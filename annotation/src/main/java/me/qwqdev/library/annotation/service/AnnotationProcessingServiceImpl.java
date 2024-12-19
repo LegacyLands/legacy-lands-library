@@ -1,5 +1,6 @@
 package me.qwqdev.library.annotation.service;
 
+import io.fairyproject.container.Containers;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.log.Log;
 import lombok.AccessLevel;
@@ -16,8 +17,15 @@ import java.util.Set;
 /**
  * Service implementation for processing annotations using custom annotation processors.
  *
+ * <p>This class provides the core functionality for scanning and processing annotations
+ * within a specified package or set of URLs. It implements the {@link AnnotationProcessingService}
+ * interface and uses reflection to dynamically instantiate and execute custom annotation processors.
+ *
  * @author qwq-dev
  * @version 1.1
+ * @see AnnotationProcessingService
+ * @see CustomAnnotationProcessor
+ * @see AnnotationProcessor
  * @since 2024-12-19 17:00
  */
 @InjectableComponent
@@ -26,52 +34,64 @@ public class AnnotationProcessingServiceImpl implements AnnotationProcessingServ
     /**
      * {@inheritDoc}
      *
-     * @param basePackage {@inheritDoc}
-     * @param classLoader {@inheritDoc}
+     * @param basePackage           {@inheritDoc}
+     * @param classLoader           {@inheritDoc}
+     * @param fromFairyIoCSingleton {@inheritDoc}
      */
     @Override
-    public void processAnnotations(String basePackage, ClassLoader... classLoader) {
-        processAnnotations(ClasspathHelper.forPackage(basePackage, classLoader));
+    public void processAnnotations(String basePackage, boolean fromFairyIoCSingleton, ClassLoader... classLoader) {
+        processAnnotations(ClasspathHelper.forPackage(basePackage, classLoader), fromFairyIoCSingleton);
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param urls {@inheritDoc}
+     * @param urls                  {@inheritDoc}
+     * @param fromFairyIoCSingleton {@inheritDoc}
      */
     @Override
-    public void processAnnotations(Collection<URL> urls) {
+    public void processAnnotations(Collection<URL> urls, boolean fromFairyIoCSingleton) {
         Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(urls, AnnotationProcessor.class);
 
         annotatedClasses.stream()
                 .filter(CustomAnnotationProcessor.class::isAssignableFrom)
-                .forEach(handlerClass -> processAnnotations(urls, handlerClass.asSubclass(CustomAnnotationProcessor.class)));
+                .forEach(handlerClass -> processAnnotations(urls, handlerClass.asSubclass(CustomAnnotationProcessor.class), fromFairyIoCSingleton));
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param urls         {@inheritDoc}
-     * @param handlerClass {@inheritDoc}
+     * @param urls                  {@inheritDoc}
+     * @param handlerClass          {@inheritDoc}
+     * @param fromFairyIoCSingleton {@inheritDoc}
      */
     @Override
-    public void processAnnotations(Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass) {
+    public void processAnnotations(Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass, boolean fromFairyIoCSingleton) {
         CustomAnnotationProcessor customAnnotationProcessor;
 
-        try {
-            customAnnotationProcessor = handlerClass.getDeclaredConstructor().newInstance();
-        } catch (InvocationTargetException exception) {
-            Log.error("An invocation target exception occurred while processing annotations", exception);
-            return;
-        } catch (InstantiationException exception) {
-            Log.error("An instance of the annotation processor could not be created", exception);
-            return;
-        } catch (IllegalAccessException exception) {
-            Log.error("An illegal access exception occurred while processing annotations", exception);
-            return;
-        } catch (NoSuchMethodException exception) {
-            Log.error("The default constructor of the annotation processor could not be found", exception);
-            return;
+        if (fromFairyIoCSingleton) {
+            try {
+                customAnnotationProcessor = Containers.get(handlerClass);
+            } catch (Exception exception) {
+                Log.error("An exception occurred when Fairy injected the singleton pattern", exception);
+                return;
+            }
+        } else {
+            try {
+                customAnnotationProcessor = handlerClass.getDeclaredConstructor().newInstance();
+            } catch (InvocationTargetException exception) {
+                Log.error("An invocation target exception occurred while processing annotations", exception);
+                return;
+            } catch (InstantiationException exception) {
+                Log.error("An instance of the annotation processor could not be created", exception);
+                return;
+            } catch (IllegalAccessException exception) {
+                Log.error("An illegal access exception occurred while processing annotations", exception);
+                return;
+            } catch (NoSuchMethodException exception) {
+                Log.error("The default constructor of the annotation processor could not be found", exception);
+                return;
+            }
         }
 
         AnnotationProcessor annotationProcessingService = handlerClass.getAnnotation(AnnotationProcessor.class);

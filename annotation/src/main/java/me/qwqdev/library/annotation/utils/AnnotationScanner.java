@@ -22,8 +22,7 @@ public class AnnotationScanner {
     /**
      * Finds a set of classes annotated with the specified annotation within the given package and its sub-packages.
      *
-     * <p>
-     * This method scans the classes in the provided base package and its sub-packages for the specified annotation.
+     * <p>This method scans the classes in the provided base package and its sub-packages for the specified annotation.
      * It supports optional class loaders to scan classes loaded by non-default class loaders.
      *
      * @param basePackage     the base package to scan for annotated classes
@@ -38,8 +37,7 @@ public class AnnotationScanner {
     /**
      * Finds a set of classes annotated with the specified annotation from the provided URLs.
      *
-     * <p>
-     * This method allows scanning classes from specific URLs rather than scanning a package or using class loaders.
+     * <p>This method allows scanning classes from specific URLs rather than scanning a package or using class loaders.
      * The provided collection of URLs will be used to locate and scan the classes for the specified annotation.
      *
      * @param urls            the collection of URLs to scan for annotated classes

@@ -20,7 +20,8 @@ public class ConfigurationLauncher extends Plugin {
 
     @Override
     public void onPluginEnable() {
+        // We need to process serializable annotations
         String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(basePackage, this.getClassLoader());
+        annotationProcessingService.processAnnotations(basePackage, false, this.getClassLoader());
     }
 }
