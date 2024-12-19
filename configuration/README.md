@@ -1,6 +1,8 @@
 ### configuration
 
-This module simply encapsulates [SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage) and provides serialization annotations and factory mode for faster use. It handles **thread safety** internally, so it can be used safely in a multi-threaded environment.
+This module simply encapsulates [SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage) and provides
+serialization annotations and factory mode for faster use. It handles **thread safety** internally, so it can be used
+safely in a multi-threaded environment.
 
 ### usage
 
@@ -30,17 +32,19 @@ public class Example extends Plugin {
         // do something eg:
 
         yaml.set("example", "test"); // thread safety
-        
+
         // more about SimplixStorage: https://github.com/Simplix-Softworks/SimplixStorage/wiki
     }
 }
 ```
 
-We recommend using `SimplixSerializer` for serialization and deserialization, which can be implemented internally using `Gson`.
+We recommend using `SimplixSerializer` for serialization and deserialization, which can be implemented internally using
+`Gson`.
 
 The `SimplixSerializerSerializableAutoRegister` annotation will automatically register the serializer.
 
 ```java
+
 @SimplixSerializerSerializableAutoRegister
 public class PlantSerializable implements SimplixSerializable<Plant> {
     @Override
@@ -61,6 +65,10 @@ public class PlantSerializable implements SimplixSerializable<Plant> {
 ```
 
 ```java
-SimplixSerializer.serialize(plant).toString();
-SimplixSerializer.deserialize(plantString, Plant.class);
+SimplixSerializer.serialize(plant).
+
+toString();
+SimplixSerializer.
+
+deserialize(plantString, Plant .class);
 ```

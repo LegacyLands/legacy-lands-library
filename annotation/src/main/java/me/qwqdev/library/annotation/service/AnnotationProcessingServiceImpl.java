@@ -25,7 +25,7 @@ public class AnnotationProcessingServiceImpl implements AnnotationProcessingServ
     /**
      * {@inheritDoc}
      *
-     * @param urls        {@inheritDoc}
+     * @param urls {@inheritDoc}
      */
     @Override
     public void processAnnotations(Collection<URL> urls) {
