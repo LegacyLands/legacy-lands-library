@@ -22,6 +22,6 @@ public class ConfigurationLauncher extends Plugin {
     @Override
     public void onPluginEnable() {
         String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(basePackage, ClasspathHelper.forPackage(basePackage));
+        annotationProcessingService.processAnnotations(ClasspathHelper.forPackage(basePackage));
     }
 }

@@ -25,35 +25,25 @@ public class AnnotationProcessingServiceImpl implements AnnotationProcessingServ
     /**
      * {@inheritDoc}
      *
-     * @param basePackage {@inheritDoc}
      * @param urls        {@inheritDoc}
      */
     @Override
-    public void processAnnotations(String basePackage, Collection<URL> urls) {
-        Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(basePackage, urls, AnnotationProcessor.class);
+    public void processAnnotations(Collection<URL> urls) {
+        Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(urls, AnnotationProcessor.class);
 
-        System.out.println("a");
-        System.out.println((long) annotatedClasses.size());
-
-        for (Class<?> annotatedClass : annotatedClasses) {
-            System.out.println(annotatedClass.getName());
-        }
-
-        annotatedClasses
-                .stream()
+        annotatedClasses.stream()
                 .filter(CustomAnnotationProcessor.class::isAssignableFrom)
-                .forEach(handlerClass -> processAnnotations(basePackage, urls, handlerClass.asSubclass(CustomAnnotationProcessor.class)));
+                .forEach(handlerClass -> processAnnotations(urls, handlerClass.asSubclass(CustomAnnotationProcessor.class)));
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param basePackage  {@inheritDoc}
      * @param urls         {@inheritDoc}
      * @param handlerClass {@inheritDoc}
      */
     @Override
-    public void processAnnotations(String basePackage, Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass) {
+    public void processAnnotations(Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass) {
         CustomAnnotationProcessor customAnnotationProcessor;
 
         try {
@@ -86,7 +76,7 @@ public class AnnotationProcessingServiceImpl implements AnnotationProcessingServ
             return;
         }
 
-        for (Class<?> aClass : AnnotationScanner.findAnnotatedClasses(basePackage, urls, annotationClazz)) {
+        for (Class<?> aClass : AnnotationScanner.findAnnotatedClasses(urls, annotationClazz)) {
             try {
                 customAnnotationProcessor.after(annotationClazz);
                 customAnnotationProcessor.process(aClass);

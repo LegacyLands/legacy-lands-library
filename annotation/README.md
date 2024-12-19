@@ -57,7 +57,7 @@ public class AnnotationLauncher extends Plugin {
     @Override
     public void onPluginEnable() {
         String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(basePackage, ClasspathHelper.forPackage(basePackage));
+        annotationProcessingService.processAnnotations(ClasspathHelper.forPackage(basePackage));
     }
 }
 ```
@@ -71,7 +71,7 @@ This is why we recommend you to use the `reflections` library. Of course, you ca
 ```java
 // omit javadoc and comments
 public interface AnnotationProcessingService {
-    void processAnnotations(String basePackage, Collection<URL> urls);
-    void processAnnotations(String basePackage, Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass);
+    void processAnnotations(Collection<URL> urls);
+    void processAnnotations(Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass);
 }
 ```

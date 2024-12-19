@@ -21,11 +21,10 @@ public class AnnotationScanner {
     /**
      * Find annotated classes set.
      *
-     * @param basePackage     the base package
      * @param annotationClass the annotation class
      * @return the set
      */
-    public static Set<Class<?>> findAnnotatedClasses(String basePackage, Collection<URL> urls, Class<? extends Annotation> annotationClass) {
+    public static Set<Class<?>> findAnnotatedClasses(Collection<URL> urls, Class<? extends Annotation> annotationClass) {
         return new Reflections(new ConfigurationBuilder().setUrls(urls)).getTypesAnnotatedWith(annotationClass);
     }
 }
