@@ -9,9 +9,6 @@ safely in a multi-threaded environment.
 ```kotlin
 // Dependencies
 dependencies {
-    // reflections is optional
-    implementation("org.reflections:reflections:0.10.2")
-
     // annotation module
     compileOnly("me.qwqdev.library:annotation:1.0-SNAPSHOT")
 
@@ -65,10 +62,6 @@ public class PlantSerializable implements SimplixSerializable<Plant> {
 ```
 
 ```java
-SimplixSerializer.serialize(plant).
-
-toString();
-SimplixSerializer.
-
-deserialize(plantString, Plant .class);
+SimplixSerializer.serialize(plant).toString();
+SimplixSerializer.deserialize(plantString, Plant .class);
 ```

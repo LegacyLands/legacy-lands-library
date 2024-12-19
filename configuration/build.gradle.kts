@@ -25,9 +25,8 @@ fairy {
 
 // Dependencies
 dependencies {
-    compileOnly(project(":annotation")) {
-        implementation("org.reflections:reflections:0.10.2")
-    }
+    // Annotation module
+    compileOnly(project(":annotation"))
 
     // SimplixStorage
     implementation("com.github.simplix-softworks:simplixstorage:3.2.7")

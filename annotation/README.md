@@ -8,9 +8,6 @@ automated annotation processor. This is very useful for repeatedly performing ce
 ```kotlin
 // Dependencies
 dependencies {
-    // reflections is optional
-    implementation("org.reflections:reflections:0.10.2")
-
     // annotation module
     compileOnly("me.qwqdev.library:annotation:1.0-SNAPSHOT")
 }
@@ -65,25 +62,9 @@ public class AnnotationLauncher extends Plugin {
     @Override
     public void onPluginEnable() {
         String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(ClasspathHelper.forPackage(basePackage));
+        annotationProcessingService.processAnnotations(basePackage, this.getClassLoader());
     }
 }
 ```
 
 We only need to get `AnnotationProcessingService` through dependency injection and simply call the method~
-
-The `ClasspathHelper` used here is the class of the `reflections` library, which helps us omit a lot of code, but we
-cannot use the `reflections` packaged inside the `annotation` library. Each independent Jar should have its own
-`reflections` packaged.
-
-This is why we recommend you to use the `reflections` library. Of course, you can also omit it. You can write a method
-to do the same thing.
-
-```java
-// omit javadoc and comments
-public interface AnnotationProcessingService {
-    void processAnnotations(Collection<URL> urls);
-
-    void processAnnotations(Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass);
-}
-```

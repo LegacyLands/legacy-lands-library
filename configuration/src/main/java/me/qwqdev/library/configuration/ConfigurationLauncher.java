@@ -5,7 +5,6 @@ import io.fairyproject.container.Autowired;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.plugin.Plugin;
 import me.qwqdev.library.annotation.service.AnnotationProcessingService;
-import org.reflections.util.ClasspathHelper;
 
 /**
  * The type Configuration launcher.
@@ -22,6 +21,6 @@ public class ConfigurationLauncher extends Plugin {
     @Override
     public void onPluginEnable() {
         String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(ClasspathHelper.forPackage(basePackage));
+        annotationProcessingService.processAnnotations(basePackage, this.getClassLoader());
     }
 }

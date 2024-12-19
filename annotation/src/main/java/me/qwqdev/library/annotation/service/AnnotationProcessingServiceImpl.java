@@ -5,6 +5,7 @@ import io.fairyproject.log.Log;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import me.qwqdev.library.annotation.utils.AnnotationScanner;
+import org.reflections.util.ClasspathHelper;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -15,13 +16,24 @@ import java.util.Set;
 /**
  * Service implementation for processing annotations using custom annotation processors.
  *
- * @author NaerQAQ
- * @version 1.0
- * @since 2024 /1/7
+ * @author qwq-dev
+ * @version 1.1
+ * @since 2024-12-19 17:00
  */
 @InjectableComponent
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class AnnotationProcessingServiceImpl implements AnnotationProcessingService {
+    /**
+     * {@inheritDoc}
+     *
+     * @param basePackage {@inheritDoc}
+     * @param classLoader {@inheritDoc}
+     */
+    @Override
+    public void processAnnotations(String basePackage, ClassLoader... classLoader) {
+        processAnnotations(ClasspathHelper.forPackage(basePackage, classLoader));
+    }
+
     /**
      * {@inheritDoc}
      *
