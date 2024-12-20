@@ -10,6 +10,14 @@ For the first and second level cache, it is actually implemented in the cache mo
 
 ### usage
 
+```kotlin
+// Dependencies
+dependencies {
+    // annotation module
+    compileOnly("me.qwqdev.library:mongodb:1.0-SNAPSHOT")
+}
+```
+
 We recommend using `MongoDBConnectionFactory` to create connections instead of creating objects directly.
 
 ```java

@@ -5,6 +5,15 @@ L1 L2 cache module, currently L1 cache has been implemented, L2 cache is still i
 The original purpose of this module was to design a L1 cache for the `mongodb` module, but now it is **general-purpose**.
 
 ### usage
+
+```kotlin
+// Dependencies
+dependencies {
+    // annotation module
+    compileOnly("me.qwqdev.library:cache:1.0-SNAPSHOT")
+}
+```
+
 ```java
 public class Main {
     public static void main(String[] args) {
@@ -34,7 +43,7 @@ public class Main {
         MemoryQueryCacheInterface<String, String> memoryQueryCacheInterface = MemoryQueryCacheFactory.create();
         
         // create cache service and bind memory query cache
-        CacheService<String, String> cacheService = CacheServiceFactory.create(memoryQueryCacheInterface);
+        L1CacheService<String, String> l1CacheService = L1CacheServiceFactory.create(memoryQueryCacheInterface);
         
         // expiration settings (this is for one element, not the entire map)
         ExpirationSettings expirationSettings = ExpirationSettings.of(100, TimeUnit.DAYS);
@@ -52,10 +61,10 @@ public class Main {
         );
 
         // Testing time: 45, db query
-        cacheService.get("testKey", dbQuery, true, expirationSettings);
+        l1CacheService.get("testKey", dbQuery, true, expirationSettings);
 
         // Now we query again test L1 cache, Testing time: 0
-        cacheService.get("testKey", dbQuery, true, expirationSettings);
+        l1CacheService.get("testKey", dbQuery, true, expirationSettings);
     }
 }
 
@@ -84,6 +93,11 @@ public class MemoryQueryCacheFactory {
 }
 ```
 
-`CacheService` is a key-value pair-based cache service, which needs to be bound to a specific cache implementation, 
+`L1CacheService` is a key-value pair-based cache service, which needs to be bound to a specific cache implementation, 
 such as `MemoryQueryCacheInterface`. When the L2 cache is developed, it only needs to change the bound cache implementation, which is different from L1.
 
+### scalability
+
+For more levels of cache, we only need to implement `QueryCacheInterface` to implement something similar to `MemoryQueryCache`. Then create a new Service class and implement `QueryCacheInterface`.
+
+If it is java memory based, we recommend using `MemoryQueryCacheInterface` (L1 cache already exists, so this is actually not necessary).
