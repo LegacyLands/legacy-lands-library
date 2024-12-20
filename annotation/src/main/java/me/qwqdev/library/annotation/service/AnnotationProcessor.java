@@ -21,7 +21,7 @@ public @interface AnnotationProcessor {
     /**
      * The type of annotation that the processor handles.
      *
-     * @return The class of the handled annotation
+     * @return the class of the handled annotation
      */
     Class<? extends Annotation> value();
 }

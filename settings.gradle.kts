@@ -10,3 +10,4 @@ rootProject.name = "legacy-lands-library"
 include("configuration")
 include("annotation")
 include("commons")
+include("mongodb")

@@ -20,8 +20,8 @@ public interface AnnotationProcessingService {
      * <p>This method scans the specified base package and its sub-packages for classes annotated with specific
      * annotations, and then processes them using default annotation processors.
      *
-     * @param basePackage           The base package to scan for annotated classes
-     * @param fromFairyIoCSingleton Whether handlerClass should be injected into a singleton by the Fairy framework
+     * @param basePackage           the base package to scan for annotated classes
+     * @param fromFairyIoCSingleton whether handlerClass should be injected into a singleton by the Fairy framework
      *                              If false, it will be created by reflection without parameters,
      *                              but it still supports setter injection with Fairy {@link io.fairyproject.container.Autowired} annotation
      * @param classLoader           optional class loaders to use for classpath scanning; if not provided, the default class loader is used
@@ -34,8 +34,8 @@ public interface AnnotationProcessingService {
      * <p>This method scans the classes located at the provided URLs for annotations and processes them using
      * default annotation processors. The URLs can represent locations like JAR files, directories, or classpath entries.
      *
-     * @param urls                  The collection of URLs to scan for annotated classes
-     * @param fromFairyIoCSingleton Whether handlerClass should be injected into a singleton by the Fairy framework
+     * @param urls                  the collection of URLs to scan for annotated classes
+     * @param fromFairyIoCSingleton whether handlerClass should be injected into a singleton by the Fairy framework
      *                              If false, it will be created by reflection without parameters,
      *                              but it still supports setter injection with Fairy {@link io.fairyproject.container.Autowired} annotation
      */
@@ -47,9 +47,9 @@ public interface AnnotationProcessingService {
      * <p>This method allows for processing annotations in the classes located at the specified URLs using a custom
      * annotation processor, which allows for more fine-grained control over the processing logic.
      *
-     * @param urls                  The collection of URLs to scan for annotated classes
-     * @param handlerClass          The class of the custom annotation processor to handle annotation processing
-     * @param fromFairyIoCSingleton Whether handlerClass should be injected into a singleton by the Fairy framework
+     * @param urls                  the collection of URLs to scan for annotated classes
+     * @param handlerClass          the class of the custom annotation processor to handle annotation processing
+     * @param fromFairyIoCSingleton whether handlerClass should be injected into a singleton by the Fairy framework
      *                              If false, it will be created by reflection without parameters,
      *                              but it still supports setter injection with Fairy {@link io.fairyproject.container.Autowired} annotation
      */
