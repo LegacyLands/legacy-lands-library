@@ -25,7 +25,6 @@ public class MongoDBConnectionConfig {
      * Constructs a new MongoDBConnectionConfig using the specified database name
      * and MongoDB connection URL. The default UUID representation (STANDARD) will be used.
      *
-     *
      * @param databaseName the name of the MongoDB database to connect to
      * @param mongoURL     the MongoDB connection URL, such as "mongodb://localhost:27017"
      * @throws IllegalArgumentException if either the database name or MongoDB URL is null or empty
