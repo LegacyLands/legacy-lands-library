@@ -33,7 +33,7 @@ jobs:
         uses: MariachiBear/get-repo-name-action@v1.1.0
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.5
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }}
           path: |
