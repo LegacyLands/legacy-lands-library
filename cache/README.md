@@ -98,6 +98,6 @@ such as `MemoryQueryCacheInterface`. When the L2 cache is developed, it only nee
 
 ### scalability
 
-For more levels of cache, we only need to implement `QueryCacheInterface` to implement something similar to `MemoryQueryCache`. Then create a new Service class and implement `QueryCacheInterface`.
+For more levels of cache, we only need to implement `QueryCacheInterface` to implement something similar to `MemoryQueryCache`. Then create a new Service class and implement `CacheServiceInterface`.
 
 If it is java memory based, we recommend using `MemoryQueryCacheInterface` (L1 cache already exists, so this is actually not necessary).

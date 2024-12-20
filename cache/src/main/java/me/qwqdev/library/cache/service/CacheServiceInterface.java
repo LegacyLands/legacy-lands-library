@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  * @see QueryCacheInterface
  * @since 2024-12-20
  */
-public interface CacheInterface<K, V> extends QueryCacheInterface<K, V> {
+public interface CacheServiceInterface<K, V> extends QueryCacheInterface<K, V> {
     /**
      * Retrieves the value associated with the specified key from the cache.
      *

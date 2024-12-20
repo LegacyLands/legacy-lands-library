@@ -57,7 +57,7 @@ This is very simple, right? But now that the definition is complete, how does th
 @InjectableComponent
 public class AnnotationLauncher extends Plugin {
     @Autowired
-    private AnnotationProcessingService annotationProcessingService;
+    private AnnotationProcessingServiceInterface annotationProcessingService;
 
     @Override
     public void onPluginEnable() {

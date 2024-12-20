@@ -4,7 +4,7 @@ import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.Autowired;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.plugin.Plugin;
-import me.qwqdev.library.annotation.service.AnnotationProcessingService;
+import me.qwqdev.library.annotation.service.AnnotationProcessingServiceInterface;
 
 /**
  * The type Configuration launcher.
@@ -16,12 +16,12 @@ import me.qwqdev.library.annotation.service.AnnotationProcessingService;
 @InjectableComponent
 public class ConfigurationLauncher extends Plugin {
     @Autowired
-    private AnnotationProcessingService annotationProcessingService;
+    private AnnotationProcessingServiceInterface annotationProcessingServiceInterface;
 
     @Override
     public void onPluginEnable() {
         // We need to process serializable annotations
         String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(basePackage, false, this.getClassLoader());
+        annotationProcessingServiceInterface.processAnnotations(basePackage, false, this.getClassLoader());
     }
 }

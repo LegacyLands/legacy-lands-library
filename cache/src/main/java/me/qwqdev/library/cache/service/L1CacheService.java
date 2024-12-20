@@ -21,7 +21,7 @@ import java.util.function.Supplier;
  */
 @Data
 @RequiredArgsConstructor
-public class L1CacheService<K, V> implements CacheInterface<K, V> {
+public class L1CacheService<K, V> implements CacheServiceInterface<K, V> {
     private final QueryCacheInterface<K, V> queryCacheInterface;
 
     /**
