@@ -41,7 +41,6 @@ We recommend using `SimplixSerializer` for serialization and deserialization, wh
 The `SimplixSerializerSerializableAutoRegister` annotation will automatically register the serializer.
 
 ```java
-
 @SimplixSerializerSerializableAutoRegister
 public class PlantSerializable implements SimplixSerializable<Plant> {
     @Override

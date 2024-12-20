@@ -6,14 +6,14 @@ import me.qwqdev.library.mongodb.model.MongoDBConnectionConfig;
 import org.bson.UuidRepresentation;
 
 /**
- * MongoDBConnectionFactory is a factory class responsible for creating instances of {@link MongoDBConnectionConfig}.
+ * MongoDBConnectionConfigFactory is a factory class responsible for creating instances of {@link MongoDBConnectionConfig}.
  *
  * @author qwq-dev
  * @see MongoDBConnectionConfig
  * @since 2024-12-20 12:18
  */
 @UtilityClass
-public class MongoDBConnectionFactory {
+public class MongoDBConnectionConfigFactory {
     /**
      * Creates a default {@link MongoDBConnectionConfig} instance using the standard UUID representation.
      *

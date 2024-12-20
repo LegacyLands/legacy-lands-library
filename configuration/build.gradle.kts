@@ -29,7 +29,7 @@ dependencies {
     compileOnly(project(":annotation"))
 
     // SimplixStorage
-    implementation("com.github.simplix-softworks:simplixstorage:3.2.7")
+    api("com.github.simplix-softworks:simplixstorage:3.2.7")
 
     // Apache commons io
     implementation("commons-io:commons-io:2.18.0")

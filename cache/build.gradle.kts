@@ -25,6 +25,6 @@ fairy {
 
 // Dependencies
 dependencies {
-    // https://mvnrepository.com/artifact/dev.morphia.morphia/morphia-core
-    api("dev.morphia.morphia:morphia-core:2.4.14")
+    // Mongodb
+    implementation(project(":mongodb"))
 }

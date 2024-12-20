@@ -4,11 +4,9 @@ This module only encapsulates a more convenient MongoConfig based on [Morphia](h
 
 We recommend using Datastore directly for any CRUD operations, using [Morphia](https://morphia.dev/landing/index.html) for index creation or using the [aggregation](https://morphia.dev/morphia/2.4/aggregations.html).
 
-
 ### cache
 
 For the first and second level cache, it is actually implemented in the cache module.
-
 
 ### usage
 
