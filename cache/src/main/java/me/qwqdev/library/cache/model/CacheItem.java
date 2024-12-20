@@ -18,13 +18,16 @@ public class CacheItem<V> {
     /**
      * Constructs a CacheItem with a specified value and expiration settings.
      *
+     * <p>If the ttl is set to -1, the item will never expire.
+     *
      * @param value              the cached value
      * @param expirationSettings the expiration settings
      * @see ExpirationSettings
      */
     public CacheItem(V value, ExpirationSettings expirationSettings) {
         this.value = value;
-        this.expirationTime = System.currentTimeMillis() + expirationSettings.getTimeUnit().toMillis(expirationSettings.getTimeToLive());
+        this.expirationTime = expirationSettings.getTimeToLive() <= -1 ? -1 :
+                System.currentTimeMillis() + expirationSettings.getTimeUnit().toMillis(expirationSettings.getTimeToLive());
     }
 
     /**
@@ -33,6 +36,10 @@ public class CacheItem<V> {
      * @return true if the item is expired, false otherwise
      */
     public boolean isExpired() {
-        return System.currentTimeMillis() > expirationTime;
+        if (value == null) {
+            return true;
+        }
+
+        return expirationTime > -1 && System.currentTimeMillis() > expirationTime;
     }
 }

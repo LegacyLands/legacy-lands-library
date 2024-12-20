@@ -1,6 +1,6 @@
 ### cache
 
-L1 L2 cache module, currently L1 cache has been implemented, L2 cache is still in the planning. The L2 cache plan is most likely based on Redis
+The cache module based on memory and memory database, the part based on Memory and Caffeine has been completed.
 
 The original purpose of this module was to design a L1 cache for the `mongodb` module, but now it is **general-purpose**.
 
@@ -39,15 +39,11 @@ public class Main {
         datastore.save(person2);
 
         
-        // create memory query cache
-        MemoryQueryCacheInterface<String, String> memoryQueryCacheInterface = MemoryQueryCacheFactory.create();
-        
-        // create cache service and bind memory query cache
-        L1CacheService<String, String> l1CacheService = L1CacheServiceFactory.create(memoryQueryCacheInterface);
+        // create memory cache service
+        MemoryCacheServiceInterface memoryCacheService = MemoryCacheServiceFactory.create();
         
         // expiration settings (this is for one element, not the entire map)
         ExpirationSettings expirationSettings = ExpirationSettings.of(100, TimeUnit.DAYS);
-
         
         // db query
         Supplier<String> dbQuery = () -> String.valueOf(
@@ -61,10 +57,10 @@ public class Main {
         );
 
         // Testing time: 45, db query
-        l1CacheService.get("testKey", dbQuery, true, expirationSettings);
+        memoryCacheService.get("testKey", dbQuery, true, expirationSettings);
 
         // Now we query again test L1 cache, Testing time: 0
-        l1CacheService.get("testKey", dbQuery, true, expirationSettings);
+        memoryCacheService.get("testKey", dbQuery, true, expirationSettings);
     }
 }
 
@@ -79,25 +75,12 @@ class Person {
 }
 ```
 
-It should be noted that the element will only perform a timeout check when the `get` method is called. For this problem, you can provide a `Map` to solve it.
+It is very simple to use. We have created cache service classes for `Memory`, `Caffeine`-based `Cache`, and `AsyncCache`.
 
-```java
-public class MemoryQueryCacheFactory {
-    public static <K, V> MemoryQueryCacheInterface<K, V> create() {
-        return new MemoryQueryCache<>();
-    }
-    
-    public static <K, V> MemoryQueryCacheInterface<K, V> create(Map<K, CacheItem<V>> cacheMap) {
-        return new MemoryQueryCache<>(cacheMap);
-    }
-}
-```
-
-`L1CacheService` is a key-value pair-based cache service, which needs to be bound to a specific cache implementation, 
-such as `MemoryQueryCacheInterface`. When the L2 cache is developed, it only needs to change the bound cache implementation, which is different from L1.
+We only need to create them through the factory class to use them without manually writing the internal logic.
 
 ### scalability
 
-For more levels of cache, we only need to implement `QueryCacheInterface` to implement something similar to `MemoryQueryCache`. Then create a new Service class and implement `CacheServiceInterface`.
+In-memory database level cache is already in the planning. 
 
-If it is java memory based, we recommend using `MemoryQueryCacheInterface` (L1 cache already exists, so this is actually not necessary).
+For caches like L1 and L2, developers should manually nest them or directly use the L1 and L2 level caches provided by the `data` module.

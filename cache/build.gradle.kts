@@ -21,3 +21,9 @@ fairy {
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
 }
+
+// Dependencies
+dependencies {
+    // https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine
+    api("com.github.ben-manes.caffeine:caffeine:3.1.8")
+}
