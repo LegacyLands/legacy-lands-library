@@ -36,4 +36,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }}
-          path: build/libs/*.jar
+          path: |
+            annotation/build/libs/*.jar
+            cache/build/libs/*.jar
+            configuration/build/libs/*.jar
+            commons/build/libs/*.jar
+            mongodb/build/libs/*.jar
