@@ -62,5 +62,5 @@ public class PlantSerializable implements SimplixSerializable<Plant> {
 
 ```java
 SimplixSerializer.serialize(plant).toString();
-SimplixSerializer.deserialize(plantString, Plant .class);
+SimplixSerializer.deserialize(plantString, Plant.class);
 ```
