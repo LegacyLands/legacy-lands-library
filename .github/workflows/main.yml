@@ -1,0 +1,39 @@
+name: Legacy Lands Library
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  shadowJar:
+    name: shadow
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'zulu'
+          cache: 'gradle'
+        
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      
+      - name: Build with Gradle
+        run: ./gradlew shadowJar
+
+      - name: Set outputs
+        id: short_sha
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Get Repository Name
+        uses: MariachiBear/get-repo-name-action@v1.1.0
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }}
+          path: build/libs/*.jar
