@@ -21,9 +21,3 @@ fairy {
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
 }
-
-// Dependencies
-dependencies {
-    // Mongodb
-    implementation(project(":mongodb"))
-}
