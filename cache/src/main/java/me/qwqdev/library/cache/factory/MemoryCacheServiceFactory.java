@@ -1,5 +1,6 @@
 package me.qwqdev.library.cache.factory;
 
+import lombok.experimental.UtilityClass;
 import me.qwqdev.library.cache.model.CacheItem;
 import me.qwqdev.library.cache.service.memory.MemoryCacheService;
 import me.qwqdev.library.cache.service.memory.MemoryCacheServiceInterface;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author qwq-dev
  * @since 2024-12-20 20:39
  */
+@UtilityClass
 public class MemoryCacheServiceFactory {
     /**
      * Creates a new instance of {@link MemoryCacheService} with a default {@link ConcurrentHashMap}.

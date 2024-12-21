@@ -1,6 +1,7 @@
 package me.qwqdev.library.cache.factory;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
+import lombok.experimental.UtilityClass;
 import me.qwqdev.library.cache.service.caffeine.CaffeineAsyncCacheService;
 import me.qwqdev.library.cache.service.caffeine.CaffeineAsyncCacheServiceInterface;
 
@@ -10,6 +11,7 @@ import me.qwqdev.library.cache.service.caffeine.CaffeineAsyncCacheServiceInterfa
  * @author qwq-dev
  * @since 2024-12-20 20:39
  */
+@UtilityClass
 public class CaffeineAsyncCacheServiceFactory {
     /**
      * Creates a new instance of {@link CaffeineAsyncCacheService} with a default {@link AsyncCache}.
