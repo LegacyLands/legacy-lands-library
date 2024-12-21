@@ -1,6 +1,7 @@
 package me.qwqdev.library.cache.service.redis;
 
 import io.fairyproject.log.Log;
+import lombok.Data;
 import me.qwqdev.library.cache.model.ExpirationSettings;
 import org.redisson.Redisson;
 import org.redisson.api.RBucket;
@@ -20,7 +21,8 @@ import java.util.function.Supplier;
  * @author qwq-dev
  * @since 2024-12-21 12:00
  */
-public class RedisCacheService<K, V> {
+@Data
+public class RedisCacheService<K, V> implements RedisCacheServiceInterface<K, V> {
     private final RedissonClient redissonClient;
 
     /**
@@ -42,6 +44,7 @@ public class RedisCacheService<K, V> {
      * @param expirationSettings {@inheritDoc}
      * @return
      */
+    @Override
     public V get(K key, Function<RedissonClient, RBucket<V>> function, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
         return executeCacheOperation(function, key, query, cacheAfterQuery, expirationSettings);
     }
@@ -56,6 +59,7 @@ public class RedisCacheService<K, V> {
      * @param expirationSettings {@inheritDoc}
      * @return {@inheritDoc}
      */
+    @Override
     public V getWithLock(K key, Function<RedissonClient, RBucket<V>> function, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
         return executeCacheOperationWithLock(function, key, query, cacheAfterQuery, expirationSettings);
     }

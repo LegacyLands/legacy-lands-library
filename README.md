@@ -9,6 +9,6 @@ The overall dependence is on the Fairy Framework framework. It probably doesn't 
 - annotation        - Not fully completed (annotation processor available)
 - configuration     - Not fully completed (serialization/yaml/json/toml available)
 - mongodb           - Not fully completed
-- cache             - Not fully completed (Memory Caffeine cache available)
+- cache             - Not fully completed (memory/caffeine/redis cache available)
 - data              - Not started yet
 - security          - Not started yet
