@@ -3,6 +3,7 @@ package me.qwqdev.library.cache.model;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,8 +25,19 @@ public class ExpirationSettings {
      * @param timeToLive the time to live for the cache item
      * @param timeUnit   the time unit for the expiration
      * @return an ExpirationSettings instance
+     * @see TimeUnit
      */
     public static ExpirationSettings of(long timeToLive, TimeUnit timeUnit) {
         return new ExpirationSettings(timeToLive, timeUnit);
+    }
+
+    /**
+     * Converts the ExpirationSettings to a {@link Duration}.
+     *
+     * @return a {@link Duration} object representing the expiration time
+     * @see Duration
+     */
+    public Duration toDuration() {
+        return Duration.ofMillis(timeUnit.toMillis(timeToLive));
     }
 }

@@ -26,4 +26,7 @@ fairy {
 dependencies {
     // https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine
     api("com.github.ben-manes.caffeine:caffeine:3.1.8")
+
+    // https://mvnrepository.com/artifact/org.redisson/redisson
+    api("org.redisson:redisson:3.40.2")
 }
