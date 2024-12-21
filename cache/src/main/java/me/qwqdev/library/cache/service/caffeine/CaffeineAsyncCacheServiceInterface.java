@@ -1,5 +1,7 @@
 package me.qwqdev.library.cache.service.caffeine;
 
+import com.github.benmanes.caffeine.cache.AsyncCache;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
@@ -13,6 +15,13 @@ import java.util.function.Supplier;
  * @since 2024-12-20 20:18
  */
 public interface CaffeineAsyncCacheServiceInterface<K, V> {
+    /**
+     * Get the {@link AsyncCache} that implements the cache
+     *
+     * @return the {@link AsyncCache}
+     */
+    AsyncCache<K, V> getCache();
+
     /**
      * Retrieves a value from the cache asynchronously. If the value is not present in the cache,
      * it will be fetched using the provided query supplier and optionally cached.

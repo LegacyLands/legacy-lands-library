@@ -1,7 +1,9 @@
 package me.qwqdev.library.cache.service.memory;
 
+import me.qwqdev.library.cache.model.CacheItem;
 import me.qwqdev.library.cache.model.ExpirationSettings;
 
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -13,6 +15,13 @@ import java.util.function.Supplier;
  * @since 2024-12-20 20:39
  */
 public interface MemoryCacheServiceInterface<K, V> {
+    /**
+     * Get the Map that implements the cache
+     *
+     * @return the cache map
+     */
+    Map<K, CacheItem<V>> getCache();
+
     /**
      * Retrieves a value from the cache. If the value is not present in the cache,
      * it will be fetched using the provided query supplier and optionally cached

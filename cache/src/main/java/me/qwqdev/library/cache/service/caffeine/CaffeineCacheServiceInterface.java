@@ -1,5 +1,7 @@
 package me.qwqdev.library.cache.service.caffeine;
 
+import com.github.benmanes.caffeine.cache.Cache;
+
 import java.util.function.Supplier;
 
 /**
@@ -11,6 +13,13 @@ import java.util.function.Supplier;
  * @since 2024-12-20 20:18
  */
 public interface CaffeineCacheServiceInterface<K, V> {
+    /**
+     * Get the {@link Cache} that implements the cache
+     *
+     * @return the {@link Cache}
+     */
+    Cache<K, V> getCache();
+
     /**
      * Retrieves a value from the cache. If the value is not present in the cache,
      * it will be fetched using the provided query supplier and optionally cached.
