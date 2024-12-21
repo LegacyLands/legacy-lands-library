@@ -39,7 +39,12 @@ public class Main {
         datastore.save(person2);
 
         
-        // create memory cache service
+        /*
+         * create memory cache service
+         * 
+         * By default, MemoryCacheService uses ConcurrentHashMap, which means it is thread-safe.
+         * When a custom Map is passed in, thread safety is tied to the Map.
+         */
         MemoryCacheServiceInterface memoryCacheService = MemoryCacheServiceFactory.create();
         
         // expiration settings (this is for one element, not the entire map)

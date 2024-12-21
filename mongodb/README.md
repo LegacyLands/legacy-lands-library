@@ -49,7 +49,7 @@ public class Example {
         datastore.save(person2);
 
 
-        // find object
+        // find object, its thread safety
         @Cleanup
         MorphiaCursor<Person> iterator = datastore.find(Person.class)
                 .filter(Filters.and(
@@ -57,6 +57,8 @@ public class Example {
                         Filters.eq("name", "Alice"), // name eq
                         Filters.gt("age", 35) // age > 35, it's time to lay off employees lol
                 ))
+                
+                // It should be noted that iterators are not thread-safe
                 .iterator(); // get iterator
 
         // just print
