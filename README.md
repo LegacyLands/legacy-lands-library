@@ -6,6 +6,8 @@
 
 ## overview
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/940bb4ab9f2c461e893004cc3f193ce6)](https://app.codacy.com/gh/LegacyLands/legacy-lands-library?utm_source=github.com&utm_medium=referral&utm_content=LegacyLands/legacy-lands-library&utm_campaign=Badge_Grade)
+
 The overall dependence is on the [Fairy Framework](https://github.com/FairyProject/fairy). It probably doesn't have a lot of overly complex stuff, like an unnecessary repackaging of some large library.
 
 ## usage
