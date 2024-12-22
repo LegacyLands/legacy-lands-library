@@ -1,6 +1,8 @@
 ## legacy-lands-library
 
-This is a project that aims to encapsulate various existing libraries to facilitate the team to develop Folia plug-ins.
+![logo.png](logo.png)
+
+This is a project that aims to encapsulate various existing libraries to facilitate the team to develop [Folia](https://github.com/PaperMC/Folia) plug-ins.
 
 The overall dependence is on the Fairy Framework framework. It probably doesn't have a lot of overly complex stuff, like an unnecessary repackaging of some large library.
 
