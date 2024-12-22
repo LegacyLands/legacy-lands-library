@@ -1,6 +1,7 @@
 ### cache
 
-The cache module based on memory and memory database, the part based on Memory and Caffeine has been completed.
+The module is a caching solution that supports `Caffeine`'s `Cache` and `AsyncCache`, 
+as well as an in-memory `Redis` database implementation, offering functional programming support and automatic lock handling.
 
 The original purpose of this module was to design a L1 cache for the `mongodb` module, but now it is **general-purpose**.
 
@@ -15,77 +16,114 @@ dependencies {
 ```
 
 ```java
-public class Main {
+public class CacheLauncher {
     public static void main(String[] args) {
-        // test object
-        Person person = new Person();
-        person.setUuid(UUID.randomUUID());
-        person.setName("Johannes");
-        person.setAge(20);
-
-        Person person2 = new Person();
-        person2.setUuid(UUID.randomUUID());
-        person2.setName("Johannes");
-        person2.setAge(45);
+        Config config = new Config();
+        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
 
 
-        // create connection
-        MongoDBConnectionConfig mongoDBConnectionConfig =
-                MongoDBConnectionConfigFactory.create("test", "mongodb://localhost:27017/");
-        Datastore datastore = mongoDBConnectionConfig.getDatastore();
-
-        // save data
-        datastore.save(person);
-        datastore.save(person2);
-
-        
         /*
-         * create memory cache service
-         * 
-         * By default, MemoryCacheService uses ConcurrentHashMap, which means it is thread-safe.
-         * When a custom Map is passed in, thread safety is tied to the Map.
+         * Redis cache example
          */
-        MemoryCacheServiceInterface memoryCacheService = MemoryCacheServiceFactory.create();
-        
-        // expiration settings (this is for one element, not the entire map)
-        ExpirationSettings expirationSettings = ExpirationSettings.of(100, TimeUnit.DAYS);
-        
-        // db query
-        Supplier<String> dbQuery = () -> String.valueOf(
-                datastore.find(Person.class)
-                        .filter(
-                                Filters.eq("name", "Johannes"),
-                                Filters.gt("age", 30)
-                        )
-                        .iterator()
-                        .tryNext()
+        RedisCacheServiceInterface redisCache =
+                CacheServiceFactory.createRedisCache(config);
+
+        // get method will return object type, getWithType can specify the return type
+        int integer = redisCache.getWithType(
+                // get cache value by key
+                cache -> cache.getBucket("key").get(),
+
+                // if cache miss, do this, like query from database
+                () -> 1,
+
+                // if cacheAfterQuery is true, do this, store to cache
+                (cache, queryValue) -> cache.getBucket("key").set(queryValue),
+
+                // cacheAfterQuery
+                true
         );
 
-        // Testing time: 45, db query
-        memoryCacheService.get("testKey", dbQuery, true, expirationSettings);
+        // string
+        String string = redisCache.getWithType(
+                // get cache value by key
+                cache -> cache.getBucket("key2").get(),
 
-        // Now we query again test L1 cache, Testing time: 0
-        memoryCacheService.get("testKey", dbQuery, true, expirationSettings);
+                // if cache miss, do this, like query from database
+                () -> "qwq",
+
+                // if cacheAfterQuery is true, do this, store to cache
+                (cache, queryValue) -> cache.getBucket("key2").set(queryValue),
+
+                // cacheAfterQuery
+                true
+        );
+
+
+        /*
+         * Caffeine cache example
+         *
+         * Cache<Integer, String>
+         *      - cache key and cache value type
+         *
+         * Cache<String, String>, String>
+         *                       - Cache value type
+         */
+        CacheServiceInterface<Cache<Integer, String>, String> caffeineCache =
+                CacheServiceFactory.createCaffeineCache();
+
+        // get
+        String qwq = caffeineCache.get(
+                // get cache value by key
+
+                cache -> cache.getIfPresent(1),
+                // if cache miss, do this, like query from database
+                () -> "qwq",
+
+                // if cacheAfterQuery is true, do this, store to cache
+                (cache, queryValue) -> cache.put(1, queryValue),
+
+                // cacheAfterQuery
+                true
+        );
+
+        // get with lock
+        String qwq2 = caffeineCache.get(
+                // get lock
+                cache -> new ReentrantLock(),
+
+                // get cache value by key
+                cache -> cache.getIfPresent(1),
+
+                // if cache miss, do this, like query from database
+                () -> "qwq",
+
+                // if cacheAfterQuery is true, do this, store to cache
+                (cache, queryValue) -> cache.put(1, queryValue),
+
+                // cacheAfterQuery
+                true,
+
+                // lock settings
+                LockSettings.of(1, 1, TimeUnit.MINUTES)
+        );
+
+        // thread-safe execution of something, redis cache same
+        caffeineCache.execute(
+                // get lock
+                cache -> new ReentrantLock(),
+
+                // do something
+                cache -> cache.getIfPresent(1),
+
+                // lock settings
+                LockSettings.of(1, 1, TimeUnit.MINUTES)
+        );
+
+        /*
+         * Although most of caffeine's methods are thread-safe,
+         * we can directly use getCache() to operate these methods.
+         */
+        caffeineCache.getCache().put(2, "hi");
     }
 }
-
-@Data
-@Entity("persons")
-class Person {
-    @Id
-    private UUID uuid;
-
-    private String name;
-    private int age;
-}
 ```
-
-It is very simple to use. We have created cache service classes for `Memory`, `Caffeine`-based `Cache`, and `AsyncCache`.
-
-We only need to create them through the factory class to use them without manually writing the internal logic.
-
-### scalability
-
-In-memory database level cache is already in the planning. 
-
-For caches like L1 and L2, developers should manually nest them or directly use the L1 and L2 level caches provided by the `data` module.

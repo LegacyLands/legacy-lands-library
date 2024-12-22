@@ -1,129 +1,153 @@
 package me.qwqdev.library.cache.service.redis;
 
 import io.fairyproject.log.Log;
-import lombok.Data;
-import me.qwqdev.library.cache.model.ExpirationSettings;
+import me.qwqdev.library.cache.model.LockSettings;
+import me.qwqdev.library.cache.service.AbstractLockableCache;
 import org.redisson.Redisson;
-import org.redisson.api.RBucket;
-import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Redis Cache Service that supports flexible functional programming to operate the cache.
+ * Redis implementation of cache service using Redisson client.
  *
- * @param <K> the type of the key
- * @param <V> the type of the value
+ * <p>Provides Redis-specific caching functionality with support for
+ * expiration and lock-protected operations.
+ *
  * @author qwq-dev
- * @since 2024-12-21 12:00
+ * @see RedissonClient
+ * @see RedisCacheServiceInterface
+ * @see AbstractLockableCache
+ * @since 2024-12-21 20:03
  */
-@Data
-public class RedisCacheService<K, V> implements RedisCacheServiceInterface<K, V> {
-    private final RedissonClient redissonClient;
-
+public class RedisCacheService extends AbstractLockableCache<RedissonClient> implements RedisCacheServiceInterface {
     /**
-     * Initializes the Redis Cache Service with the provided Redisson configuration.
+     * Constructs a new Redis cache service with the specified Redisson client.
      *
-     * @param config the Redisson configuration
+     * @param config {@link Config}
+     * @see Config
      */
     public RedisCacheService(Config config) {
-        this.redissonClient = Redisson.create(config);
+        super(Redisson.create(config));
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param key                {@inheritDoc}
-     * @param function           {@inheritDoc}
-     * @param query              {@inheritDoc}
-     * @param cacheAfterQuery    {@inheritDoc}
-     * @param expirationSettings {@inheritDoc}
-     * @return
-     */
-    @Override
-    public V get(K key, Function<RedissonClient, RBucket<V>> function, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
-        return executeCacheOperation(function, key, query, cacheAfterQuery, expirationSettings);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param key                {@inheritDoc}
-     * @param function           {@inheritDoc}
-     * @param query              {@inheritDoc}
-     * @param cacheAfterQuery    {@inheritDoc}
-     * @param expirationSettings {@inheritDoc}
+     * @param getCacheFunction {@inheritDoc}
+     * @param query            {@inheritDoc}
+     * @param cacheBiConsumer  {@inheritDoc}
+     * @param cacheAfterQuery  {@inheritDoc}
+     * @param <R>              {@inheritDoc}
      * @return {@inheritDoc}
      */
     @Override
-    public V getWithLock(K key, Function<RedissonClient, RBucket<V>> function, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
-        return executeCacheOperationWithLock(function, key, query, cacheAfterQuery, expirationSettings);
+    @SuppressWarnings("unchecked")
+    public <R> R getWithType(Function<RedissonClient, ?> getCacheFunction, Supplier<Object> query,
+                             BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery) {
+        return (R) retrieveOrStoreInCache(getCacheFunction.apply(getCache()), query, cacheBiConsumer, cacheAfterQuery);
     }
 
-    private V executeCacheOperation(Function<RedissonClient, RBucket<V>> function, K key, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
-        RBucket<V> rBucket = function.apply(redissonClient);
-        return retrieveOrStoreInCache(rBucket, key, query, cacheAfterQuery, expirationSettings);
+    /**
+     * {@inheritDoc}
+     *
+     * @param getLockFunction  {@inheritDoc}
+     * @param getCacheFunction {@inheritDoc}
+     * @param query            {@inheritDoc}
+     * @param cacheBiConsumer  {@inheritDoc}
+     * @param cacheAfterQuery  {@inheritDoc}
+     * @param lockSettings     {@inheritDoc}
+     * @param <R>              {@inheritDoc}
+     * @return {@inheritDoc}
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public <R> R getWithType(Function<RedissonClient, Lock> getLockFunction, Function<RedissonClient, ?> getCacheFunction,
+                             Supplier<Object> query, BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery,
+                             LockSettings lockSettings) {
+        return (R) execute(getLockFunction,
+                cache -> retrieveOrStoreInCache(getCacheFunction.apply(cache),
+                        query, cacheBiConsumer, cacheAfterQuery), lockSettings
+        );
     }
 
-    private V executeCacheOperationWithLock(Function<RedissonClient, RBucket<V>> function, K key, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
-        RLock lock = redissonClient.getLock("lock:" + key);
 
-        try {
-            if (lock.tryLock(30, 10, TimeUnit.SECONDS)) {
-                return executeCacheOperation(function, key, query, cacheAfterQuery, expirationSettings);
-            }
-            String msg = "Could not acquire lock for key: " + key;
-            Log.error(msg);
-            throw new RuntimeException(msg);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            String msg = "Thread interrupted while trying to acquire lock for key: " + key;
-            Log.error(msg, exception);
-            throw new RuntimeException(msg, exception);
-        } finally {
-            try {
-                lock.unlock();
-            } catch (Exception exception) {
-                Log.error("Error unlocking lock for key: " + key, exception);
-            }
-        }
+    /**
+     * {@inheritDoc}
+     *
+     * @param getCacheFunction {@inheritDoc}
+     * @param query            {@inheritDoc}
+     * @param cacheBiConsumer  {@inheritDoc}
+     * @param cacheAfterQuery  {@inheritDoc}
+     * @return {@inheritDoc}
+     */
+    @Override
+    public Object get(Function<RedissonClient, Object> getCacheFunction, Supplier<Object> query,
+                      BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery) {
+        return retrieveOrStoreInCache(getCacheFunction.apply(getCache()), query, cacheBiConsumer, cacheAfterQuery);
     }
 
-    private V retrieveOrStoreInCache(RBucket<V> rBucket, K key, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings) {
-        V value = rBucket.get();
+    /**
+     * {@inheritDoc}
+     *
+     * @param getLockFunction  {@inheritDoc}
+     * @param getCacheFunction {@inheritDoc}
+     * @param query            {@inheritDoc}
+     * @param cacheBiConsumer  {@inheritDoc}
+     * @param cacheAfterQuery  {@inheritDoc}
+     * @param lockSettings     {@inheritDoc}
+     * @return {@inheritDoc}
+     */
+    @Override
+    public Object get(Function<RedissonClient, Lock> getLockFunction,
+                      Function<RedissonClient, Object> getCacheFunction, Supplier<Object> query,
+                      BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery,
+                      LockSettings lockSettings) {
+        return execute(getLockFunction,
+                cache -> retrieveOrStoreInCache(getCacheFunction.apply(cache),
+                        query, cacheBiConsumer, cacheAfterQuery), lockSettings
+        );
+    }
 
+    /**
+     * Core method implementing the cache retrieval and storage logic with expiration support.
+     *
+     * @param value           the value from cache, may be null indicating a cache miss
+     * @param query           the supplier to compute value if not found in cache
+     * @param cacheBiConsumer the consumer to handle cache storage operations
+     * @param cacheAfterQuery flag indicating whether to store the computed value in cache
+     * @return the cached value if present, otherwise the newly computed value
+     */
+    protected Object retrieveOrStoreInCache(Object value, Supplier<?> query,
+                                            BiConsumer<RedissonClient, Object> cacheBiConsumer,
+                                            boolean cacheAfterQuery) {
         if (value != null) {
             return value;
         }
 
         value = query.get();
 
-        if (cacheAfterQuery) {
-            storeInCache(rBucket, value, expirationSettings);
+        if (value != null && cacheAfterQuery && cacheBiConsumer != null) {
+            cacheBiConsumer.accept(getCache(), value);
         }
 
         return value;
     }
 
-    private void storeInCache(RBucket<V> rBucket, V value, ExpirationSettings expirationSettings) {
-        if (expirationSettings != null) {
-            rBucket.set(value, expirationSettings.toDuration());
-        } else {
-            rBucket.set(value);
-        }
-    }
-
     /**
      * {@inheritDoc}
      */
+    @Override
     public void shutdown() {
-        if (redissonClient != null) {
+        RedissonClient cache = getCache();
+
+        if (cache != null) {
             try {
-                redissonClient.shutdown();
+                cache.shutdown();
             } catch (Exception exception) {
                 Log.error("Error shutting down Redisson client", exception);
             }

@@ -2,68 +2,36 @@ package me.qwqdev.library.cache.service.caffeine;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import lombok.Data;
-
-import java.util.function.Supplier;
+import me.qwqdev.library.cache.service.AbstractCacheService;
+import me.qwqdev.library.cache.service.CacheServiceInterface;
 
 /**
- * Implementation of the {@link CaffeineCacheServiceInterface} using Caffeine's {@link Cache}.
+ * Synchronous Caffeine cache service implementation.
  *
- * @param <K> the type of keys maintained by this cache
- * @param <V> the type of mapped values
+ * <p>Provides caching functionality using Caffeine's synchronous cache implementation.
+ *
+ * @param <K> the cache key type
+ * @param <V> the cache value type
  * @author qwq-dev
- * @see CaffeineCacheServiceInterface
  * @see Cache
- * @since 2024-12-20 20:18
+ * @see AbstractCacheService
+ * @see CacheServiceInterface
+ * @since 2024-12-21 20:03
  */
-@Data
-public class CaffeineCacheService<K, V> implements CaffeineCacheServiceInterface<K, V> {
-    private final Cache<K, V> cache;
-
+public class CaffeineCacheService<K, V> extends AbstractCacheService<Cache<K, V>, V> implements CacheServiceInterface<Cache<K, V>, V> {
     /**
-     * Instantiates with a default {@link Cache}.
-     *
-     * @see Caffeine#build()
+     * Creates a new cache service with default Caffeine settings.
      */
     public CaffeineCacheService() {
-        this.cache = Caffeine.newBuilder().build();
+        super(Caffeine.newBuilder().build());
     }
 
     /**
-     * Instantiates with a specified {@link Cache}.
+     * Creates a new cache service with a pre-configured cache.
      *
-     * @param cache the {@link Cache} to be used by this service
+     * @param cache the pre-configured cache instance
      */
     public CaffeineCacheService(Cache<K, V> cache) {
-        this.cache = cache;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param key             {@inheritDoc}
-     * @param query           {@inheritDoc}
-     * @param cacheAfterQuery {@inheritDoc}
-     * @return {@inheritDoc}
-     */
-    @Override
-    public V get(K key, Supplier<V> query, boolean cacheAfterQuery) {
-        V value = cache.getIfPresent(key);
-
-        if (value != null) {
-            return value;
-        }
-
-        value = query.get();
-
-        if (value == null) {
-            return null;
-        }
-
-        if (cacheAfterQuery) {
-            cache.put(key, value);
-        }
-
-        return value;
+        super(cache);
     }
 }

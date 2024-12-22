@@ -1,58 +1,71 @@
 package me.qwqdev.library.cache.service.redis;
 
-import me.qwqdev.library.cache.model.ExpirationSettings;
-import org.redisson.api.RBucket;
+import me.qwqdev.library.cache.model.LockSettings;
+import me.qwqdev.library.cache.service.CacheServiceInterface;
 import org.redisson.api.RedissonClient;
 
+import java.util.concurrent.locks.Lock;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Interface for redis cache service.
+ * Interface for the Redis cache service, providing methods to interact with the cache
+ * using Redisson client, including support for lockable cache operations.
  *
- * @param <K> the type of the key
- * @param <V> the type of the value
+ * <p>This interface extends {@link CacheServiceInterface} and provides Redis-specific
+ * cache operations. It includes methods for retrieving or storing values in the cache,
+ * with support for both locked and non-locked operations.
+ *
  * @author qwq-dev
- * @since 2024-12-21 12:16
+ * @see CacheServiceInterface
+ * @see RedissonClient
+ * @since 2024-12-21 20:03
  */
-public interface RedisCacheServiceInterface<K, V> {
-    /**
-     * Get the {@link RedissonClient} that implements the cache
-     *
-     * @return the {@link RedissonClient}
-     */
-    RedissonClient getRedissonClient();
+public interface RedisCacheServiceInterface extends CacheServiceInterface<RedissonClient, Object> {
 
     /**
-     * Retrieves a value from the Redis cache. If the value is not found, it fetches the value
-     * using the provided query function and optionally stores it in the cache.
+     * Retrieves a value from the Redis cache or computes it if not found, without using a lock.
      *
-     * @param key                the cache key
-     * @param function           function to access the Redis cache (e.g., using {@link RedissonClient#getBucket(String)})
-     * @param query              the query function to fetch the value when not present in the cache
-     * @param cacheAfterQuery    whether to cache the value after querying
-     * @param expirationSettings the expiration settings for the cache item
-     * @return the value from the cache, or the queried value if not found
+     * <p>This method will first attempt to retrieve the value from the cache using the
+     * {@code getCacheFunction}. If the value is not present, it will be computed by
+     * the {@code query} supplier, and the result can be stored in the cache using
+     * the {@code cacheBiConsumer}.
+     *
+     * @param getCacheFunction function to retrieve the cached value from Redis
+     * @param query            the supplier to compute the value if not found in cache
+     * @param cacheBiConsumer  the consumer to store the value in the cache after computation
+     * @param cacheAfterQuery  flag indicating whether the computed value should be cached
+     * @return the cached or computed value
      */
-    V get(K key, Function<RedissonClient, RBucket<V>> function, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings);
+    <R> R getWithType(Function<RedissonClient, ?> getCacheFunction, Supplier<Object> query,
+                      BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery);
 
     /**
-     * Retrieves a value from the Redis cache with a distributed lock to ensure exclusive access
-     * in high-concurrency environments. If the value is not found, it fetches the value using
-     * the provided query function and optionally stores it in the cache.
+     * Retrieves a value from the Redis cache or computes it if not found, with lock protection.
      *
-     * @param key                the cache key
-     * @param function           function to access the Redis cache (e.g., using {@link RedissonClient#getBucket(String)})
-     * @param query              the query function to fetch the value when not present in the cache
-     * @param cacheAfterQuery    whether to cache the value after querying
-     * @param expirationSettings the expiration settings for the cache item
-     * @return the value from the cache, or the queried value if not found
-     * @throws RuntimeException if the lock cannot be acquired
+     * <p>This method is similar to {@link #getWithType(Function, Supplier, BiConsumer, boolean)},
+     * but it involves a locking mechanism to ensure that only one thread can compute and store
+     * the value at a time. The lock is obtained using the {@code getLockFunction}, and the lock
+     * settings are specified through {@code lockSettings}.
+     *
+     * @param getLockFunction  function to obtain the lock for cache operations
+     * @param getCacheFunction function to retrieve the cached value from Redis
+     * @param query            the supplier to compute the value if not found in cache
+     * @param cacheBiConsumer  the consumer to store the value in the cache after computation
+     * @param cacheAfterQuery  flag indicating whether the computed value should be cached
+     * @param lockSettings     the settings that define the lock behavior
+     * @return the cached or computed value
      */
-    V getWithLock(K key, Function<RedissonClient, RBucket<V>> function, Supplier<V> query, boolean cacheAfterQuery, ExpirationSettings expirationSettings);
+    <R> R getWithType(Function<RedissonClient, Lock> getLockFunction, Function<RedissonClient, ?> getCacheFunction,
+                      Supplier<Object> query, BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery,
+                      LockSettings lockSettings);
 
     /**
-     * Shuts down the Redisson client and releases resources.
+     * Shuts down the Redis client connection gracefully.
+     *
+     * <p>This method is responsible for closing the connection to the Redis server
+     * and releasing any resources associated with the Redisson client.
      */
     void shutdown();
 }

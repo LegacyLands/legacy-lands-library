@@ -2,84 +2,36 @@ package me.qwqdev.library.cache.service.caffeine;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import lombok.Data;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.function.Supplier;
+import me.qwqdev.library.cache.service.AbstractCacheService;
+import me.qwqdev.library.cache.service.CacheServiceInterface;
 
 /**
- * Implementation of the {@link CaffeineAsyncCacheServiceInterface} using Caffeine's {@link AsyncCache}.
+ * Asynchronous Caffeine cache service implementation.
  *
- * @param <K> the type of keys maintained by this cache
- * @param <V> the type of mapped values
+ * <p>Provides caching functionality using Caffeine's asynchronous cache implementation.
+ *
+ * @param <K> the cache key type
+ * @param <V> the cache value type
  * @author qwq-dev
- * @see CaffeineAsyncCacheServiceInterface
  * @see AsyncCache
- * @since 2024-12-20 20:18
+ * @see AbstractCacheService
+ * @see CacheServiceInterface
+ * @since 2024-12-21 20:03
  */
-@Data
-public class CaffeineAsyncCacheService<K, V> implements CaffeineAsyncCacheServiceInterface<K, V> {
-    private final AsyncCache<K, V> cache;
-
+public class CaffeineAsyncCacheService<K, V> extends AbstractCacheService<AsyncCache<K, V>, V> implements CacheServiceInterface<AsyncCache<K, V>, V> {
     /**
-     * Instantiates with a default {@link AsyncCache}.
-     *
-     * @see Caffeine#buildAsync()
+     * Creates a new async cache service with default Caffeine settings.
      */
     public CaffeineAsyncCacheService() {
-        this.cache = Caffeine.newBuilder().buildAsync();
+        super(Caffeine.newBuilder().buildAsync());
     }
 
     /**
-     * Instantiates with a specified {@link AsyncCache}.
+     * Creates a new async cache service with a pre-configured cache.
      *
-     * @param cache the {@link AsyncCache} to be used by this service
+     * @param cache the pre-configured async cache instance
      */
     public CaffeineAsyncCacheService(AsyncCache<K, V> cache) {
-        this.cache = cache;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param key             {@inheritDoc}
-     * @param query           {@inheritDoc}
-     * @param cacheAfterQuery {@inheritDoc}
-     * @return
-     */
-    @Override
-    public CompletableFuture<V> get(K key, Supplier<V> query, boolean cacheAfterQuery) {
-        return get(key, query, cacheAfterQuery, ForkJoinPool.commonPool());
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param key             {@inheritDoc}
-     * @param query           {@inheritDoc}
-     * @param cacheAfterQuery {@inheritDoc}
-     * @param executor        {@inheritDoc}
-     * @return {@inheritDoc}
-     */
-    @Override
-    public CompletableFuture<V> get(K key, Supplier<V> query, boolean cacheAfterQuery, Executor executor) {
-        CompletableFuture<V> cachedValue = cache.getIfPresent(key);
-        return cachedValue != null ? cachedValue : fetchAndCache(key, query, cacheAfterQuery, executor);
-    }
-
-    private CompletableFuture<V> fetchAndCache(K key, Supplier<V> query, boolean cacheAfterQuery, Executor executor) {
-        CompletableFuture<V> future = CompletableFuture.supplyAsync(query, executor);
-
-        if (cacheAfterQuery) {
-            future.thenAccept(value -> {
-                if (value != null) {
-                    cache.put(key, CompletableFuture.completedFuture(value));
-                }
-            });
-        }
-
-        return future;
+        super(cache);
     }
 }
