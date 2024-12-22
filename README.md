@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./logo.png" style="border-radius: 20px;">
+    <img src="./logo.png">
     <br /><br />
     <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plug-in, aiming to encapsulate various existing libraries to simplify the development of <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> plug-ins.</p>
 </div>
@@ -29,4 +29,4 @@ It should be noted that the entire library fully depends on [Fairy Framework](ht
 
 The project is fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
 
-<img src="./legacy-lands-logo.png" style="border-radius: 20px;" alt="legacy-lands-logo">
+![legacy-lands-logo.png](./legacy-lands-logo.png)
