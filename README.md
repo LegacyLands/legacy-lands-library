@@ -6,7 +6,7 @@
 
 ## overview
 
-The overall dependence is on the Fairy [Fairy Framework](https://github.com/FairyProject/fairy). It probably doesn't have a lot of overly complex stuff, like an unnecessary repackaging of some large library.
+The overall dependence is on the [Fairy Framework](https://github.com/FairyProject/fairy). It probably doesn't have a lot of overly complex stuff, like an unnecessary repackaging of some large library.
 
 ## usage
 
