@@ -45,7 +45,12 @@ public class Test {
     public static VarHandle TField_HANDLE;
 
     static {
-        InjectorFactory.inject(Test.class);
+        /*
+         * This class is a singleton and is managed by Fairy IoC.
+         * Of course, it is also allowed to create it directly using the factory or directly creating it.
+         * This is not so strict.
+         */
+        InjectorFactory.createVarHandleReflectionInjector().inject(Test.class);
     }
 }
 ```
