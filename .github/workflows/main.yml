@@ -1,0 +1,59 @@
+name: Legacy Lands Library
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  shadowJar:
+    name: shadow
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Java JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          distribution: 'zulu'
+          cache: 'gradle'
+        
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      
+      - name: Build with Gradle
+        run: ./gradlew shadowJar
+
+      - name: Set outputs
+        id: short_sha
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Get Repository Name
+        uses: MariachiBear/get-repo-name-action@v1.1.0
+
+      - uses: actions/upload-artifact@v4.5.0
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -annotation
+          path: |
+            annotation/build/libs/*.jar
+      - uses: actions/upload-artifact@v4.5.0
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -cache
+          path: |            
+            cache/build/libs/*.jar
+      - uses: actions/upload-artifact@v4.5.0
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -configuration
+          path: |            
+            configuration/build/libs/*.jar
+      - uses: actions/upload-artifact@v4.5.0
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -commons
+          path: |            
+            commons/build/libs/*.jar
+      - uses: actions/upload-artifact@v4.5.0
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -mongodb
+          path: |            
+            mongodb/build/libs/*.jar
