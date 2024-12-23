@@ -11,17 +11,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Setup Java JDK
         uses: actions/setup-java@v3
         with:
           java-version: 21
-          distribution: 'zulu'
+          distribution: 'graalvm'
           cache: 'gradle'
-        
+
       - name: Make gradlew executable
         run: chmod +x gradlew
-      
+
       - name: Build with Gradle
         run: ./gradlew shadowJar
 
@@ -32,6 +32,11 @@ jobs:
       - name: Get Repository Name
         uses: MariachiBear/get-repo-name-action@v1.1.0
 
+      - name: Publish to GitHub Packages
+        run: ./gradlew publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/upload-artifact@v4.5.0
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -annotation
@@ -40,20 +45,20 @@ jobs:
       - uses: actions/upload-artifact@v4.5.0
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -cache
-          path: |            
+          path: |
             cache/build/libs/*.jar
       - uses: actions/upload-artifact@v4.5.0
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -configuration
-          path: |            
+          path: |
             configuration/build/libs/*.jar
       - uses: actions/upload-artifact@v4.5.0
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -commons
-          path: |            
+          path: |
             commons/build/libs/*.jar
       - uses: actions/upload-artifact@v4.5.0
         with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -mongodb
-          path: |            
+          path: |
             mongodb/build/libs/*.jar
