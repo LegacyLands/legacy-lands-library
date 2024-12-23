@@ -13,7 +13,7 @@ For the first and second level cache, it is actually implemented in the cache mo
 ```kotlin
 // Dependencies
 dependencies {
-    // annotation module
+    // mongodb module
     compileOnly("me.qwqdev.library:mongodb:1.0-SNAPSHOT")
 }
 ```

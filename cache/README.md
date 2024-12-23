@@ -10,7 +10,7 @@ The original purpose of this module was to design a L1 cache for the `mongodb` m
 ```kotlin
 // Dependencies
 dependencies {
-    // annotation module
+    // cache module
     compileOnly("me.qwqdev.library:cache:1.0-SNAPSHOT")
 }
 ```
@@ -56,6 +56,18 @@ public class CacheLauncher {
 
                 // cacheAfterQuery
                 true
+        );
+
+        // for redisCacheService, it is recommended to use redissonClient to acquire the lock
+        redisCache.execute(
+                // get lock
+                redissonClient -> redissonClient.getLock("a"),
+
+                // do something
+                redissonClient -> redissonClient.getBucket("a").get(),
+
+                // lock settings
+                LockSettings.of(1, 1, TimeUnit.MINUTES)
         );
 
 
@@ -107,7 +119,7 @@ public class CacheLauncher {
                 LockSettings.of(1, 1, TimeUnit.MINUTES)
         );
 
-        // thread-safe execution of something, redis cache same
+        // thread-safe execution of something
         caffeineCache.execute(
                 // get lock
                 cache -> new ReentrantLock(),
