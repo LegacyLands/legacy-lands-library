@@ -45,7 +45,7 @@ public class Test {
     public static VarHandle TField_HANDLE;
 
     static {
-        new VarHandleReflectionInjector().inject(Test.class);
+        InjectorFactory.inject(Test.class);
     }
 }
 ```

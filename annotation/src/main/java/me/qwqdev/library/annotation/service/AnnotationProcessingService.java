@@ -3,8 +3,6 @@ package me.qwqdev.library.annotation.service;
 import io.fairyproject.container.Containers;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.log.Log;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import me.qwqdev.library.annotation.utils.AnnotationScanner;
 import org.reflections.util.ClasspathHelper;
 
@@ -16,6 +14,9 @@ import java.util.Set;
 
 /**
  * Service implementation for processing annotations using custom annotation processors.
+ *
+ * <p>This class is a singleton class managed by {@code Fairy IoC}.
+ * It is best to use dependency injection, but creating it directly is also allowed.
  *
  * <p>This class provides the core functionality for scanning and processing annotations
  * within a specified package or set of URLs. It implements the {@link AnnotationProcessingServiceInterface}
@@ -29,7 +30,6 @@ import java.util.Set;
  * @since 2024-12-19 17:00
  */
 @InjectableComponent
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class AnnotationProcessingService implements AnnotationProcessingServiceInterface {
     /**
      * {@inheritDoc}

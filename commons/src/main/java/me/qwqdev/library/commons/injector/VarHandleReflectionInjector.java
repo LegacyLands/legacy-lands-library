@@ -1,5 +1,6 @@
 package me.qwqdev.library.commons.injector;
 
+import io.fairyproject.container.InjectableComponent;
 import me.qwqdev.library.commons.injector.annotation.VarHandleAutoInjection;
 
 import java.lang.invoke.MethodHandles;
@@ -12,9 +13,11 @@ import java.lang.reflect.Method;
  * This class automatically injects {@link VarHandle} instances into the static fields of a class based on the annotations
  * present on those fields.
  *
+ * <p>This class is a singleton class managed by {@code Fairy IoC}.. It is best to use dependency injection,
+ * but using a factory class or creating it directly is also allowed.
+ *
  * <p>The injection is done via reflection, which allows this class to work without explicitly hardcoding the
  * dependencies. However, this approach introduces some overhead and may not be suitable for high-performance use cases.
- * </p>
  *
  * <p>The injection process works in two ways:
  * <ul>
@@ -24,21 +27,22 @@ import java.lang.reflect.Method;
  *     to retrieve the {@link VarHandle} for the field. This allows for more customized handling of the {@link VarHandle}
  *     injection.</li>
  * </ul>
- * </p>
  *
  * <p>If using a static method for injection, the class containing the static method must be loadable by the current
  * thread's context {@link ClassLoader}. The method should be accessible and match the required signature for retrieving
- * the {@link VarHandle}.</p>
+ * the {@link VarHandle}.
  *
  * <p>Due to the use of reflection, the fields will be made accessible even if they are private, ensuring that injection
- * can occur regardless of visibility modifiers.</p>
+ * can occur regardless of visibility modifiers.
  *
  * <p>This class implements the {@link StaticInjectorInterface} interface, which defines the contract for injecting
- * dependencies (in this case, {@link VarHandle} instances) into static fields of a class.</p>
+ * dependencies (in this case, {@link VarHandle} instances) into static fields of a class.
  *
  * @author qwq-dev
+ * @see me.qwqdev.library.commons.factory.InjectorFactory
  * @since 2024-12-23 16:15
  */
+@InjectableComponent
 public class VarHandleReflectionInjector implements StaticInjectorInterface {
     /**
      * {@inheritDoc}
