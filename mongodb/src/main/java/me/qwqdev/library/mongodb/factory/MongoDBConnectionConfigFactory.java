@@ -13,7 +13,7 @@ import org.bson.UuidRepresentation;
  * @since 2024-12-20 12:18
  */
 @UtilityClass
-public class MongoDBConnectionConfigFactory {
+public final class MongoDBConnectionConfigFactory {
     /**
      * Creates a default {@link MongoDBConnectionConfig} instance using the standard UUID representation.
      *
@@ -21,6 +21,7 @@ public class MongoDBConnectionConfigFactory {
      * @param mongoURL     the MongoDB connection URL, e.g., "mongodb://localhost:27017"
      * @return a configured {@link MongoDBConnectionConfig} instance
      * @throws IllegalArgumentException if either the database name or MongoDB URL is null or empty
+     * @see MongoDBConnectionConfig
      */
     public static MongoDBConnectionConfig create(String databaseName, String mongoURL) {
         return new MongoDBConnectionConfig(databaseName, mongoURL);
@@ -34,6 +35,8 @@ public class MongoDBConnectionConfigFactory {
      * @param uuidRepresentation the UUID representation to be used in MongoDB documents
      * @return a configured {@link MongoDBConnectionConfig} instance
      * @throws IllegalArgumentException if either the database name or MongoDB URL is null or empty
+     * @see MongoDBConnectionConfig
+     * @see UuidRepresentation
      */
     public static MongoDBConnectionConfig create(String databaseName, String mongoURL, UuidRepresentation uuidRepresentation) {
         return new MongoDBConnectionConfig(databaseName, mongoURL, uuidRepresentation);
@@ -45,6 +48,8 @@ public class MongoDBConnectionConfigFactory {
      * @param mongoClientSettings the custom {@link MongoClientSettings} to configure the MongoClient
      * @return a configured {@link MongoDBConnectionConfig} instance
      * @throws IllegalArgumentException if {@link MongoClientSettings} is null
+     * @see MongoDBConnectionConfig
+     * @see MongoClientSettings
      */
     public static MongoDBConnectionConfig create(MongoClientSettings mongoClientSettings) {
         return new MongoDBConnectionConfig(mongoClientSettings);

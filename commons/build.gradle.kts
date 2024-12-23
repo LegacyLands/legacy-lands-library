@@ -24,4 +24,6 @@ fairy {
 
 // Dependencies
 dependencies {
+    // Annotation module
+    compileOnly(project(":annotation"))
 }

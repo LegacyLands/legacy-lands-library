@@ -1,8 +1,10 @@
 ### mongodb
 
-This module only encapsulates a more convenient MongoConfig based on [Morphia](https://morphia.dev/landing/index.html), and its implementation is very simple.
+This module only encapsulates a more convenient MongoConfig based on [Morphia](https://morphia.dev/landing/index.html),
+and its implementation is very simple.
 
-We recommend using Datastore directly for any CRUD operations, using [Morphia](https://morphia.dev/landing/index.html) for index creation or using the [aggregation](https://morphia.dev/morphia/2.4/aggregations.html).
+We recommend using Datastore directly for any CRUD operations, using [Morphia](https://morphia.dev/landing/index.html)
+for index creation or using the [aggregation](https://morphia.dev/morphia/2.4/aggregations.html).
 
 ### cache
 
@@ -57,7 +59,7 @@ public class Example {
                         Filters.eq("name", "Alice"), // name eq
                         Filters.gt("age", 35) // age > 35, it's time to lay off employees lol
                 ))
-                
+
                 // It should be noted that iterators are not thread-safe
                 .iterator(); // get iterator
 

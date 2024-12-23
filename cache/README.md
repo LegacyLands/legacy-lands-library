@@ -1,9 +1,11 @@
 ### cache
 
-The module is a caching solution that supports `Caffeine`'s `Cache` and `AsyncCache`, 
-as well as an in-memory `Redis` database implementation, offering functional programming support and automatic lock handling.
+The module is a caching solution that supports `Caffeine`'s `Cache` and `AsyncCache`,
+as well as an in-memory `Redis` database implementation, offering functional programming support and automatic lock
+handling.
 
-The original purpose of this module was to design a L1 cache for the `mongodb` module, but now it is **general-purpose**.
+The original purpose of this module was to design a L1 cache for the `mongodb` module, but now it is **general-purpose
+**.
 
 ### usage
 

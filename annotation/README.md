@@ -71,5 +71,6 @@ We only need to get `AnnotationProcessingService` through dependency injection a
 Let's focus on `annotationProcessingService.processAnnotations(basePackage, false, this.getClassLoader())`.
 
 The first parameter is the package we need to scan.
-The second is whether the processed class should be injected into the singleton mode by the Fairy framework. If it is false, it will be created through parameterless reflection.
+The second is whether the processed class should be injected into the singleton mode by the Fairy framework. If it is
+false, it will be created through parameterless reflection.
 The third is the classloader that needs to be scanned.

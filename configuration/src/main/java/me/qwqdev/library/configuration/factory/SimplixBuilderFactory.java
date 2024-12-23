@@ -20,7 +20,7 @@ import java.nio.file.Path;
  * @since 2024-12-18 13:48
  */
 @UtilityClass
-public class SimplixBuilderFactory {
+public final class SimplixBuilderFactory {
     /**
      * Creates a {@link SimplixBuilder} instance from a file.
      *
@@ -28,6 +28,8 @@ public class SimplixBuilderFactory {
      *
      * @param file the file to create the {@link SimplixBuilder} from
      * @return a configured {@link SimplixBuilder} instance
+     * @see File
+     * @see SimplixBuilder
      */
     public static SimplixBuilder createSimplixBuilderFromFile(File file) {
         return configureSimplixBuilder(SimplixBuilder.fromFile(file));
@@ -40,6 +42,8 @@ public class SimplixBuilderFactory {
      *
      * @param file the directory to create the {@link SimplixBuilder} from
      * @return a configured {@link SimplixBuilder} instance
+     * @see File
+     * @see SimplixBuilder
      */
     public static SimplixBuilder createSimplixBuilderFromDirectory(File file) {
         return configureSimplixBuilder(SimplixBuilder.fromDirectory(file));
@@ -52,6 +56,8 @@ public class SimplixBuilderFactory {
      *
      * @param path the path to create the {@link SimplixBuilder} from
      * @return a configured {@link SimplixBuilder} instance
+     * @see Path
+     * @see SimplixBuilder
      */
     public static SimplixBuilder createSimplixBuilderFromPath(Path path) {
         return configureSimplixBuilder(SimplixBuilder.fromPath(path));
@@ -65,6 +71,7 @@ public class SimplixBuilderFactory {
      * @param name the name of the file
      * @param path the path to the file
      * @return a configured {@link SimplixBuilder} instance
+     * @see SimplixBuilder
      */
     public static SimplixBuilder createSimplixBuilder(String name, String path) {
         return configureSimplixBuilder(SimplixBuilder.fromPath(name, path));

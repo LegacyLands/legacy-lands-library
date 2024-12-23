@@ -22,22 +22,28 @@ import org.redisson.config.Config;
 @UtilityClass
 public final class CacheServiceFactory {
     /**
-     * Creates a Redis cache service with the specified configuration.
+     * Creates a {@link RedisCacheService} with the specified configuration.
      *
      * @param config the Redis configuration
-     * @return a new Redis cache service instance
+     * @return a new {@link RedisCacheService} instance
+     * @see RedisCacheService
+     * @see RedisCacheServiceInterface
+     * @see Config
      */
     public static RedisCacheServiceInterface createRedisCache(Config config) {
         return new RedisCacheService(config);
     }
 
     /**
-     * Creates a Caffeine synchronous cache service with custom configuration.
+     * Creates a {@link CaffeineCacheService} with custom configuration.
      *
      * @param cache the Caffeine cache
      * @param <K>   the cache key type
      * @param <V>   the cache value type
-     * @return a new Caffeine cache service instance
+     * @return a new {@link CaffeineCacheService} instance
+     * @see CacheServiceInterface
+     * @see Cache
+     * @see CaffeineCacheService
      */
     public static <K, V> CacheServiceInterface<Cache<K, V>, V> createCaffeineCache(Cache<K, V> cache) {
         return new CaffeineCacheService<>(cache);
@@ -49,6 +55,9 @@ public final class CacheServiceFactory {
      * @param <K> the cache key type
      * @param <V> the cache value type
      * @return a new Caffeine cache service instance
+     * @see CacheServiceInterface
+     * @see Cache
+     * @see CaffeineCacheService
      */
     public static <K, V> CacheServiceInterface<Cache<K, V>, V> createCaffeineCache() {
         return new CaffeineCacheService<>();
@@ -61,6 +70,9 @@ public final class CacheServiceFactory {
      * @param <K>        the cache key type
      * @param <V>        the cache value type
      * @return a new async Caffeine cache service instance
+     * @see CacheServiceInterface
+     * @see AsyncCache
+     * @see CaffeineAsyncCacheService
      */
     public static <K, V> CacheServiceInterface<AsyncCache<K, V>, V> createCaffeineAsyncCache(AsyncCache<K, V> asyncCache) {
         return new CaffeineAsyncCacheService<>(asyncCache);
@@ -72,6 +84,9 @@ public final class CacheServiceFactory {
      * @param <K> the cache key type
      * @param <V> the cache value type
      * @return a new async Caffeine cache service instance
+     * @see CacheServiceInterface
+     * @see AsyncCache
+     * @see CaffeineAsyncCacheService
      */
     public static <K, V> CacheServiceInterface<AsyncCache<K, V>, V> createCaffeineAsyncCache() {
         return new CaffeineAsyncCacheService<>();
