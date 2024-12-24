@@ -104,7 +104,7 @@ publishing {
                 from(components["java"])
                 groupId = group.toString()
                 artifactId = "$module"
-                version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy"))}"
+                version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-mmss"))}"
             }
         }
     }
