@@ -4,6 +4,7 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 group = properties("group")
 version = properties("version")
+val modules = rootProject.subprojects.map { it.name }
 
 plugins {
     // Java plugin
@@ -23,6 +24,9 @@ plugins {
 
     // Lombok
     id("io.freefair.lombok") version "8.11" apply false
+
+    // Maven publish
+    id("maven-publish")
 }
 
 subprojects {
@@ -88,5 +92,28 @@ subprojects {
         relocate("com.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
+    }
+}
+
+publishing {
+    publications {
+        modules.forEach { module ->
+            create<MavenPublication>("maven-${module.capitalize()}") {
+                from(components["java"])
+                groupId = group.toString()
+                artifactId = "$module"
+                version = version
+            }
+        }
+    }
+    // GitHub Packages
+    repositories {
+        maven {
+            url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
+            credentials {
+                username = project.findProperty("githubUsername")?.toString() ?: System.getenv("GITHUB_USERNAME")?.toString() ?: error("GitHub username is missing")
+                password = project.findProperty("githubToken")?.toString() ?: System.getenv("GITHUB_TOKEN")?.toString() ?: error("GitHub token is missing")
+            }
+        }
     }
 }
