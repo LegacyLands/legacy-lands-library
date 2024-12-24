@@ -13,7 +13,7 @@ The original purpose of this module was to design a L1 cache for the `mongodb` m
 // Dependencies
 dependencies {
     // cache module
-    compileOnly("me.qwqdev.library:cache:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:cache:1.0-SNAPSHOT")
 }
 ```
 

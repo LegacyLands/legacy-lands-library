@@ -10,10 +10,10 @@ safely in a multi-threaded environment.
 // Dependencies
 dependencies {
     // annotation module
-    compileOnly("me.qwqdev.library:annotation:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:annotation:1.0-SNAPSHOT")
 
     // configuration module
-    compileOnly("me.qwqdev.library:configuration:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:configuration:1.0-SNAPSHOT")
 }
 ```
 

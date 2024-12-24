@@ -9,7 +9,7 @@ this document when there's new content.
 // Dependencies
 dependencies {
     // commons module
-    compileOnly("me.qwqdev.library:commons:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:commons:1.0-SNAPSHOT")
 }
 ```
 

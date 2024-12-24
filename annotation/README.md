@@ -9,7 +9,7 @@ automated annotation processor. This is very useful for repeatedly performing ce
 // Dependencies
 dependencies {
     // annotation module
-    compileOnly("me.qwqdev.library:annotation:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:annotation:1.0-SNAPSHOT")
 }
 ```
 
@@ -66,10 +66,10 @@ public class Launcher extends Plugin {
                 
                 /*
                  * The package where the Processor of the annotation to be processed is located
-                 * e.g. "me.qwqdev.library.configuration.serialize.annotation.SimplixSerializerSerializableAutoRegister"
-                 * so the package name is "me.qwqdev.library.configuration.serialize.annotation"
+                 * e.g. "annotation.serialize.net.legacy.library.configuration.SimplixSerializerSerializableAutoRegister"
+                 * so the package name is "net.legacy.library.configuration.serialize.annotation"
                  */
-                "me.qwqdev.library.configuration.serialize.annotation"
+                "net.legacy.library.configuration.serialize.annotation"
         );
         
         annotationProcessingService.processAnnotations(
