@@ -1,4 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 fun properties(key: String) = project.findProperty(key).toString()
 
@@ -102,7 +104,7 @@ publishing {
                 from(components["java"])
                 groupId = group.toString()
                 artifactId = "$module"
-                version = version
+                version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy"))}"
             }
         }
     }
