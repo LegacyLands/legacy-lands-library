@@ -50,27 +50,45 @@ The `SimplixSerializerSerializableAutoRegister` annotation is used to mark the c
 annotation. The `CustomAnnotationProcessor` interface is used to determine the processing method.
 
 This is very simple, right? But now that the definition is complete, how does this all work?
+What if we only want to process a few specific annotations?
 
 ```java
-
 @FairyLaunch
-@InjectableComponent
-public class AnnotationLauncher extends Plugin {
+public class Launcher extends Plugin {
     @Autowired
     private AnnotationProcessingServiceInterface annotationProcessingService;
 
     @Override
     public void onPluginEnable() {
-        String basePackage = this.getClass().getPackageName();
-        annotationProcessingService.processAnnotations(basePackage, false, this.getClassLoader());
+        List<String> basePackages = List.of(
+                // Packets expected to be processed
+                "org.example",
+                
+                /*
+                 * The package where the Processor of the annotation to be processed is located
+                 * e.g. "me.qwqdev.library.configuration.serialize.annotation.SimplixSerializerSerializableAutoRegister"
+                 * so the package name is "me.qwqdev.library.configuration.serialize.annotation"
+                 */
+                "me.qwqdev.library.configuration.serialize.annotation"
+        );
+        
+        annotationProcessingService.processAnnotations(
+                basePackages,
+                
+                // should Processors dependency injection by Fairy IoC
+                false,
+
+                /*
+                 * All ClassLoaders used for basePackages scanning
+                 * Here, we need to pass in not only the ClassLoader of the current class, 
+                 * but also the ClassLoader of the Launcher when we need to use the Processor that comes with legacy-lands-library
+                 */
+                this.getClassLoader(),
+                ConfigurationLauncher.class.getClassLoader() // configuration moduel's class loader
+                // or CommonsLauncher.class.getClassLoader(), its commons module's class loader
+        );
     }
 }
 ```
 
-We only need to get `AnnotationProcessingService` through dependency injection and simply call the method~
-Let's focus on `annotationProcessingService.processAnnotations(basePackage, false, this.getClassLoader())`.
-
-The first parameter is the package we need to scan.
-The second is whether the processed class should be injected into the singleton mode by the Fairy framework. If it is
-false, it will be created through parameterless reflection.
-The third is the classloader that needs to be scanned.
+Let's look at this, we just need to get the `AnnotationProcessingService` through dependency injection and then call `processAnnotations`.

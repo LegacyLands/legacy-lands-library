@@ -54,3 +54,40 @@ public class Test {
     }
 }
 ```
+
+### [Task](src/main/java/me/qwqdev/library/commons/task)
+
+The [TaskInterface](src/main/java/me/qwqdev/library/commons/task/TaskInterface.java)
+simplifies task scheduling by providing convenience methods with consistent naming and argument order with the Fairy Framework (MCScheduler)[https://docs.fairyproject.io/core/minecraft/scheduler].
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        TaskInterface taskInterface = new TaskInterface() {
+            @Override
+            public ScheduledTask<?> start() {
+                // This is a simple example of a task that prints "Hello, world!" every second.
+                return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+            }
+        };
+
+        // start the task
+        taskInterface.start();
+    }
+}
+```
+
+It also provides [TaskAutoStartAnnotation](src/main/java/me/qwqdev/library/commons/task/annotation/TaskAutoStartAnnotation.java) to handle some tasks that need to be automatically started at a specific time. When there are many tasks to start, annotation automation will help us avoid manually managing the creation and calling of these instances, thereby simplifying the code.
+
+```java
+@TaskAutoStartAnnotation(isFromFairyIoC = false)
+public class Example implements TaskInterface {
+    @Override
+    public ScheduledTask<?> start() {
+        // This is a simple example of a task that prints "Hello, world!" every second.
+        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+    }
+}
+```
+
+As for how to make annotation processors work on your own plugins, please see the [annotation](../annotation/README.md) module.

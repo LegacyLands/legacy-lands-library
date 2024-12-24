@@ -2,6 +2,7 @@ package me.qwqdev.library.annotation.service;
 
 import java.net.URL;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Service interface for processing annotations using custom annotation processors.
@@ -27,6 +28,21 @@ public interface AnnotationProcessingServiceInterface {
      * @param classLoader           optional class loaders to use for classpath scanning; if not provided, the default class loader is used
      */
     void processAnnotations(String basePackage, boolean fromFairyIoCSingleton, ClassLoader... classLoader);
+
+    /**
+     * Processes annotations within the specified list of base packages using the default annotation processors.
+     *
+     * <p>This method scans the specified base packages and their sub-packages for classes annotated with specific
+     * annotations, and then processes them using default annotation processors. The method supports scanning
+     * multiple base packages and allows for optional class loaders to be specified for classpath scanning.
+     *
+     * @param basePackages          the list of base packages to scan for annotated classes
+     * @param fromFairyIoCSingleton whether handlerClass should be injected into a singleton by the Fairy framework
+     *                              If false, it will be created by reflection without parameters,
+     *                              but it still supports setter injection with Fairy {@link io.fairyproject.container.Autowired} annotation
+     * @param classLoader           optional class loaders to use for classpath scanning; if not provided, the default class loader is used
+     */
+    void processAnnotations(List<String> basePackages, boolean fromFairyIoCSingleton, ClassLoader... classLoader);
 
     /**
      * Processes annotations within the specified collection of URLs using default annotation processors.

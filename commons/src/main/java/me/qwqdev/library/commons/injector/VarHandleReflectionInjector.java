@@ -9,7 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * Utility class for injecting {@link VarHandle} instances into static fields annotated with {@link VarHandleAutoInjection}.
+ * Injector class for injecting {@link VarHandle} instances into static fields annotated with {@link VarHandleAutoInjection}.
  * This class automatically injects {@link VarHandle} instances into the static fields of a class based on the annotations
  * present on those fields.
  *
@@ -46,8 +46,8 @@ import java.lang.reflect.Method;
 public class VarHandleReflectionInjector implements StaticInjectorInterface {
     /**
      * {@inheritDoc}
-     * <p>
-     * Injects {@link VarHandle} instances into static fields of the given class that are annotated with
+     *
+     * <p>Injects {@link VarHandle} instances into static fields of the given class that are annotated with
      * {@link VarHandleAutoInjection}. This method uses reflection to find the appropriate {@link VarHandle}
      * for each annotated field and assigns it to the field.
      *

@@ -1,5 +1,6 @@
 package me.qwqdev.library.annotation.service;
 
+import com.google.common.collect.Sets;
 import io.fairyproject.container.Containers;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.log.Log;
@@ -10,6 +11,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -41,6 +43,20 @@ public class AnnotationProcessingService implements AnnotationProcessingServiceI
     @Override
     public void processAnnotations(String basePackage, boolean fromFairyIoCSingleton, ClassLoader... classLoader) {
         processAnnotations(ClasspathHelper.forPackage(basePackage, classLoader), fromFairyIoCSingleton);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param basePackages          {@inheritDoc}
+     * @param fromFairyIoCSingleton {@inheritDoc}
+     * @param classLoader           {@inheritDoc}
+     */
+    @Override
+    public void processAnnotations(List<String> basePackages, boolean fromFairyIoCSingleton, ClassLoader... classLoader) {
+        Collection<URL> urls = Sets.newHashSet();
+        basePackages.forEach(basePackage -> urls.addAll(ClasspathHelper.forPackage(basePackage, classLoader)));
+        processAnnotations(urls, fromFairyIoCSingleton);
     }
 
     /**
