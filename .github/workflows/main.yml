@@ -3,7 +3,12 @@ name: Legacy Lands Library
 on:
   push:
     branches: [ "main" ]
-
+    
+permissions:
+  contents: read  
+  packages: write  
+  actions: read 
+  
 jobs:
   shadowJar:
     name: shadow
