@@ -22,6 +22,31 @@ The usage of a particular module is described in detail in the module's `README.
 
 It should be noted that the entire library fully depends on [Fairy Framework](https://github.com/FairyProject/fairy), which will completely simplify our development process and provide various functions. It also depends on [fairy-lib-plugin](https://github.com/FairyProject/fairy-lib-plugin).
 
+### for developer
+
+Please configure your Github Username and Github Token
+
+* Maven Repo:
+```kts
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+        }
+    }
+}
+```
+* Artifact Information:
+```kts
+dependencies {
+    implementation("net.legacy.library:{module}:{version}")
+}
+ ```
+
+You can get all modules and versions here [GitHub Packages](https://github.com/LegacyLands/legacy-lands-library/packages)
+
 ## modules
 
 - [annotation](annotation/README.md)
