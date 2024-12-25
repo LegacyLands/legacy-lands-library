@@ -103,10 +103,12 @@ publishing {
         publications {
             modules.forEach { module ->
                 create<MavenPublication>("maven-${module.capitalize()}") {
-                    from(components["java"])
+                    artifact(tasks.named("shadowJar").get()) {
+                    //from(components["java"])
                     groupId = group.toString()
                     artifactId = "$module"
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
+                    }
                 }
             }
         }
