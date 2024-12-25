@@ -102,11 +102,14 @@ publishing {
     if (isGitHubActions) {
         publications {
             modules.forEach { module ->
-                create<MavenPublication>("maven-${module.capitalize()}") {
-                    from(components["shadow"])
-                    groupId = group.toString()
-                    artifactId = "$module"
-                    version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
+                val subproject = rootProject.subprojects.find { it.name == module }
+                subproject?.let {
+                    create<MavenPublication>("maven-${module.capitalize()}") {
+                        from(components["shadow"])
+                        groupId = group.toString()
+                        artifactId = "$module"
+                        version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
+                    }
                 }
             }
         }
