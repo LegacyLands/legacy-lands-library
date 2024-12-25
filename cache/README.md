@@ -22,7 +22,7 @@ public class CacheLauncher {
     public static void main(String[] args) {
         Config config = new Config();
         config.useSingleServer().setAddress("redis://127.0.0.1:6379");
-
+        
 
         /*
          * Redis cache example
@@ -138,6 +138,23 @@ public class CacheLauncher {
          * we can directly use getCache() to operate these methods.
          */
         caffeineCache.getCache().put(2, "hi");
+
+
+        /*
+         * Custom cache example
+         *
+         * CacheServiceInterface<Map<Integer, String>, String> customCache
+         *                                            - value type
+         *                      - impl cache type, e.g. Map<Integer, String>
+         *
+         * CacheServiceFactory.createCustomCache(new ConcurrentHashMap<>())
+         *                                      - impl cache, e.g. ConcurrentHashMap<>
+         */
+        CacheServiceInterface<Map<Integer, String>, String> customCache =
+                CacheServiceFactory.createCustomCache(new ConcurrentHashMap<>());
+
+        // get impl cache, we can use get, execute, and more method like other cache service
+        Map<Integer, String> cache = customCache.getCache();
     }
 }
 ```

@@ -6,6 +6,7 @@ import lombok.experimental.UtilityClass;
 import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.caffeine.CaffeineAsyncCacheService;
 import net.legacy.library.cache.service.caffeine.CaffeineCacheService;
+import net.legacy.library.cache.service.custom.CustomCacheService;
 import net.legacy.library.cache.service.redis.RedisCacheService;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import org.redisson.config.Config;
@@ -90,5 +91,17 @@ public final class CacheServiceFactory {
      */
     public static <K, V> CacheServiceInterface<AsyncCache<K, V>, V> createCaffeineAsyncCache() {
         return new CaffeineAsyncCacheService<>();
+    }
+
+    /**
+     * Creates a {@link CustomCacheService} with the specified cache implementation.
+     *
+     * @param cache the underlying cache implementation
+     * @param <V>   the cache value type
+     * @param <C>   the cache implementation type
+     * @return a new {@link CustomCacheService} instance
+     */
+    public static <C, V> CacheServiceInterface<C, V> createCustomCache(C cache) {
+        return new CustomCacheService<>(cache);
     }
 }
