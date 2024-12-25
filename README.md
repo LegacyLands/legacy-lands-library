@@ -31,13 +31,10 @@ Please configure your Github Username and Github Token
 repositories {
     maven {
         url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
-        credentials {
-            username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
-            password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
-        }
     }
 }
 ```
+
 * Artifact Information:
 ```kts
 dependencies {
