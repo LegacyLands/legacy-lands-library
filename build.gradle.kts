@@ -108,14 +108,11 @@ publishing {
             }
         }
     }
+
     // GitHub Packages
     repositories {
         maven {
             url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
-            credentials {
-                username = project.findProperty("githubUsername")?.toString() ?: System.getenv("GITHUB_USERNAME")?.toString() ?: error("GitHub username is missing")
-                password = project.findProperty("githubToken")?.toString() ?: System.getenv("GITHUB_TOKEN")?.toString() ?: error("GitHub token is missing")
-            }
         }
     }
 }
