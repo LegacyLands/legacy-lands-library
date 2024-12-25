@@ -85,6 +85,9 @@ allprojects {
 }
 
 subprojects {
+    // Apply shadow plugin to all subprojects
+    apply(plugin = "com.github.johnrengelman.shadow")
+
     tasks.withType(ShadowJar::class.java) {
         // Relocate fairy to avoid plugin conflict
         relocate("io.fairyproject.bootstrap", "${properties("package")}.fairy.bootstrap")
