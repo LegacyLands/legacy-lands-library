@@ -98,12 +98,14 @@ subprojects {
     }
 }
 
+
 publishing {
     if (isGitHubActions) {
         publications {
             modules.forEach { module ->
                 create<MavenPublication>("maven-${module.capitalize()}") {
-                    from(components["shadowJar"])
+//                    from(components["shadow"])
+                    artifact(tasks.named<ShadowJar>("shadow${module.capitalize()}").get())
                     groupId = group.toString()
                     artifactId = "$module"
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
