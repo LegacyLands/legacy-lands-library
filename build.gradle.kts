@@ -3,6 +3,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 fun properties(key: String) = project.findProperty(key).toString()
+val isGitHubActions = project.hasProperty("isGitHubActions") && project.property("isGitHubActions") == "true"
 
 group = properties("group")
 version = properties("version")
@@ -98,21 +99,27 @@ subprojects {
 }
 
 publishing {
-    publications {
-        modules.forEach { module ->
-            create<MavenPublication>("maven-${module.capitalize()}") {
-                from(components["java"])
-                groupId = group.toString()
-                artifactId = "$module"
-                version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-mmss"))}"
+    if (isGitHubActions) {
+        publications {
+            modules.forEach { module ->
+                create<MavenPublication>("maven-${module.capitalize()}") {
+                    from(components["java"])
+                    groupId = group.toString()
+                    artifactId = "$module"
+                    version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
+                }
             }
         }
-    }
 
-    // GitHub Packages
-    repositories {
-        maven {
-            url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
+        // GitHub Packages
+        repositories {
+            maven {
+                url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
+                credentials {
+                    username = project.findProperty("githubUsername")?.toString() ?: System.getenv("GITHUB_USERNAME")?.toString() ?: error("GitHub username is missing")
+                    password = project.findProperty("githubToken")?.toString() ?: System.getenv("GITHUB_TOKEN")?.toString() ?: error("GitHub token is missing")
+                }
+            }
         }
     }
 }

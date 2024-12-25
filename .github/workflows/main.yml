@@ -30,7 +30,8 @@ jobs:
         run: ./gradlew shadowJar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_USERNAME: ${{ github.actor }}        
+          GITHUB_USERNAME: ${{ github.actor }}
+          isGitHubActions: "true"
 
       - name: Set outputs
         id: short_sha
@@ -44,6 +45,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.actor }}
+          isGitHubActions: "true"
 
       - uses: actions/upload-artifact@v4.5.0
         with:
