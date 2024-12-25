@@ -85,9 +85,6 @@ allprojects {
 }
 
 subprojects {
-    // Apply shadow plugin to all subprojects
-    apply(plugin = "com.github.johnrengelman.shadow")
-
     tasks.withType(ShadowJar::class.java) {
         // Relocate fairy to avoid plugin conflict
         relocate("io.fairyproject.bootstrap", "${properties("package")}.fairy.bootstrap")
@@ -106,12 +103,10 @@ publishing {
         publications {
             modules.forEach { module ->
                 create<MavenPublication>("maven-${module.capitalize()}") {
-                    artifact(tasks.named("shadowJar").get()) {
-                    //from(components["java"])
+                    from(components["shadow"])
                     groupId = group.toString()
                     artifactId = "$module"
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
-                    }
                 }
             }
         }
