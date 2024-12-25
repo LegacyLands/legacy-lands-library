@@ -7,6 +7,8 @@ handling.
 The original purpose of this module was to design a L1 cache for the `mongodb` module, but now it is **general-purpose
 **.
 
+The multi-level cache originally expected to be handled by the `data` module will be directly handled by the `cache` module.
+
 ### usage
 
 ```kotlin

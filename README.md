@@ -51,7 +51,6 @@ You can get all modules and versions here [GitHub Packages](https://github.com/L
 - [configuration](configuration/README.md)
 - [mongodb](mongodb/README.md)
 - [cache](cache/README.md)
-- data              - Not started yet
 - security          - Not started yet
 
 ## sponsors
