@@ -20,11 +20,11 @@ import java.util.function.Supplier;
  * @param <C> the type of the cache implementation
  * @param <V> the type of the cache value
  * @author qwq-dev
- * @see LockableCache
+ * @see LockableCacheInterface
  * @see LockSettings
  * @since 2024-12-21 18:54
  */
-public interface CacheServiceInterface<C, V> extends LockableCache<C> {
+public interface CacheServiceInterface<C, V> extends LockableCacheInterface<C> {
 
     /**
      * Retrieves a value from the cache or computes it if not found.

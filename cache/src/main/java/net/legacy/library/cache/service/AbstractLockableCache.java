@@ -14,13 +14,13 @@ import java.util.function.Function;
  *
  * @param <C> the cache implementation type
  * @author qwq-dev
- * @see LockableCache
+ * @see LockableCacheInterface
  * @see LockSettings
  * @see Lock
  * @since 2024-12-21 20:03
  */
 @Data
-public abstract class AbstractLockableCache<C> implements LockableCache<C> {
+public abstract class AbstractLockableCache<C> implements LockableCacheInterface<C> {
     private final C cache;
 
     /**

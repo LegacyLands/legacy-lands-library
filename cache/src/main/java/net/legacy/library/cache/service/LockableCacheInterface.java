@@ -16,7 +16,7 @@ import java.util.function.Function;
  * @see LockSettings
  * @since 2024-12-21 19:13
  */
-public interface LockableCache<C> {
+public interface LockableCacheInterface<C> {
     /**
      * Gets the underlying cache implementation.
      *
