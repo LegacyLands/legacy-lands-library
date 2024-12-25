@@ -58,7 +58,7 @@ public class Test {
 ### [Task](src/main/java/me/qwqdev/library/commons/task)
 
 The [TaskInterface](src/main/java/me/qwqdev/library/commons/task/TaskInterface.java)
-simplifies task scheduling by providing convenience methods with consistent naming and argument order with the Fairy Framework (MCScheduler)[https://docs.fairyproject.io/core/minecraft/scheduler].
+simplifies task scheduling by providing convenience methods with consistent naming and argument order with the Fairy Framework [MCScheduler](https://docs.fairyproject.io/core/minecraft/scheduler).
 
 ```java
 public class Example {
