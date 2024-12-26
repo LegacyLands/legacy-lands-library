@@ -58,3 +58,10 @@ You can get all modules and versions here [GitHub Packages](https://github.com/L
 The project is fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
+
+
+## star history
+
+We are honored that this library can help more people!
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
