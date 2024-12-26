@@ -13,6 +13,18 @@ dependencies {
 }
 ```
 
+The whole logic may be messy, but let's take it slow and think about a question. What is the meaning of `annotation`?
+
+Imagine that you have a lot of books at home, and each book has some different stickers on the cover.
+
+When you want to find books with a certain type of sticker, you can ask a helper to look through all the books, see which books have the stickers you want, and then pick out these books.
+
+After picking out these books, you want to operate on these books one by one, such as... They are too messy, tidy them up! Another helper!
+
+Here, the helper who helps you find the books with the stickers you want is called `AnnotationProcessingService`. And the helper who helps you operate on these books with the stickers you want is called `CustomAnnotationProcessor`.
+
+`AnnotationProcessingService` scans a lot of classes (like flipping books) to check whether the annotation it cares about is written on each class (like a sticker). If this annotation is found, the class will be taken out and handed over to the `CustomAnnotationProcessor` you specified for subsequent processing or operation.
+
 For example, we want to get all classes annotated with `SimplixSerializerSerializableAutoRegister` and do some
 processing on them.
 
@@ -92,3 +104,19 @@ public class Launcher extends Plugin {
 ```
 
 Let's look at this, we just need to get the `AnnotationProcessingService` through dependency injection and then call `processAnnotations`.
+
+Then there is a small question, why do we need to add the `ClassLoader` of the module `ConfigurationLauncher` when we use the annotation processor under `net.legacy.library.configuration.serialize.annotation`??
+
+That's because each module here runs as a plug-in, so if we want to get the class of other plug-ins, we certainly need to get its `ClassLoader`.
+
+If you are still confused, let's go back to the book example!
+
+In fact, you can think of `ClassLoader` as a `library` - each plug-in is an independent `library`, which stores various books (that is, `classes`) that it needs to use.
+
+When we want to use a class in a plug-in, we need to search in its own `library`. If we only search in our own `library`, we will definitely not find books from other plug-ins.
+
+Therefore, when `AnnotationProcessingService` scans (using `reflection`) all `classes` under the specified package, if it is only given one `library` (only one `ClassLoader`), it can only search for `classes` from this single source.
+
+But once you need to scan `classes` in other plug-ins (such as `classes` in the configuration module), you must tell it: "_Hey, these are other libraries, you can look for them together._" - that is, give it multiple `ClassLoaders`.
+
+In this way, it can scan and match all `classes` managed by these `ClassLoaders`, and finally hand over the correct class to `CustomAnnotationProcessor` for processing.
