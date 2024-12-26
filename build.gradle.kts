@@ -99,7 +99,7 @@ subprojects {
     // Configure sourcesJar task
     tasks.register<Jar>("sourcesJar") {
         from(sourceSets.main.get().allSource)
-        archiveClassifier.set("sources")
+        archiveClassifier.set("all")
     }
     tasks.named("build") {
         dependsOn("shadowJar", "sourcesJar")
