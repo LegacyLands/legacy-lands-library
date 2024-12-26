@@ -24,7 +24,11 @@ It should be noted that the entire library fully depends on [Fairy Framework](ht
 
 ### for developer
 
-Please configure your Github Username and Github Token
+You can use jar files ending with sources as dependencies, which include both compiled binary files and source code.
+
+The GitHub Packages repository will open soon.
+
+<!--Please configure your GitHub Username and GitHub Token
 
 * Maven Repo:
 ```kts
@@ -42,7 +46,7 @@ dependencies {
 }
  ```
 
-You can get all modules and versions here [GitHub Packages](https://github.com/LegacyLands/legacy-lands-library/packages)
+You can get all modules and versions here [GitHub Packages](https://github.com/LegacyLands/legacy-lands-library/packages)-->
 
 ## modules
 

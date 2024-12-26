@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.archivesName
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -84,7 +85,6 @@ subprojects {
 
     // Configure ShadowJar task
     tasks.withType(ShadowJar::class) {
-        archiveClassifier.set("shadow")
         // Relocate fairy to avoid plugin conflict
         relocate("io.fairyproject.bootstrap", "${properties("package")}.fairy.bootstrap")
         relocate("net.kyori", "io.fairyproject.libs.kyori")
@@ -94,15 +94,25 @@ subprojects {
         relocate("com.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
+        archiveClassifier.set("plugin")
     }
 
     // Configure sourcesJar task
     tasks.register<Jar>("sourcesJar") {
+        from(tasks.named<ShadowJar>("shadowJar").get().source)
         from(sourceSets.main.get().allSource)
-        archiveClassifier.set("all")
+        archiveClassifier.set("sources")
     }
-    tasks.named("build") {
-        dependsOn("shadowJar", "sourcesJar")
+
+    // Configure javadocJar task
+    tasks.register<Jar>("javadocJar") {
+        dependsOn(tasks.named("javadoc"))
+        from(tasks.named("javadoc"))
+        archiveClassifier.set("javadoc")
+    }
+
+    tasks.register("allJar") {
+        dependsOn("shadowJar", "sourcesJar", "javadocJar")
     }
 }
 
@@ -113,7 +123,7 @@ publishing {
                 create<MavenPublication>("shadow-${module.capitalize()}") {
                     project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension>() {
                         component(this@create)
-                        //artifact(tasks.named<ShadowJar>("shadowJar").get().archiveFile.get())
+                        artifact(tasks.named<ShadowJar>("shadowJar").get().source)
                         groupId = group.toString()
                         artifactId = "$module"
                         version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
@@ -121,17 +131,6 @@ publishing {
                 }
             }
         }
-        // Maven Central
-//        publications {
-//            modules.forEach { module ->
-//                create<MavenPublication>("maven-${module.capitalize()}") {
-//                    artifact(tasks.named<ShadowJar>("shadowJar").get().archiveFile.get())
-//                    groupId = group.toString()
-//                    artifactId = "$module"
-//                    version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
-//                }
-//            }
-//        }
 
         // GitHub Packages
         repositories {
