@@ -16,37 +16,17 @@ The overall dependence is on the [Fairy Framework](https://github.com/FairyProje
 
 ## usage
 
-Please download all `artifacts` in [Actions](https://github.com/LegacyLands/legacy-lands-library/actions) and install them as plugins.
+In the compressed package downloaded by [Actions](https://github.com/LegacyLands/legacy-lands-library/actions), `-javadoc` is the javadoc build, `-plugin` only has the compiled class files, and `-sources` has not only the compiled class files but also the source code.
 
 The usage of a particular module is described in detail in the module's `README.md`.
 
 It should be noted that the entire library fully depends on [Fairy Framework](https://github.com/FairyProject/fairy), which will completely simplify our development process and provide various functions. It also depends on [fairy-lib-plugin](https://github.com/FairyProject/fairy-lib-plugin).
 
-### for developer
+We recommend that developers import `-sources` to view javadoc more conveniently in IDA.
 
-You can use jar files ending with sources as dependencies, which include both compiled binary files and source code.
+To run the module as a plugin (which is the recommended way), run the `-plugin` file directly as a plugin.
 
-The GitHub Packages repository will open soon.
-
-<!--Please configure your GitHub Username and GitHub Token
-
-* Maven Repo:
-```kts
-repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
-    }
-}
-```
-
-* Artifact Information:
-```kts
-dependencies {
-    implementation("net.legacy.library:{module}:{version}")
-}
- ```
-
-You can get all modules and versions here [GitHub Packages](https://github.com/LegacyLands/legacy-lands-library/packages)-->
+**_You need to be careful about dependencies between modules!_**
 
 ## modules
 
@@ -62,7 +42,6 @@ You can get all modules and versions here [GitHub Packages](https://github.com/L
 The project is fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
-
 
 ## star history
 

@@ -15,7 +15,7 @@ The multi-level cache originally expected to be handled by the `data` module wil
 // Dependencies
 dependencies {
     // cache module
-    compileOnly("net.legacy.library:cache:1.0-SNAPSHOT")
+    compileOnly(files("libs/cache-1.0-SNAPSHOT.jar"))
 }
 ```
 

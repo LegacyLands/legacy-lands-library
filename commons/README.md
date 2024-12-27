@@ -9,7 +9,7 @@ this document when there's new content.
 // Dependencies
 dependencies {
     // commons module
-    compileOnly("net.legacy.library:commons:1.0-SNAPSHOT")
+    compileOnly(files("libs/commons-1.0-SNAPSHOT.jar"))
 }
 ```
 

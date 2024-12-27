@@ -16,7 +16,7 @@ For the first and second level cache, it is actually implemented in the cache mo
 // Dependencies
 dependencies {
     // mongodb module
-    compileOnly("net.legacy.library:mongodb:1.0-SNAPSHOT")
+    compileOnly(files("libs/mongodb-1.0-SNAPSHOT.jar"))
 }
 ```
 

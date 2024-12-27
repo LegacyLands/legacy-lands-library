@@ -10,10 +10,10 @@ safely in a multi-threaded environment.
 // Dependencies
 dependencies {
     // annotation module
-    compileOnly("net.legacy.library:annotation:1.0-SNAPSHOT")
+    compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
 
     // configuration module
-    compileOnly("net.legacy.library:configuration:1.0-SNAPSHOT")
+    compileOnly(files("libs/configuration-1.0-SNAPSHOT.jar"))
 }
 ```
 

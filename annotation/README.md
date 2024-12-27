@@ -9,7 +9,7 @@ automated annotation processor. This is very useful for repeatedly performing ce
 // Dependencies
 dependencies {
     // annotation module
-    compileOnly("net.legacy.library:annotation:1.0-SNAPSHOT")
+    compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
 }
 ```
 
