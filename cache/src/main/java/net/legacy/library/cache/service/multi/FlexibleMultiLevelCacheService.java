@@ -12,7 +12,7 @@ import java.util.function.Function;
  * A flexible multi-level cache service that manages multiple {@link TieredCacheLevel} instances.
  *
  * @author qwq-dev
- * @since 2024-12-27
+ * @since 2024-12-27 19:15
  */
 public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<TieredCacheLevel<?, ?>>> {
     /**
@@ -45,8 +45,8 @@ public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<Ti
 
     /**
      * Applies a function to the underlying cache of a specific level (without lock).
-     * <p>
-     * This method looks up the {@link TieredCacheLevel} by the provided level identifier, and if found,
+     *
+     * <p>This method looks up the {@link TieredCacheLevel} by the provided level identifier, and if found,
      * applies the given function to the cache.
      *
      * @param level        the identifier of the cache level
@@ -66,8 +66,8 @@ public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<Ti
 
     /**
      * Applies a function to the underlying cache of a specific level (with lock).
-     * <p>
-     * This method obtains the lock from the targeted cache (using the provided function),
+     *
+     * <p>This method obtains the lock from the targeted cache (using the provided function),
      * then executes the desired operation via {@link #execute(Function, Function, LockSettings)}
      * of the parent class {@link AbstractLockableCache}.
      *
