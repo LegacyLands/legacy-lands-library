@@ -7,9 +7,13 @@ import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.caffeine.CaffeineAsyncCacheService;
 import net.legacy.library.cache.service.caffeine.CaffeineCacheService;
 import net.legacy.library.cache.service.custom.CustomCacheService;
+import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
+import net.legacy.library.cache.service.multi.TieredCacheLevel;
 import net.legacy.library.cache.service.redis.RedisCacheService;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import org.redisson.config.Config;
+
+import java.util.Set;
 
 /**
  * Factory for creating cache service instances.
@@ -103,5 +107,15 @@ public final class CacheServiceFactory {
      */
     public static <C, V> CacheServiceInterface<C, V> createCustomCache(C cache) {
         return new CustomCacheService<>(cache);
+    }
+
+    /**
+     * Creates a {@link FlexibleMultiLevelCacheService}.
+     *
+     * @param tieredCacheLevels a set of {@link TieredCacheLevel} instances
+     * @return a new {@link CustomCacheService} instance
+     */
+    public static FlexibleMultiLevelCacheService createFlexibleMultiLevelCacheService(Set<TieredCacheLevel<?, ?>> tieredCacheLevels){
+        return new FlexibleMultiLevelCacheService(tieredCacheLevels);
     }
 }
