@@ -48,3 +48,7 @@ The project is fully sponsored and maintained by [LegacyLands](https://github.co
 We are honored that this library can help more people!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
+
+## related tutorials (simplified Chinese)
+
+Currently, the production of [Fairy Framework](https://github.com/FairyProject/fairy) and related tutorial videos is being planned and carried out. We will post the detailed video on the bilibili [LegacyLands official account](https://space.bilibili.com/1253128469).
