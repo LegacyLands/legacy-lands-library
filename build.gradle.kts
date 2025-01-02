@@ -95,6 +95,7 @@ subprojects {
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
         archiveClassifier.set("plugin")
+
     }
 
     // Configure sourcesJar task
@@ -114,6 +115,7 @@ subprojects {
     tasks.register("allJar") {
         dependsOn("shadowJar", "sourcesJar", "javadocJar")
     }
+
 }
 
 publishing {
@@ -121,21 +123,30 @@ publishing {
         publications {
             modules.forEach { module ->
                 create<MavenPublication>("shadow-${module.capitalize()}") {
-                    project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension>() {
-                        component(this@create)
-                        artifact(tasks.named<ShadowJar>("shadowJar").get().source)
-                        groupId = group.toString()
-                        artifactId = "$module"
-                        version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
-                    }
+                    val shadowJarTask = project(":$module").tasks.named<ShadowJar>("shadowJar")
+                    artifact(shadowJarTask.get().archiveFile.get())
+
+                    groupId = group.toString()
+                    artifactId = "$module"
+                    version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
                 }
             }
+//            modules.forEach { module ->
+//                create<MavenPublication>("shadow-${module.capitalize()}") {
+//                    project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension>() {
+//                        from(tasks.named<ShadowJar>("shadowJar").get().archiveFile.get)
+//                        groupId = group.toString()
+//                        artifactId = "$module"
+//                        version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
+//                    }
+//                }
+//            }
         }
 
         // GitHub Packages
         repositories {
             maven {
-                url = uri("https://maven.pkg.github.com/DuoDuoJuZi/Legacy")
+                url = uri("https://github.com/LegacyLands/legacy-lands-library")
                 credentials {
                     username = project.findProperty("githubUsername")?.toString() ?: System.getenv("GITHUB_USERNAME")?.toString() ?: error("GitHub username is missing")
                     password = project.findProperty("githubToken")?.toString() ?: System.getenv("GITHUB_TOKEN")?.toString() ?: error("GitHub token is missing")

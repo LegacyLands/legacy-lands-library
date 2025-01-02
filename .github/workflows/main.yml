@@ -40,11 +40,11 @@ jobs:
       - name: Get Repository Name
         uses: MariachiBear/get-repo-name-action@v1.1.0
 
-#      - name: Publish to GitHub Packages
-#       run: ./gradlew publish -PisGitHubActions=true
-#       env:
-#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         GITHUB_USERNAME: ${{ github.actor }}
+      - name: Publish to GitHub Packages
+        run: ./gradlew publish -PisGitHubActions=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ${{ github.actor }}
 
       - uses: actions/upload-artifact@v4.5.0
         with:
