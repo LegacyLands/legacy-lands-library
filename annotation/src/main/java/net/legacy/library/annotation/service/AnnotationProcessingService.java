@@ -3,6 +3,7 @@ package net.legacy.library.annotation.service;
 import com.google.common.collect.Sets;
 import io.fairyproject.container.Containers;
 import io.fairyproject.container.InjectableComponent;
+import io.fairyproject.container.scope.InjectableScope;
 import io.fairyproject.log.Log;
 import net.legacy.library.annotation.utils.AnnotationScanner;
 import org.reflections.util.ClasspathHelper;
@@ -31,7 +32,7 @@ import java.util.Set;
  * @see AnnotationProcessor
  * @since 2024-12-19 17:00
  */
-@InjectableComponent
+@InjectableComponent(scope = InjectableScope.PROTOTYPE)
 public class AnnotationProcessingService implements AnnotationProcessingServiceInterface {
     /**
      * {@inheritDoc}
