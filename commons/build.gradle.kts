@@ -26,4 +26,7 @@ fairy {
 dependencies {
     // Annotation module
     compileOnly(project(":annotation"))
+
+    // Gson
+    api("com.google.code.gson:gson:2.11.0")
 }

@@ -7,13 +7,13 @@ This module will facilitate player data management, rapid development, and no lo
 
 ### process design
 
-- When the player enters, load the Redis data into Java memory.
+- When the player enters, check the `L1 (caffeine)` and `L2 (Redis)` cache hit problem, and query level by level if it does not hit.
 - When the player data needs to be updated:
-   - Use the Redis Streams mechanism to notify other services.
+   - Use the `Redis Streams` mechanism to notify other services.
    - Each service checks whether the player is online.
-   - If online, directly update the memory data of the service; otherwise update Redis.
-- When the player exits, save the memory data to Redis.
-- The scheduled task persists the Redis data to the MongoDB.
+   - If online, directly update the `L1 (caffeine)` data of the service; otherwise update `L2 (Redis)`.
+- When the player exits, save the `L1 (caffeine)` data to `L2 (Redis)`.
+- The scheduled task persists the `L2 (Redis)` data to the MongoDB.
 
 ### distributed implementation of scheduled tasks:
 

@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * A flexible multi-level cache service that manages multiple {@link TieredCacheLevel} instances.
@@ -41,6 +42,24 @@ public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<Ti
         return tieredCacheLevels.stream()
                 .filter(tieredLevel -> tieredLevel.getLevel().equals(level))
                 .findFirst();
+    }
+
+    /**
+     * Retrieves the cache level object by the given level identifier, or throws an exception if not found.
+     *
+     * <p>This method attempts to retrieve a {@link TieredCacheLevel} corresponding to the given {@code level}.
+     * If the cache level is not found (i.e., the {@link Optional} is empty), it throws an exception
+     * provided by the {@code exceptionSupplier}.
+     *
+     * @param level the identifier of the level to look up
+     * @param exceptionSupplier a {@link Supplier} that provides the exception to be thrown if the cache level is not found
+     * @param <L> the type of the level identifier
+     * @param <X> the type of the exception that may be thrown
+     * @return the {@link TieredCacheLevel} associated with the given level identifier
+     * @throws X if the cache level is not found, the exception provided by {@code exceptionSupplier} is thrown
+     */
+    public <L, X extends Throwable> TieredCacheLevel<?, ?> getCacheLevelElseThrow(L level, Supplier<? extends X> exceptionSupplier) throws X {
+        return getCacheLevel(level).orElseThrow(exceptionSupplier);
     }
 
     /**

@@ -27,8 +27,14 @@ dependencies {
     // Annotation module
     compileOnly(project(":annotation"))
 
+    // Configuration module
+    compileOnly(project(":configuration"))
+
     // Cache module
     compileOnly(project(":cache"))
+
+    // Commons module
+    compileOnly(project(":commons"))
 
     // Mongodb module
     compileOnly(project(":mongodb"))
