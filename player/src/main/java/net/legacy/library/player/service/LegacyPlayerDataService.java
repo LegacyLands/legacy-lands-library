@@ -34,6 +34,21 @@ public class LegacyPlayerDataService {
             LEGACY_PLAYER_DATA_SERVICES = CacheServiceFactory.createCaffeineCache();
 
     /**
+     * Retrieves a {@link LegacyPlayerDataService} by name.
+     *
+     * @param name the name of the service
+     * @return an {@link Optional} containing the {@link LegacyPlayerDataService} if found, or empty if not found
+     */
+    public static Optional<LegacyPlayerDataService> getLegacyPlayerDataService(String name) {
+        return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
+    }
+
+    /**
+     * The name of the service.
+     */
+    private final String name;
+
+    /**
      * MongoDB connection configuration for database operations.
      */
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
@@ -46,10 +61,12 @@ public class LegacyPlayerDataService {
     /**
      * Constructs a new {@link LegacyPlayerDataService}.
      *
+     * @param name                    the name
      * @param mongoDBConnectionConfig the MongoDB connection configuration
      * @param config                  the Redis configuration for initializing the Redis cache
      */
-    public LegacyPlayerDataService(MongoDBConnectionConfig mongoDBConnectionConfig, Config config) {
+    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config) {
+        this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
         // Create L1 cache using Caffeine
@@ -67,7 +84,13 @@ public class LegacyPlayerDataService {
         ));
 
         // Record all LegacyPlayerDataService
-        LEGACY_PLAYER_DATA_SERVICES.getCache().put(String.valueOf(hashCode()), this);
+        Cache<String, LegacyPlayerDataService> cache = LEGACY_PLAYER_DATA_SERVICES.getCache();
+
+        if (cache.getIfPresent(name) != null) {
+            throw new IllegalStateException("LegacyPlayerDataService with name " + name + " already exists");
+        }
+
+        cache.put(name, this);
     }
 
     /**
