@@ -3,12 +3,12 @@ name: Legacy Lands Library
 on:
   push:
     branches: [ "main" ]
-    
+
 permissions:
-  contents: read  
-  packages: write  
-  actions: read 
-  
+  contents: read
+  packages: write
+  actions: read
+
 jobs:
   shadowJar:
     name: shadow
@@ -28,6 +28,7 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew allJar
+        #        run: ./gradlew shadowJar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.actor }}
@@ -39,12 +40,6 @@ jobs:
 
       - name: Get Repository Name
         uses: MariachiBear/get-repo-name-action@v1.1.0
-
-      - name: Publish to GitHub Packages
-        run: ./gradlew publish -PisGitHubActions=true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_USERNAME: ${{ github.actor }}
 
       - uses: actions/upload-artifact@v4.5.0
         with:
