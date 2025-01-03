@@ -35,6 +35,7 @@ To run the module as a plugin (which is the recommended way), run the `-plugin` 
 - [configuration](configuration/README.md)
 - [mongodb](mongodb/README.md)
 - [cache](cache/README.md)
+- [player](player/README.md) - In progress
 - security          - Not started yet
 
 ## sponsors
