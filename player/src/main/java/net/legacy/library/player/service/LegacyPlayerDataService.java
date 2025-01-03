@@ -23,7 +23,7 @@ import java.util.UUID;
  * Service for managing {@link LegacyPlayerData} with a multi-level caching system.
  *
  * @author qwq-dev
- * @since 2025-01-03
+ * @since 2025-01-03 15:12
  */
 @Getter
 public class LegacyPlayerDataService {
@@ -32,27 +32,14 @@ public class LegacyPlayerDataService {
      */
     public static final CacheServiceInterface<Cache<String, LegacyPlayerDataService>, LegacyPlayerDataService>
             LEGACY_PLAYER_DATA_SERVICES = CacheServiceFactory.createCaffeineCache();
-
-    /**
-     * Retrieves a {@link LegacyPlayerDataService} by name.
-     *
-     * @param name the name of the service
-     * @return an {@link Optional} containing the {@link LegacyPlayerDataService} if found, or empty if not found
-     */
-    public static Optional<LegacyPlayerDataService> getLegacyPlayerDataService(String name) {
-        return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
-    }
-
     /**
      * The name of the service.
      */
     private final String name;
-
     /**
      * MongoDB connection configuration for database operations.
      */
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
-
     /**
      * Flexible multi-level cache service managing L1 and L2 caches.
      */
@@ -91,6 +78,16 @@ public class LegacyPlayerDataService {
         }
 
         cache.put(name, this);
+    }
+
+    /**
+     * Retrieves a {@link LegacyPlayerDataService} by name.
+     *
+     * @param name the name of the service
+     * @return an {@link Optional} containing the {@link LegacyPlayerDataService} if found, or empty if not found
+     */
+    public static Optional<LegacyPlayerDataService> getLegacyPlayerDataService(String name) {
+        return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
     }
 
     /**

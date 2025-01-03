@@ -10,6 +10,8 @@ import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.KeyUtil;
 import org.redisson.api.RedissonClient;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
@@ -60,8 +62,8 @@ public class PlayerQuitTask implements TaskInterface {
 
             l2Cache.execute(
                     lockFunction,
-                    cache -> {
-                        cache.getBucket(bucketKey).set(serialized);
+                    client -> {
+                        client.getBucket(bucketKey).set(serialized, Duration.of(2, ChronoUnit.HOURS));
                         return null;
                     },
                     lockSettings

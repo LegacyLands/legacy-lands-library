@@ -20,6 +20,7 @@ import java.util.List;
 @InjectableComponent
 public class PlayerLauncher extends Plugin {
     @Autowired
+    @SuppressWarnings("unused")
     private AnnotationProcessingServiceInterface annotationProcessingService;
 
     @Override
