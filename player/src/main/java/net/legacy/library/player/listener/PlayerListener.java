@@ -2,7 +2,7 @@ package net.legacy.library.player.listener;
 
 import io.fairyproject.bukkit.listener.RegisterAsListener;
 import net.legacy.library.cache.model.LockSettings;
-import net.legacy.library.player.task.PlayerQuitTask;
+import net.legacy.library.player.task.PlayerQuitDataSaveTask;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -21,6 +21,6 @@ public class PlayerListener implements Listener {
         UUID uniqueId = event.getPlayer().getUniqueId();
 
         // Schedule a task to save player data to L2 cache
-        PlayerQuitTask.of(uniqueId, LockSettings.of(100, 100, TimeUnit.MILLISECONDS)).start();
+        PlayerQuitDataSaveTask.of(uniqueId, LockSettings.of(100, 100, TimeUnit.MILLISECONDS)).start();
     }
 }

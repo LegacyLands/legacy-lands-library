@@ -4,20 +4,26 @@ import com.github.benmanes.caffeine.cache.Cache;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import dev.morphia.query.MorphiaCursor;
 import dev.morphia.query.filters.Filters;
+import io.fairyproject.scheduler.ScheduledTask;
 import lombok.Cleanup;
 import lombok.Getter;
 import net.legacy.library.cache.factory.CacheServiceFactory;
+import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
 import net.legacy.library.cache.service.multi.TieredCacheLevel;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.model.LegacyPlayerData;
+import net.legacy.library.player.task.PlayerDataPersistenceTask;
+import net.legacy.library.player.util.KeyUtil;
 import org.redisson.config.Config;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service for managing {@link LegacyPlayerData} with a multi-level caching system.
@@ -32,18 +38,11 @@ public class LegacyPlayerDataService {
      */
     public static final CacheServiceInterface<Cache<String, LegacyPlayerDataService>, LegacyPlayerDataService>
             LEGACY_PLAYER_DATA_SERVICES = CacheServiceFactory.createCaffeineCache();
-    /**
-     * The name of the service.
-     */
+
     private final String name;
-    /**
-     * MongoDB connection configuration for database operations.
-     */
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
-    /**
-     * Flexible multi-level cache service managing L1 and L2 caches.
-     */
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
+    private final ScheduledTask<?> playerDataPersistenceTask;
 
     /**
      * Constructs a new {@link LegacyPlayerDataService}.
@@ -51,8 +50,9 @@ public class LegacyPlayerDataService {
      * @param name                    the name
      * @param mongoDBConnectionConfig the MongoDB connection configuration
      * @param config                  the Redis configuration for initializing the Redis cache
+     * @param autoSaveInterval        the interval for auto-saving player data to the database
      */
-    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config) {
+    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval) {
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
@@ -78,6 +78,37 @@ public class LegacyPlayerDataService {
         }
 
         cache.put(name, this);
+
+        // Auto save task
+        this.playerDataPersistenceTask =
+                PlayerDataPersistenceTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(0, 0, TimeUnit.MILLISECONDS), this).start();
+    }
+
+    /**
+     * Creates a new {@link LegacyPlayerDataService}.
+     *
+     * <p>The auto-save interval is set to 2 hours by default.
+     *
+     * @param name                    the name
+     * @param mongoDBConnectionConfig the MongoDB connection configuration
+     * @param config                  the Redis configuration for initializing the Redis cache
+     * @return the {@link LegacyPlayerDataService}
+     */
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2));
+    }
+
+    /**
+     * Creates a new {@link LegacyPlayerDataService}.
+     *
+     * @param name                    the name
+     * @param mongoDBConnectionConfig the MongoDB connection configuration
+     * @param config                  the Redis configuration for initializing the Redis cache
+     * @param autoSaveInterval        the interval for auto-saving player data to the database
+     * @return the {@link LegacyPlayerDataService}
+     */
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval);
     }
 
     /**
@@ -91,6 +122,16 @@ public class LegacyPlayerDataService {
     }
 
     /**
+     * Retrieves the {@link CacheServiceInterface} used for the first-level cache (L1).
+     *
+     * @return the {@link CacheServiceInterface} used for the first-level cache (L1)
+     */
+    public CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> getL1Cache() {
+        return flexibleMultiLevelCacheService.getCacheLevelElseThrow(1, () -> new IllegalStateException("L1 cache not found"))
+                .getCacheWithType();
+    }
+
+    /**
      * Retrieves the {@link LegacyPlayerData} from the first-level cache (L1).
      *
      * @param uuid the unique identifier of the player
@@ -100,13 +141,21 @@ public class LegacyPlayerDataService {
         String uuidString = uuid.toString();
 
         // Get L1 cache
-        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache =
-                flexibleMultiLevelCacheService.getCacheLevelElseThrow(1, () -> new IllegalStateException("L1 cache not found"))
-                        .getCacheWithType();
+        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
         Cache<String, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
 
         // Retrieve data from L1 cache
         return Optional.ofNullable(l1CacheImpl.getIfPresent(uuidString));
+    }
+
+    /**
+     * Retrieves the {@link RedisCacheServiceInterface} used for the second-level cache (L2).
+     *
+     * @return the {@link RedisCacheServiceInterface} used for the second-level cache (L2)
+     */
+    public RedisCacheServiceInterface getL2Cache() {
+        return flexibleMultiLevelCacheService.getCacheLevelElseThrow(2, () -> new IllegalStateException("L2 cache not found"))
+                .getCacheWithType();
     }
 
     /**
@@ -116,17 +165,15 @@ public class LegacyPlayerDataService {
      * @return an {@link Optional} containing the {@link LegacyPlayerData} if found, or empty if not found
      */
     public Optional<LegacyPlayerData> getFromL2Cache(UUID uuid) {
-        String uuidString = uuid.toString();
+        String key = KeyUtil.getLegacyPlayerDataServiceKey(uuid, this);
 
         // Get L2 cache
-        RedisCacheServiceInterface l2Cache =
-                flexibleMultiLevelCacheService.getCacheLevelElseThrow(2, () -> new IllegalStateException("L2 cache not found"))
-                        .getCacheWithType();
+        RedisCacheServiceInterface l2Cache = getL2Cache();
 
         // Retrieve data from L2 cache
         return Optional.ofNullable(l2Cache.getWithType(
                 // Deserialize JSON to LegacyPlayerData
-                cache -> SimplixSerializer.deserialize(cache.getBucket(uuidString).get().toString(), LegacyPlayerData.class), () -> null, null, false
+                cache -> SimplixSerializer.deserialize(cache.getBucket(key).get().toString(), LegacyPlayerData.class), () -> null, null, false
         ));
     }
 
@@ -167,8 +214,7 @@ public class LegacyPlayerDataService {
             return dataFromL1Cache.get();
         }
 
-        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache =
-                flexibleMultiLevelCacheService.getCacheLevelElseThrow(1, () -> new IllegalStateException("L1 cache not found")).getCacheWithType();
+        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
         Cache<String, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
         LegacyPlayerData legacyPlayerData = getFromL2Cache(uuid).orElseGet(() -> getFromDatabase(uuid));
 
@@ -184,9 +230,7 @@ public class LegacyPlayerDataService {
         LEGACY_PLAYER_DATA_SERVICES.getCache().invalidate(String.valueOf(hashCode()));
 
         // Shutdown L2 cache
-        RedisCacheServiceInterface redisCacheService =
-                flexibleMultiLevelCacheService.getCacheLevelElseThrow(2, () -> new IllegalStateException("L2 cache not found"))
-                        .getCacheWithType();
+        RedisCacheServiceInterface redisCacheService = getL2Cache();
         redisCacheService.shutdown();
     }
 }

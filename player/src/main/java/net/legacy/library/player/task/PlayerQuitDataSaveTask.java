@@ -20,17 +20,17 @@ import java.util.function.Function;
  * @author qwq-dev
  * @since 2025-01-03 18:51
  */
-public class PlayerQuitTask implements TaskInterface {
+public class PlayerQuitDataSaveTask implements TaskInterface {
     private final UUID uuid;
     private final LockSettings lockSettings;
 
-    public PlayerQuitTask(UUID uuid, LockSettings lockSettings1) {
+    public PlayerQuitDataSaveTask(UUID uuid, LockSettings lockSettings1) {
         this.uuid = uuid;
         this.lockSettings = lockSettings1;
     }
 
-    public static PlayerQuitTask of(UUID uuid, LockSettings lockSettings) {
-        return new PlayerQuitTask(uuid, lockSettings);
+    public static PlayerQuitDataSaveTask of(UUID uuid, LockSettings lockSettings) {
+        return new PlayerQuitDataSaveTask(uuid, lockSettings);
     }
 
     @Override
@@ -58,11 +58,12 @@ public class PlayerQuitTask implements TaskInterface {
             }
 
             Function<RedissonClient, Lock> lockFunction =
-                    cache -> cache.getLock(KeyUtil.getLegacyPlayerDataServiceKey(uuid, legacyPlayerDataService, "quit-lock"));
+                    client -> client.getLock(KeyUtil.getLegacyPlayerDataServiceKey(uuid, legacyPlayerDataService, "quit-lock"));
 
             l2Cache.execute(
                     lockFunction,
                     client -> {
+                        // 2 hours
                         client.getBucket(bucketKey).set(serialized, Duration.of(2, ChronoUnit.HOURS));
                         return null;
                     },
