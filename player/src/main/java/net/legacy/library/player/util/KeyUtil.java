@@ -13,6 +13,10 @@ public class KeyUtil {
         return legacyPlayerDataService.getName() + "-pdsr";
     }
 
+    public static String getRedisStreamNameKey(LegacyPlayerDataService legacyPlayerDataService) {
+        return legacyPlayerDataService.getName() + "-redis-stream";
+    }
+
     /**
      * Generates a key for a {@link LegacyPlayerDataService} and a {@link UUID}.
      *

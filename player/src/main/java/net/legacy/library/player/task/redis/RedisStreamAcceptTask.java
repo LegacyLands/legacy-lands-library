@@ -73,7 +73,7 @@ public class RedisStreamAcceptTask implements TaskInterface {
                         }
                     }
                 } catch (Exception exception) {
-                    Log.error("Failed to process Redis rStream message", exception);
+                    Log.error("Failed to process Redis stream message", exception);
                 }
             }
         };

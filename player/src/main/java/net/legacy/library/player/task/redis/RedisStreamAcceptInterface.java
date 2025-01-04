@@ -10,5 +10,6 @@ import java.util.Map;
  */
 public interface RedisStreamAcceptInterface {
     boolean canAccept(StreamMessageId streamMessageId);
+
     void accept(Map<Object, Object> message);
 }

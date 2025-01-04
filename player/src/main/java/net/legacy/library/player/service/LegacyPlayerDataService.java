@@ -14,12 +14,17 @@ import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
 import net.legacy.library.cache.service.multi.TieredCacheLevel;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
+import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
+import net.legacy.library.player.task.redis.RedisStreamAcceptTask;
+import net.legacy.library.player.task.redis.RedisStreamPubTask;
 import net.legacy.library.player.util.KeyUtil;
 import org.redisson.config.Config;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -43,16 +48,18 @@ public class LegacyPlayerDataService {
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
     private final ScheduledTask<?> playerDataPersistenceTask;
+    private final ScheduledTask<?> redisStreamAcceptTask;
 
     /**
      * Constructs a new {@link LegacyPlayerDataService}.
      *
-     * @param name                    the name
-     * @param mongoDBConnectionConfig the MongoDB connection configuration
-     * @param config                  the Redis configuration for initializing the Redis cache
-     * @param autoSaveInterval        the interval for auto-saving player data to the database
+     * @param name                      the name
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration for initializing the Redis cache
+     * @param autoSaveInterval          the interval for auto-saving player data to the database
+     * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
      */
-    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval) {
+    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval, Duration redisStreamAcceptInterval) {
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
@@ -82,6 +89,19 @@ public class LegacyPlayerDataService {
         // Auto save task
         this.playerDataPersistenceTask =
                 PlayerDataPersistenceTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(0, 0, TimeUnit.MILLISECONDS), this).start();
+
+        // Redis stream accept task
+        this.redisStreamAcceptTask = RedisStreamAcceptTask.of(
+                this,
+                KeyUtil.getRedisStreamNameKey(this),
+                List.of(
+                        "net.legacy.library.player"
+                ),
+                List.of(
+                        PlayerLauncher.class.getClassLoader()
+                ),
+                redisStreamAcceptInterval
+        ).start();
     }
 
     /**
@@ -95,20 +115,21 @@ public class LegacyPlayerDataService {
      * @return the {@link LegacyPlayerDataService}
      */
     public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2));
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2), Duration.ofSeconds(5));
     }
 
     /**
      * Creates a new {@link LegacyPlayerDataService}.
      *
-     * @param name                    the name
-     * @param mongoDBConnectionConfig the MongoDB connection configuration
-     * @param config                  the Redis configuration for initializing the Redis cache
-     * @param autoSaveInterval        the interval for auto-saving player data to the database
+     * @param name                      the name
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration for initializing the Redis cache
+     * @param autoSaveInterval          the interval for auto-saving player data to the database
+     * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
      * @return the {@link LegacyPlayerDataService}
      */
-    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval);
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval, Duration redisStreamAcceptInterval) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, redisStreamAcceptInterval);
     }
 
     /**
@@ -119,6 +140,10 @@ public class LegacyPlayerDataService {
      */
     public static Optional<LegacyPlayerDataService> getLegacyPlayerDataService(String name) {
         return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
+    }
+
+    public <K, V> ScheduledTask<?> redisStreamPubTask(Map<K, V> data) {
+        return RedisStreamPubTask.of(this, KeyUtil.getRedisStreamNameKey(this), data).start();
     }
 
     /**

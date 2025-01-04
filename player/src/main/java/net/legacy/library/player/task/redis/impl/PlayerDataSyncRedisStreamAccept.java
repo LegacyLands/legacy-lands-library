@@ -19,6 +19,6 @@ public class PlayerDataSyncRedisStreamAccept implements RedisStreamAcceptInterfa
 
     @Override
     public void accept(Map<Object, Object> message) {
-
+        // TODO: player data sync (l1 -> l2)
     }
 }
