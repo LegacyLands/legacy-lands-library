@@ -1,11 +1,11 @@
 package net.legacy.library.annotation.service;
 
-import com.google.common.collect.Sets;
 import io.fairyproject.container.Containers;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.container.scope.InjectableScope;
 import io.fairyproject.log.Log;
-import net.legacy.library.annotation.utils.AnnotationScanner;
+import net.legacy.library.annotation.util.AnnotationScanner;
+import net.legacy.library.annotation.util.ReflectUtil;
 import org.reflections.util.ClasspathHelper;
 
 import java.lang.annotation.Annotation;
@@ -55,9 +55,7 @@ public class AnnotationProcessingService implements AnnotationProcessingServiceI
      */
     @Override
     public void processAnnotations(List<String> basePackages, boolean fromFairyIoCSingleton, ClassLoader... classLoader) {
-        Collection<URL> urls = Sets.newHashSet();
-        basePackages.forEach(basePackage -> urls.addAll(ClasspathHelper.forPackage(basePackage, classLoader)));
-        processAnnotations(urls, fromFairyIoCSingleton);
+        processAnnotations(ReflectUtil.resolveUrlsForPackages(basePackages, classLoader), fromFairyIoCSingleton);
     }
 
     /**

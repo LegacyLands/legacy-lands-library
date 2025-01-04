@@ -9,6 +9,10 @@ import java.util.UUID;
  * @since 2025-01-03 19:37
  */
 public class KeyUtil {
+    public static String getRedisStreamPlayerDataSyncKey(LegacyPlayerDataService legacyPlayerDataService) {
+        return legacyPlayerDataService.getName() + "-pdsr";
+    }
+
     /**
      * Generates a key for a {@link LegacyPlayerDataService} and a {@link UUID}.
      *

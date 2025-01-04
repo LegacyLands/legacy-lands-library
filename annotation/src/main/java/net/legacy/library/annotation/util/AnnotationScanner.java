@@ -1,4 +1,4 @@
-package net.legacy.library.annotation.utils;
+package net.legacy.library.annotation.util;
 
 import lombok.experimental.UtilityClass;
 import org.reflections.Reflections;
