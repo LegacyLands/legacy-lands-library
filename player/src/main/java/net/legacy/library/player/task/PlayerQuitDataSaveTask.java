@@ -42,9 +42,7 @@ public class PlayerQuitDataSaveTask implements TaskInterface {
                     legacyPlayerDataService.getFlexibleMultiLevelCacheService();
 
             // Get L2 cache
-            RedisCacheServiceInterface l2Cache =
-                    flexibleMultiLevelCacheService.getCacheLevelElseThrow(2, () -> new IllegalStateException("L2 cache not found"))
-                            .getCacheWithType();
+            RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
 
             /*
              * Save player data to L2 cache
