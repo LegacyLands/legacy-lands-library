@@ -13,12 +13,12 @@ import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.redis.L1ToL2DataSyncTask;
 import net.legacy.library.player.util.KeyUtil;
+import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
+import org.redisson.api.RType;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
-import java.time.Duration;
-import java.util.Iterator;
 import java.util.UUID;
 
 /**
@@ -27,18 +27,16 @@ import java.util.UUID;
  */
 @RequiredArgsConstructor
 public class PlayerDataPersistenceTask implements TaskInterface {
-    private final Duration delay;
-    private final Duration interval;
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
 
-    public static PlayerDataPersistenceTask of(Duration delay, Duration interval, LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService) {
-        return new PlayerDataPersistenceTask(delay, interval, lockSettings, legacyPlayerDataService);
+    public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService) {
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService);
     }
 
     @Override
     public ScheduledTask<?> start() {
-        Runnable runnable = () -> {
+        return schedule(() -> {
             CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache =
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
@@ -48,7 +46,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
             L1ToL2DataSyncTask.of(legacyPlayerDataService).start();
 
             // Persistence
-            String lockKey = KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService) + "-persistence-lock";
+            String lockKey = KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService, "persistence-lock");
             RLock lock = redissonClient.getLock(lockKey);
 
             try {
@@ -59,30 +57,41 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                 try {
                     Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
 
-                    // Get all LPDS key (name + "-lpds-*")
-                    Iterator<String> keys =
-                            redissonClient.getKeys().getKeys(
-                                    KeysScanOptions.defaults().pattern(KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService))
-                            ).iterator();
+                    /*
+                     * Get all LPDS key (name + "-lpds-*") and deserialize and save all LPD
+                     */
+                    RKeys keys = redissonClient.getKeys();
+                    for (String string : keys.getKeys(
+                            KeysScanOptions.defaults()
+                                    .pattern(KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService) + "*")
+                    )) {
+                        RType type = keys.getType(string);
 
-                    // Deserialize and save all LPD
-                    while (keys.hasNext()) {
+                        if (type != RType.OBJECT) {
+                            continue;
+                        }
+
+                        // DEBUG PRINT
+//                        Log.debug("string: " + string);
+
                         LegacyPlayerData legacyPlayerData = l2Cache.getWithType(
-                                client -> SimplixSerializer.deserialize(client.getBucket(keys.next()).get().toString(), LegacyPlayerData.class), () -> null, null, false
+                                client -> SimplixSerializer.deserialize(client.getBucket(string).get().toString(), LegacyPlayerData.class), () -> null, null, false
                         );
                         datastore.save(legacyPlayerData);
                     }
                 } finally {
-                    lock.unlock();
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
                 }
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Thread interrupted while trying to acquire lock.", exception);
             } catch (Exception exception) {
+                // DEBUG print
+                exception.printStackTrace();
                 throw new RuntimeException("Unexpected error during legacy player data migration.", exception);
             }
-        };
-
-        return scheduleAtFixedRate(runnable, delay, interval);
+        });
     }
 }

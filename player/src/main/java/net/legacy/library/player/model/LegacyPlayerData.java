@@ -1,5 +1,7 @@
 package net.legacy.library.player.model;
 
+import dev.morphia.annotations.Entity;
+import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -21,12 +23,14 @@ import java.util.function.Function;
  * @since 2025-01-03 14:45
  */
 @Getter
+@Entity("legacy-player-data")
 @RequiredArgsConstructor
 public class LegacyPlayerData {
 
     /**
      * The unique identifier for the player.
      */
+    @Id
     @NonNull
     private final UUID uuid;
 

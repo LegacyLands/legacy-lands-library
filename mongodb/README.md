@@ -38,7 +38,7 @@ public class Example {
 
 
         // create connection
-        MongoDBConnectionConfig mongoConfig = MongoDBConnectionFactory.create(
+        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
                 "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
         );
 

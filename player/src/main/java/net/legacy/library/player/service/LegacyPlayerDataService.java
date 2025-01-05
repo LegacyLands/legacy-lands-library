@@ -17,6 +17,7 @@ import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
+import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
 import net.legacy.library.player.task.redis.RedisStreamAcceptTask;
 import net.legacy.library.player.task.redis.RedisStreamPubTask;
 import net.legacy.library.player.util.KeyUtil;
@@ -47,7 +48,7 @@ public class LegacyPlayerDataService {
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
-    private final ScheduledTask<?> playerDataPersistenceTask;
+    private final ScheduledTask<?> playerDataPersistenceTimerTask;
     private final ScheduledTask<?> redisStreamAcceptTask;
 
     /**
@@ -73,8 +74,8 @@ public class LegacyPlayerDataService {
 
         // Initialize multi-level cache
         this.flexibleMultiLevelCacheService = CacheServiceFactory.createFlexibleMultiLevelCacheService(Set.of(
-                TieredCacheLevel.of(1, cacheStringCacheServiceInterface.getCache()),
-                TieredCacheLevel.of(2, redisCacheServiceInterface.getCache())
+                TieredCacheLevel.of(1, cacheStringCacheServiceInterface), // fix typo lmao
+                TieredCacheLevel.of(2, redisCacheServiceInterface)
         ));
 
         // Record all LegacyPlayerDataService
@@ -87,11 +88,11 @@ public class LegacyPlayerDataService {
         cache.put(name, this);
 
         // Auto save task
-        this.playerDataPersistenceTask =
-                PlayerDataPersistenceTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(0, 0, TimeUnit.MILLISECONDS), this).start();
+        this.playerDataPersistenceTimerTask =
+                PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(50, 50, TimeUnit.MILLISECONDS), this).start();
 
         // Redis stream accept task
-        this.redisStreamAcceptTask = RedisStreamAcceptTask.of(
+        this.redisStreamAcceptTask = RedisStreamAcceptTask.of( // TODO: add to of method
                 this,
                 KeyUtil.getRedisStreamNameKey(this),
                 List.of(
@@ -192,12 +193,15 @@ public class LegacyPlayerDataService {
 
         // Get L2 cache
         RedisCacheServiceInterface l2Cache = getL2Cache();
+        Object object =
+                l2Cache.getWithType(client -> client.getBucket(key).get(), () -> null, null, false);
 
-        // Retrieve data from L2 cache
-        return Optional.ofNullable(l2Cache.getWithType(
-                // Deserialize JSON to LegacyPlayerData
-                cache -> SimplixSerializer.deserialize(cache.getBucket(key).get().toString(), LegacyPlayerData.class), () -> null, null, false
-        ));
+        if (object == null) {
+            return Optional.empty();
+        }
+
+        // Deserialize JSON to LegacyPlayerData
+        return Optional.ofNullable(SimplixSerializer.deserialize(object.toString(), LegacyPlayerData.class));
     }
 
     /**
@@ -248,7 +252,10 @@ public class LegacyPlayerDataService {
     /**
      * Shuts down the {@link RedisCacheServiceInterface} used for the second-level cache (L2).
      */
-    public void shutdown() {
+    public void shutdown() throws InterruptedException {
+        // Wait the player data persistence task to finish
+        PlayerDataPersistenceTask.of(LockSettings.of(5, 5, TimeUnit.MILLISECONDS), this).start().wait();
+
         // Remove this LegacyPlayerDataService from the cache
         LEGACY_PLAYER_DATA_SERVICES.getCache().invalidate(String.valueOf(hashCode()));
 

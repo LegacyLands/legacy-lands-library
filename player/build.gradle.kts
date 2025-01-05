@@ -17,6 +17,11 @@ fairy {
     fairyPackage.set("io.fairyproject")
 
     bukkitProperties().depends.add("fairy-lib-plugin")
+    bukkitProperties().depends.add("configuration")
+    bukkitProperties().depends.add("annotation")
+    bukkitProperties().depends.add("commons")
+    bukkitProperties().depends.add("mongodb")
+    bukkitProperties().depends.add("cache")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")

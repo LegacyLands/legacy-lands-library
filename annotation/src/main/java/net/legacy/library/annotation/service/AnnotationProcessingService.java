@@ -32,7 +32,7 @@ import java.util.Set;
  * @see AnnotationProcessor
  * @since 2024-12-19 17:00
  */
-@InjectableComponent(scope = InjectableScope.PROTOTYPE)
+@InjectableComponent
 public class AnnotationProcessingService implements AnnotationProcessingServiceInterface {
     /**
      * {@inheritDoc}

@@ -17,6 +17,7 @@ fairy {
     fairyPackage.set("io.fairyproject")
 
     bukkitProperties().depends.add("fairy-lib-plugin")
+    bukkitProperties().depends.add("annotation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -26,7 +27,4 @@ fairy {
 dependencies {
     // Annotation module
     compileOnly(project(":annotation"))
-
-    // Gson
-    api("com.google.code.gson:gson:2.11.0")
 }

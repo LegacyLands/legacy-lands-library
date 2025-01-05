@@ -58,7 +58,7 @@ public class L1ToL2DataSyncTask implements TaskInterface {
                             client.getBucket(bucketKey).set(serialized);
                             return null;
                         },
-                        LockSettings.of(0, 0, TimeUnit.MILLISECONDS)
+                        LockSettings.of(5, 5, TimeUnit.MILLISECONDS)
                 );
             });
         });

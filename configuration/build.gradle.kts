@@ -16,8 +16,8 @@ fairy {
     mainPackage.set(properties("package"))
     fairyPackage.set("io.fairyproject")
 
-    bukkitProperties().depends.add("annotation")
     bukkitProperties().depends.add("fairy-lib-plugin")
+    bukkitProperties().depends.add("annotation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")

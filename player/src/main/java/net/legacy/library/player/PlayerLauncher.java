@@ -1,14 +1,18 @@
 package net.legacy.library.player;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.Autowired;
 import io.fairyproject.container.InjectableComponent;
+import io.fairyproject.log.Log;
 import io.fairyproject.plugin.Plugin;
 import net.legacy.library.annotation.service.AnnotationProcessingServiceInterface;
+import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.configuration.ConfigurationLauncher;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * The type Player launcher.
@@ -35,14 +39,33 @@ public class PlayerLauncher extends Plugin {
                 this.getClassLoader(), ConfigurationLauncher.class.getClassLoader()
         );
 
-        // TODO: try get leader from redis
+        // DEBUG
+//        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
+//                "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
+//        );
+//
+//        Config config = new Config();
+//        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+//
+//        LegacyPlayerDataService.of(
+//                "player-data-service", mongoConfig, config,
+//                Duration.ofSeconds(10), Duration.ofSeconds(10)
+//        );
     }
 
     @Override
     public void onPluginDisable() {
-        // TODO: if leader, then save redis data to mongodb
+        CacheServiceInterface<Cache<String, LegacyPlayerDataService>, LegacyPlayerDataService> legacyPlayerDataServices =
+                LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES;
+        ConcurrentMap<String, LegacyPlayerDataService> map = legacyPlayerDataServices.getCache().asMap();
 
         // Shut down all cache services
-        LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getCache().asMap().forEach((key, value) -> value.shutdown());
+        map.forEach((key, value) -> {
+            try {
+                value.shutdown();
+            } catch (InterruptedException exception) {
+                Log.error("Failed to shutdown LegacyPlayerDataService: " + value.getName(), exception);
+            }
+        });
     }
 }

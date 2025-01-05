@@ -2,6 +2,7 @@ package net.legacy.library.cache.service;
 
 import lombok.Data;
 import net.legacy.library.cache.model.LockSettings;
+import org.redisson.api.RLock;
 
 import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
@@ -57,7 +58,12 @@ public abstract class AbstractLockableCache<C> implements LockableCacheInterface
                 try {
                     return function.apply(cache);
                 } finally {
-                    lock.unlock();
+                    // Making RLock more secure
+                    if (lock instanceof RLock rLock && rLock.isHeldByCurrentThread()) {
+                        rLock.unlock();
+                    } else {
+                        lock.unlock();
+                    }
                 }
             }
             throw new RuntimeException("Could not acquire lock: " + simpleName);
