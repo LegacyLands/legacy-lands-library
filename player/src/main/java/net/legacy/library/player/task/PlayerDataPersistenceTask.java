@@ -11,6 +11,7 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
+import net.legacy.library.player.task.redis.L1ToL2DataSyncTask;
 import net.legacy.library.player.util.KeyUtil;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -19,7 +20,6 @@ import org.redisson.api.options.KeysScanOptions;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author qwq-dev
@@ -39,28 +39,15 @@ public class PlayerDataPersistenceTask implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
         Runnable runnable = () -> {
-            CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache =
+            CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache =
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
             RedissonClient redissonClient = l2Cache.getCache();
 
             // Sync L1 cache to L2 cache
-            l1Cache.getCache().asMap().forEach((key, legacyPlayerData) -> {
-                UUID uuid = legacyPlayerData.getUuid();
-                String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
-                String bucketKey = KeyUtil.getLegacyPlayerDataServiceKey(uuid, legacyPlayerDataService, "bucket-key");
-                String syncLockKey = KeyUtil.getLegacyPlayerDataServiceKey(uuid, legacyPlayerDataService, "persistence-l1-sync");
+            L1ToL2DataSyncTask.of(legacyPlayerDataService).start();
 
-                l2Cache.execute(
-                        client -> client.getLock(syncLockKey),
-                        client -> {
-                            client.getBucket(bucketKey).set(serialized);
-                            return null;
-                        },
-                        LockSettings.of(0, 0, TimeUnit.MILLISECONDS)
-                );
-            });
-
+            // Persistence
             String lockKey = KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService) + "-persistence-lock";
             RLock lock = redissonClient.getLock(lockKey);
 

@@ -64,7 +64,7 @@ public class LegacyPlayerDataService {
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
         // Create L1 cache using Caffeine
-        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> cacheStringCacheServiceInterface =
+        CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> cacheStringCacheServiceInterface =
                 CacheServiceFactory.createCaffeineCache();
 
         // Create L2 cache using Redis
@@ -151,7 +151,7 @@ public class LegacyPlayerDataService {
      *
      * @return the {@link CacheServiceInterface} used for the first-level cache (L1)
      */
-    public CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> getL1Cache() {
+    public CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> getL1Cache() {
         return flexibleMultiLevelCacheService.getCacheLevelElseThrow(1, () -> new IllegalStateException("L1 cache not found"))
                 .getCacheWithType();
     }
@@ -163,14 +163,12 @@ public class LegacyPlayerDataService {
      * @return an {@link Optional} containing the {@link LegacyPlayerData} if found, or empty if not found
      */
     public Optional<LegacyPlayerData> getFromL1Cache(UUID uuid) {
-        String uuidString = uuid.toString();
-
         // Get L1 cache
-        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
-        Cache<String, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
+        CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
+        Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
 
         // Retrieve data from L1 cache
-        return Optional.ofNullable(l1CacheImpl.getIfPresent(uuidString));
+        return Optional.ofNullable(l1CacheImpl.getIfPresent(uuid));
     }
 
     /**
@@ -239,11 +237,11 @@ public class LegacyPlayerDataService {
             return dataFromL1Cache.get();
         }
 
-        CacheServiceInterface<Cache<String, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
-        Cache<String, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
+        CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
+        Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
         LegacyPlayerData legacyPlayerData = getFromL2Cache(uuid).orElseGet(() -> getFromDatabase(uuid));
 
-        l1CacheImpl.put(uuidString, legacyPlayerData);
+        l1CacheImpl.put(uuid, legacyPlayerData);
         return legacyPlayerData;
     }
 

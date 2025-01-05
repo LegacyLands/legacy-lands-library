@@ -1,13 +1,9 @@
 package net.legacy.library.player.task.redis;
 
-import io.fairyproject.container.Autowired;
-import io.fairyproject.container.InjectableComponent;
-import io.fairyproject.container.scope.InjectableScope;
 import io.fairyproject.log.Log;
 import io.fairyproject.scheduler.ScheduledTask;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import net.legacy.library.annotation.service.AnnotationProcessingServiceInterface;
 import net.legacy.library.annotation.util.AnnotationScanner;
 import net.legacy.library.annotation.util.ReflectUtil;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
@@ -30,16 +26,12 @@ import java.util.Set;
  */
 @Getter
 @RequiredArgsConstructor
-@InjectableComponent(scope = InjectableScope.PROTOTYPE)
 public class RedisStreamAcceptTask implements TaskInterface {
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final String streamName;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
     private final Duration interval;
-
-    @Autowired
-    private AnnotationProcessingServiceInterface annotationProcessingService;
 
     public static RedisStreamAcceptTask of(LegacyPlayerDataService legacyPlayerDataService, String streamName, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
         return new RedisStreamAcceptTask(legacyPlayerDataService, streamName, basePackages, classLoaders, interval);
@@ -64,13 +56,12 @@ public class RedisStreamAcceptTask implements TaskInterface {
                 try {
                     for (Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry : messages.entrySet()) {
                         StreamMessageId key = streamMessageIdMapEntry.getKey();
+                        Map<Object, Object> value = streamMessageIdMapEntry.getValue();
 
                         RedisStreamAcceptInterface redisStreamAcceptInterface =
                                 (RedisStreamAcceptInterface) clazz.getDeclaredConstructor().newInstance();
 
-                        if (redisStreamAcceptInterface.canAccept(key)) {
-                            redisStreamAcceptInterface.accept(streamMessageIdMapEntry.getValue());
-                        }
+                        redisStreamAcceptInterface.accept(value);
                     }
                 } catch (Exception exception) {
                     Log.error("Failed to process Redis stream message", exception);
