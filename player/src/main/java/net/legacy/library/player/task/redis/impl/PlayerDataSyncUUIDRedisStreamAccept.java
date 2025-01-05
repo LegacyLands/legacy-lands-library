@@ -27,6 +27,11 @@ public class PlayerDataSyncUUIDRedisStreamAccept implements RStreamAcceptInterfa
     }
 
     @Override
+    public String getTargetLegacyPlayerDataServiceName() {
+        return "";
+    }
+
+    @Override
     public void accept(RStream<Object, Object> rStream, Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry) {
         for (Map.Entry<Object, Object> entry : streamMessageIdMapEntry.getValue().entrySet()) {
             Object key = entry.getKey();

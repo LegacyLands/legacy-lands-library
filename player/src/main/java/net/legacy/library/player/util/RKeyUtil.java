@@ -21,6 +21,10 @@ public class RKeyUtil {
         return legacyPlayerDataService.getName() + "-rmapcache";
     }
 
+    public static String getRStreamGroupKey(LegacyPlayerDataService legacyPlayerDataService) {
+        return legacyPlayerDataService.getName() + "-rstreamgroup";
+    }
+
     /**
      * Generates a key for a {@link LegacyPlayerDataService} and a {@link UUID}.
      *

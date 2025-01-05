@@ -52,21 +52,35 @@ public class RStreamAcceptTask implements TaskInterface {
                     RedisStreamAccepter.class
             );
 
-            for (Class<?> clazz : annotatedClasses) {
-                try {
-                    for (Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry : messages.entrySet()) {
+            // Get all msg
+            for (Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry : messages.entrySet()) {
+                // Get the class that uses @RedisStreamAccepter
+                for (Class<?> clazz : annotatedClasses) {
+                    try {
+                        // get key (action name)
                         StreamMessageId key = streamMessageIdMapEntry.getKey();
+
+                        // LPDS name and data
                         Map<Object, Object> value = streamMessageIdMapEntry.getValue();
 
-                        RStreamAcceptInterface redisStreamAcceptInterface =
-                                (RStreamAcceptInterface) clazz.getDeclaredConstructor().newInstance();
+                        // handle
+                        for (Map.Entry<Object, Object> entry : value.entrySet()) {
+                            RStreamAcceptInterface redisStreamAcceptInterface =
+                                    (RStreamAcceptInterface) clazz.getDeclaredConstructor().newInstance();
 
-                        redisStreamAcceptInterface.accept(rStream, streamMessageIdMapEntry);
+                            Object key1 = entry.getKey();
+                            Object value1 = entry.getValue();
+
+                            if (!redisStreamAcceptInterface.getActionName().equals(key1) ||
+                                    !redisStreamAcceptInterface.getTargetLegacyPlayerDataServiceName().equals(legacyPlayerDataService.getName())) {
+                                continue;
+                            }
+
+                            redisStreamAcceptInterface.accept(rStream, streamMessageIdMapEntry);
+                        }
+                    } catch (Exception exception) {
+                        Log.error("Failed to process Redis stream message", exception);
                     }
-                } catch (Exception exception) {
-                    // DEBUG print
-                    exception.printStackTrace();
-                    Log.error("Failed to process Redis stream message", exception);
                 }
             }
         };

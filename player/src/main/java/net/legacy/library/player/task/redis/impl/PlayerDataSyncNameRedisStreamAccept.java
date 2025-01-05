@@ -27,6 +27,10 @@ public class PlayerDataSyncNameRedisStreamAccept implements RStreamAcceptInterfa
         return "player-data-sync-name";
     }
 
+    public String getTargetLegacyPlayerDataServiceName() {
+        return "player-data-service";
+    }
+
     @Override
     public void accept(RStream<Object, Object> rStream, Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry) {
         for (Map.Entry<Object, Object> entry : streamMessageIdMapEntry.getValue().entrySet()) {
@@ -34,38 +38,32 @@ public class PlayerDataSyncNameRedisStreamAccept implements RStreamAcceptInterfa
             String keyString = key.toString();
             Object value = entry.getValue();
 
-            System.out.println(keyString);
-            System.out.println(value.toString());
-            if (keyString.equals(getActionName())) {
-                Pair<String, String> data = GsonUtil.getGson().fromJson(
-                        value.toString(), new TypeToken<Pair<String, String>>() {
-                        }.getType()
-                );
+            Pair<String, String> data = GsonUtil.getGson().fromJson(
+                    value.toString(), new TypeToken<Pair<String, String>>() {
+                    }.getType()
+            );
 
-                String first = data.getKey();
-                String second = data.getValue();
+            String first = data.getKey();
+            String second = data.getValue();
 
-                System.out.println(first);
-                System.out.println(second);
+            // Very slow, but it's async so it's fine
+            OfflinePlayer offlinePlayer =
+                    Bukkit.getOfflinePlayer(second);
 
-                // Very slow, but it's async so it's fine
-                OfflinePlayer offlinePlayer =
-                        Bukkit.getOfflinePlayer(second);
+            Optional<LegacyPlayerDataService> legacyPlayerDataService =
+                    LegacyPlayerDataService.getLegacyPlayerDataService(first);
 
-                Optional<LegacyPlayerDataService> legacyPlayerDataService =
-                        LegacyPlayerDataService.getLegacyPlayerDataService(first);
+            legacyPlayerDataService.ifPresent(service -> {
+                L1ToL2DataSyncTask.of(offlinePlayer.getUniqueId(), service).start().getFuture().whenComplete((aVoid, throwable) -> {
+                    if (throwable != null) {
+                        Log.error("Error while syncing player data", throwable);
+                        return;
+                    }
 
-                legacyPlayerDataService.ifPresent(service -> {
-                    L1ToL2DataSyncTask.of(offlinePlayer.getUniqueId(), service).start().getFuture().whenComplete((aVoid, throwable) -> {
-                        if (throwable != null) {
-                            Log.error("Error while syncing player data", throwable);
-                            return;
-                        }
-
-                        rStream.ack(getActionName(), streamMessageIdMapEntry.getKey());
-                    });
+                    rStream.remove(streamMessageIdMapEntry.getKey());
+                    System.out.println("success");
                 });
-            }
+            });
         }
     }
 }
