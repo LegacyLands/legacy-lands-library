@@ -9,8 +9,13 @@ import io.fairyproject.plugin.Plugin;
 import net.legacy.library.annotation.service.AnnotationProcessingServiceInterface;
 import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.configuration.ConfigurationLauncher;
+import net.legacy.library.mongodb.factory.MongoDBConnectionConfigFactory;
+import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.service.LegacyPlayerDataService;
+import org.bson.UuidRepresentation;
+import org.redisson.config.Config;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
@@ -40,17 +45,17 @@ public class PlayerLauncher extends Plugin {
         );
 
         // DEBUG
-//        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
-//                "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
-//        );
-//
-//        Config config = new Config();
-//        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
-//
-//        LegacyPlayerDataService.of(
-//                "player-data-service", mongoConfig, config,
-//                Duration.ofSeconds(10), Duration.ofSeconds(10)
-//        );
+        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
+                "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
+        );
+
+        Config config = new Config();
+        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+
+        LegacyPlayerDataService.of(
+                "player-data-service", mongoConfig, config,
+                Duration.ofMinutes(10), Duration.ofSeconds(10)
+        );
     }
 
     @Override

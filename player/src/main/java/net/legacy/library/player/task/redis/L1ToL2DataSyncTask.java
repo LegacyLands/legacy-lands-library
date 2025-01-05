@@ -10,7 +10,7 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.util.KeyUtil;
+import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RedissonClient;
 
 import java.util.UUID;
@@ -49,8 +49,8 @@ public class L1ToL2DataSyncTask implements TaskInterface {
                 }
 
                 String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
-                String bucketKey = KeyUtil.getLegacyPlayerDataServiceKey(key, legacyPlayerDataService, "bucket-key");
-                String syncLockKey = KeyUtil.getLegacyPlayerDataServiceKey(key, legacyPlayerDataService, "l1-l2-sync-lock");
+                String bucketKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService, "bucket-key");
+                String syncLockKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService, "l1-l2-sync-lock");
 
                 l2Cache.execute(
                         client -> client.getLock(syncLockKey),

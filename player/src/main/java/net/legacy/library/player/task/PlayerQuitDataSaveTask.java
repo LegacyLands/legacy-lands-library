@@ -7,7 +7,7 @@ import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.util.KeyUtil;
+import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
@@ -48,7 +48,7 @@ public class PlayerQuitDataSaveTask implements TaskInterface {
              * Save player data to L2 cache
              * Each LegacyPlayerDataService has a different Lock and ensures thread safety
              */
-            String bucketKey = KeyUtil.getLegacyPlayerDataServiceKey(uuid, legacyPlayerDataService, "bucket-key");
+            String bucketKey = RKeyUtil.getRLPDSKey(uuid, legacyPlayerDataService, "bucket-key");
             String nowCache = l2Cache.getWithType(client -> client.getBucket(bucketKey), null, null, false);
 
             if (nowCache.equals(serialized)) {
@@ -56,7 +56,7 @@ public class PlayerQuitDataSaveTask implements TaskInterface {
             }
 
             Function<RedissonClient, Lock> lockFunction =
-                    client -> client.getLock(KeyUtil.getLegacyPlayerDataServiceKey(uuid, legacyPlayerDataService, "quit-lock"));
+                    client -> client.getLock(RKeyUtil.getRLPDSKey(uuid, legacyPlayerDataService, "quit-lock"));
 
             l2Cache.execute(
                     lockFunction,

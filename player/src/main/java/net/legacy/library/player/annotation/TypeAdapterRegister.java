@@ -7,9 +7,10 @@ import java.lang.annotation.Target;
 
 /**
  * @author qwq-dev
- * @since 2025-01-04 20:19
+ * @since 2025-01-05 18:57
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RedisStreamAccept {
+public @interface TypeAdapterRegister {
+    Class<?> classType();
 }

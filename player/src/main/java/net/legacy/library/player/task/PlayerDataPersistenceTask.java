@@ -12,7 +12,7 @@ import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.redis.L1ToL2DataSyncTask;
-import net.legacy.library.player.util.KeyUtil;
+import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
 import org.redisson.api.RType;
@@ -46,7 +46,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
             L1ToL2DataSyncTask.of(legacyPlayerDataService).start();
 
             // Persistence
-            String lockKey = KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService, "persistence-lock");
+            String lockKey = RKeyUtil.getRLPDSKey(legacyPlayerDataService, "persistence-lock");
             RLock lock = redissonClient.getLock(lockKey);
 
             try {
@@ -63,16 +63,13 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                     RKeys keys = redissonClient.getKeys();
                     for (String string : keys.getKeys(
                             KeysScanOptions.defaults()
-                                    .pattern(KeyUtil.getLegacyPlayerDataServiceKey(legacyPlayerDataService) + "*")
+                                    .pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*")
                     )) {
                         RType type = keys.getType(string);
 
                         if (type != RType.OBJECT) {
                             continue;
                         }
-
-                        // DEBUG PRINT
-//                        Log.debug("string: " + string);
 
                         LegacyPlayerData legacyPlayerData = l2Cache.getWithType(
                                 client -> SimplixSerializer.deserialize(client.getBucket(string).get().toString(), LegacyPlayerData.class), () -> null, null, false
@@ -89,7 +86,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                 throw new RuntimeException("Thread interrupted while trying to acquire lock.", exception);
             } catch (Exception exception) {
                 // DEBUG print
-                exception.printStackTrace();
+//                exception.printStackTrace();
                 throw new RuntimeException("Unexpected error during legacy player data migration.", exception);
             }
         });

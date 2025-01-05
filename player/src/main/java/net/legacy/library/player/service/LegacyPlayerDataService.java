@@ -18,14 +18,14 @@ import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
 import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
-import net.legacy.library.player.task.redis.RedisStreamAcceptTask;
-import net.legacy.library.player.task.redis.RedisStreamPubTask;
-import net.legacy.library.player.util.KeyUtil;
+import net.legacy.library.player.task.redis.RStreamAcceptTask;
+import net.legacy.library.player.task.redis.RStreamPubTask;
+import net.legacy.library.player.util.RKeyUtil;
+import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.config.Config;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -92,9 +92,8 @@ public class LegacyPlayerDataService {
                 PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(50, 50, TimeUnit.MILLISECONDS), this).start();
 
         // Redis stream accept task
-        this.redisStreamAcceptTask = RedisStreamAcceptTask.of( // TODO: add to of method
+        this.redisStreamAcceptTask = RStreamAcceptTask.of( // TODO: add to of method
                 this,
-                KeyUtil.getRedisStreamNameKey(this),
                 List.of(
                         "net.legacy.library.player"
                 ),
@@ -143,8 +142,8 @@ public class LegacyPlayerDataService {
         return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
     }
 
-    public <K, V> ScheduledTask<?> redisStreamPubTask(Map<K, V> data) {
-        return RedisStreamPubTask.of(this, KeyUtil.getRedisStreamNameKey(this), data).start();
+    public ScheduledTask<?> redisStreamPubTask(Pair<String, String> data, Duration duration) {
+        return RStreamPubTask.of(this, data, duration).start();
     }
 
     /**
@@ -189,7 +188,7 @@ public class LegacyPlayerDataService {
      * @return an {@link Optional} containing the {@link LegacyPlayerData} if found, or empty if not found
      */
     public Optional<LegacyPlayerData> getFromL2Cache(UUID uuid) {
-        String key = KeyUtil.getLegacyPlayerDataServiceKey(uuid, this);
+        String key = RKeyUtil.getRLPDSKey(uuid, this);
 
         // Get L2 cache
         RedisCacheServiceInterface l2Cache = getL2Cache();

@@ -23,7 +23,7 @@ public class LegacyPlayerSerializable implements SimplixSerializable<LegacyPlaye
      */
     @Override
     public LegacyPlayerData deserialize(@NonNull Object object) throws ClassCastException {
-        return GsonUtil.GSON.fromJson(object.toString(), LegacyPlayerData.class);
+        return GsonUtil.getGson().fromJson(object.toString(), LegacyPlayerData.class);
     }
 
     /**
@@ -35,7 +35,7 @@ public class LegacyPlayerSerializable implements SimplixSerializable<LegacyPlaye
      */
     @Override
     public Object serialize(@NonNull LegacyPlayerData legacyPlayerData) throws ClassCastException {
-        return GsonUtil.GSON.toJson(legacyPlayerData);
+        return GsonUtil.getGson().toJson(legacyPlayerData);
     }
 
     /**
