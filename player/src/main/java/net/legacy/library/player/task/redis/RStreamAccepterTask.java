@@ -11,6 +11,7 @@ import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.annotation.RStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
+import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.StreamMessageId;
@@ -88,26 +89,37 @@ public class RStreamAccepterTask implements TaskInterface {
                     continue;
                 }
 
+                // The message published by RStreamPubTask is definitely a Pair
+                if (value.isEmpty()) {
+                    Log.error("RStream message is empty! StreamMessageId: " + streamMessageId);
+                    continue;
+                }
+
+                if (value.size() > 1) {
+                    Log.error("RStream message is not a pair! StreamMessageId: " + streamMessageId);
+                    continue;
+                }
+
+                Map.Entry<Object, Object> entry = value.entrySet().iterator().next();
+                String left = entry.getKey().toString();
+                String right = entry.getValue().toString();
+                Pair<String, String> pair = Pair.of(left, right);
+
                 // Get all registed accepter
                 for (RStreamAccepterInterface accepter : accepters) {
-                    // handle
-                    for (Map.Entry<Object, Object> entry : value.entrySet()) {
-                        Object key1 = entry.getKey();
+                    if (!accepter.getActionName().equals(left) ||
+                            !accepter.getTargetLegacyPlayerDataServiceName().equals(legacyPlayerDataService.getName())) {
+                        continue;
+                    }
 
-                        if (!accepter.getActionName().equals(key1) ||
-                                !accepter.getTargetLegacyPlayerDataServiceName().equals(legacyPlayerDataService.getName())) {
-                            continue;
-                        }
+                    // New thread async accept
+                    ScheduledTask<?> schedule =
+                            schedule(() -> accepter.accept(rStream, streamMessageId, pair));
 
-                        // New thread async accept
-                        ScheduledTask<?> schedule =
-                                schedule(() -> accepter.accept(rStream, streamMessageIdMapEntry));
-
-                        if (accepter.isRecodeLimit()) {
-                            schedule.getFuture().whenComplete(
-                                    (result, throwable) -> acceptedId.add(streamMessageId)
-                            );
-                        }
+                    if (accepter.isRecodeLimit()) {
+                        schedule.getFuture().whenComplete(
+                                (result, throwable) -> acceptedId.add(streamMessageId)
+                        );
                     }
                 }
             }
