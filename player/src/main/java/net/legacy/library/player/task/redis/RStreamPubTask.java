@@ -38,7 +38,7 @@ public class RStreamPubTask implements TaskInterface {
             );
 
             RMapCache<String, String> mapCache = redissonClient.getMapCache(
-                    RKeyUtil.getRMapCacheKey(legacyPlayerDataService)
+                    RKeyUtil.getTempRMapCacheKey(legacyPlayerDataService)
             );
 
             mapCache.put(data.getLeft(), data.getRight(), duration.toMillis(), TimeUnit.MILLISECONDS);

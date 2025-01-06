@@ -17,8 +17,8 @@ public class RKeyUtil {
         return legacyPlayerDataService.getName() + "-rmap";
     }
 
-    public static String getRMapCacheKey(LegacyPlayerDataService legacyPlayerDataService) {
-        return legacyPlayerDataService.getName() + "-rmapcache";
+    public static String getTempRMapCacheKey(LegacyPlayerDataService legacyPlayerDataService) {
+        return legacyPlayerDataService.getName() + "-rmapcache-" + System.currentTimeMillis();
     }
 
     public static String getRStreamGroupKey(LegacyPlayerDataService legacyPlayerDataService) {

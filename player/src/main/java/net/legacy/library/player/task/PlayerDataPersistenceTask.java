@@ -1,12 +1,10 @@
 package net.legacy.library.player.task;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import dev.morphia.Datastore;
 import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
-import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
@@ -18,8 +16,6 @@ import org.redisson.api.RLock;
 import org.redisson.api.RType;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
-
-import java.util.UUID;
 
 /**
  * @author qwq-dev
@@ -37,8 +33,6 @@ public class PlayerDataPersistenceTask implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
         return schedule(() -> {
-            CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache =
-                    legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
             RedissonClient redissonClient = l2Cache.getCache();
 

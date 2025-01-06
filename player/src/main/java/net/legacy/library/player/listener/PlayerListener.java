@@ -12,7 +12,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -33,7 +32,6 @@ public class PlayerListener implements Listener {
         Optional<LegacyPlayerDataService> legacyPlayerDataService = LegacyPlayerDataService.getLegacyPlayerDataService("player-data-service");
         LegacyPlayerDataService legacyPlayerDataService1 = legacyPlayerDataService.get();
         LegacyPlayerData legacyPlayerData = legacyPlayerDataService1.getLegacyPlayerData(event.getPlayer().getUniqueId());
-        RedissonClient redissonClient = legacyPlayerDataService1.getL2Cache().getCache();
 
         Pair<String, String> pair = Pair.of("player-data-sync-name", GsonUtil.getGson().toJson(Pair.of("player-data-service", "PsycheQwQ")));
         Pair<String, String> pair2 = Pair.of("player-data-sync-name", GsonUtil.getGson().toJson(Pair.of("player-data-service", "PsycheQwQ2")));

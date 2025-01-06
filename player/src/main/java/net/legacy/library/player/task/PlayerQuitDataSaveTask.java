@@ -3,7 +3,6 @@ package net.legacy.library.player.task;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import io.fairyproject.scheduler.ScheduledTask;
 import net.legacy.library.cache.model.LockSettings;
-import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyPlayerDataService;
@@ -37,9 +36,6 @@ public class PlayerQuitDataSaveTask implements TaskInterface {
     public ScheduledTask<?> start() {
         return schedule(() -> LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getCache().asMap().forEach((key, legacyPlayerDataService) -> legacyPlayerDataService.getFromL1Cache(uuid).ifPresent(legacyPlayerData -> {
             String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
-
-            FlexibleMultiLevelCacheService flexibleMultiLevelCacheService =
-                    legacyPlayerDataService.getFlexibleMultiLevelCacheService();
 
             // Get L2 cache
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();

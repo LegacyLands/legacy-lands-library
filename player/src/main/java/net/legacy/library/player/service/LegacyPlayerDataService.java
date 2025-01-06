@@ -18,7 +18,7 @@ import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
 import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
-import net.legacy.library.player.task.redis.RStreamAcceptTask;
+import net.legacy.library.player.task.redis.RStreamAccepterTask;
 import net.legacy.library.player.task.redis.RStreamPubTask;
 import net.legacy.library.player.util.RKeyUtil;
 import org.apache.commons.lang3.tuple.Pair;
@@ -92,7 +92,7 @@ public class LegacyPlayerDataService {
                 PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(50, 50, TimeUnit.MILLISECONDS), this).start();
 
         // Redis stream accept task
-        this.redisStreamAcceptTask = RStreamAcceptTask.of( // TODO: add to of method
+        this.redisStreamAcceptTask = RStreamAccepterTask.of( // TODO: add to of method
                 this,
                 List.of(
                         "net.legacy.library.player"
@@ -232,8 +232,6 @@ public class LegacyPlayerDataService {
      * @throws IllegalStateException if required cache levels are not found
      */
     public LegacyPlayerData getLegacyPlayerData(UUID uuid) {
-        String uuidString = uuid.toString();
-
         Optional<LegacyPlayerData> dataFromL1Cache = getFromL1Cache(uuid);
 
         if (dataFromL1Cache.isPresent()) {

@@ -11,7 +11,6 @@ import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
-import org.redisson.api.RedissonClient;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -39,11 +38,8 @@ public class L1ToL2DataSyncTask implements TaskInterface {
             CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache =
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
-            RedissonClient redissonClient = l2Cache.getCache();
 
             l1Cache.getCache().asMap().forEach((key, legacyPlayerData) -> {
-                UUID uuid = legacyPlayerData.getUuid();
-
                 if (this.uuid != null && !this.uuid.equals(key)) {
                     return;
                 }
