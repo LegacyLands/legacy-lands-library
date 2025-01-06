@@ -6,13 +6,13 @@
 
 ## 📚 Table of Contents
 
-- [Introduction](#introduction)
-- [Automation](#automation)
-- [Key Components](#key-components)
-- [Data Processes](#data-processes)
-- [Performance Optimizations](#performance-optimizations)
-- [Summary](#summary)
-- [License](#license)
+- [Introduction](#-introduction)
+- [Automation](#-automation)
+- [Key Components](#-key-components)
+- [Data Processes](#-data-processes)
+- [Performance Optimizations](#️-performance-optimizations)
+- [Summary](#-summary)
+- [License](#-license)
 
 ---
 
@@ -50,9 +50,11 @@ Automates the management and synchronization of player data across multiple laye
 
 1. **Check L1 Cache**:
    - **Note**: Optimized for online players; not queried for offline data.
+
 2. **Query L2 Cache (Redis)**:
    - **Cache Hit**: Retrieve data, store in L1, return to requester.
    - **Cache Miss**: Query MongoDB.
+
 3. **Query Database (MongoDB)**:
    - **Success**: Retrieve, store in L1, return data.
    - **No Data Found**: Create new record, store in L1.
@@ -60,9 +62,11 @@ Automates the management and synchronization of player data across multiple laye
 ### 🚪 Player Logout Process
 
 1. **Retrieve All Instances**: Gather all instances of `LegacyPlayerDataService`.
+
 2. **Compare L1 and L2 Cache**:
    - **Consistent**: No changes needed.
    - **Inconsistent**: Update L2 with L1 data.
+
 3. **Remove Player Data**: Delete from L1 to maintain integrity.
 
 ### 🔄 Data Synchronization
@@ -76,6 +80,7 @@ Automates the management and synchronization of player data across multiple laye
    - Ensure distributed synchronization.
    - Update L2 cache directly.
    - **L2 Cache Miss**: Update database.
+
 2. **Process on Each Server**:
    - **Online Player**: Sync updated data from L2 to L1.
 
@@ -110,6 +115,3 @@ In conclusion, this design maximizes data retrieval efficiency, ensures consiste
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
-
