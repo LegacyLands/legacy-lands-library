@@ -1,41 +1,49 @@
-### commons
+# 🌟 Commons Module
 
-This is a module full of good stuff that is useful in every way, so it's a bit of a mixed bag, but I'll always update
-this document when there's new content.
+[![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-### usage
+This module is packed with useful utilities and features that can enhance your projects in various ways. It's a versatile collection that will be updated regularly with new content.
+
+## 📋 Contents
+
+- [📦 Installation](#-installation)
+- [🔧 VarHandleReflectionInjector](#-varhandlereflectioninjector)
+- [⏰ Task Management](#-task-management)
+- [🔗 Related Modules](#-related-modules)
+- [📝 License](#-license)
+
+## 📦 Installation
+
+### Gradle
 
 ```kotlin
-// Dependencies
 dependencies {
-    // commons module
     compileOnly(files("libs/commons-1.0-SNAPSHOT.jar"))
 }
 ```
 
-### [VarHandleReflectionInjector](src/main/java/me/qwqdev/library/commons/injector/VarHandleReflectionInjector.java)
+## 🔧 VarHandleReflectionInjector
 
-This is an `injector`, and its main use is to be used
-with [VarHandleAutoInjection](src/main/java/me/qwqdev/library/commons/injector/annotation/VarHandleAutoInjection.java).
+The [VarHandleReflectionInjector](src/main/java/me/qwqdev/library/commons/injector/VarHandleReflectionInjector.java) is an injector designed to work seamlessly with [VarHandleAutoInjection](src/main/java/me/qwqdev/library/commons/injector/annotation/VarHandleAutoInjection.java). It simplifies the process of assigning `VarHandle` without the need for verbose code.
 
-Yes, just like its name, we don't have to write a bunch of ugly code to assign `VarHandle`, let it all disappear, Amen.
+### Example Usage
 
 ```java
 public class Example {
     public static void main(String[] args) {
         Test test = new Test();
 
-        // we can use TField_HANDLE
+        // Use TField_HANDLE to set the value
         Test.TField_HANDLE.set(test, 2);
 
-        // prints 2
+        // Prints 2
         System.out.println(test.getTField());
     }
 }
 ```
 
 ```java
-
 @Getter
 @Setter
 public class Test {
@@ -45,21 +53,17 @@ public class Test {
     public static VarHandle TField_HANDLE;
 
     static {
-        /*
-         * This class is a singleton and is managed by Fairy IoC.
-         * Of course, it is also allowed to create it directly using the factory or directly creating it.
-         * This is not so strict.
-         */
+        // Managed by Fairy IoC or can be created directly
         InjectorFactory.createVarHandleReflectionInjector().inject(Test.class);
     }
 }
 ```
 
-### [Task](src/main/java/me/qwqdev/library/commons/task)
+## ⏰ Task Management
 
-The [TaskInterface](src/main/java/me/qwqdev/library/commons/task/TaskInterface.java)
-simplifies task scheduling by providing convenience methods with consistent naming and argument order with the Fairy
-Framework [MCScheduler](https://docs.fairyproject.io/core/minecraft/scheduler).
+The [TaskInterface](src/main/java/me/qwqdev/library/commons/task/TaskInterface.java) simplifies task scheduling by providing convenient methods that align with the Fairy Framework's [MCScheduler](https://docs.fairyproject.io/core/minecraft/scheduler).
+
+### Example Usage
 
 ```java
 public class Example {
@@ -67,34 +71,36 @@ public class Example {
         TaskInterface taskInterface = new TaskInterface() {
             @Override
             public ScheduledTask<?> start() {
-                // This is a simple example of a task that prints "Hello, world!" every second.
+                // Prints "Hello, world!" every second
                 return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
             }
         };
 
-        // start the task
+        // Start the task
         taskInterface.start();
     }
 }
 ```
 
-It also
-provides [TaskAutoStartAnnotation](src/main/java/me/qwqdev/library/commons/task/annotation/TaskAutoStartAnnotation.java)
-to handle some tasks that need to be automatically started at a specific time. When there are many tasks to start,
-annotation automation will help us avoid manually managing the creation and calling of these instances, thereby
-simplifying the code.
+### Task Automation
+
+Utilize [TaskAutoStartAnnotation](src/main/java/me/qwqdev/library/commons/task/annotation/TaskAutoStartAnnotation.java) to automate the start of tasks at specific times, reducing manual management.
 
 ```java
-
 @TaskAutoStartAnnotation(isFromFairyIoC = false)
 public class Example implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
-        // This is a simple example of a task that prints "Hello, world!" every second.
+        // Prints "Hello, world!" every second
         return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
     }
 }
 ```
 
-As for how to make annotation processors work on your own plugins, please see the [annotation](../annotation/README.md)
-module.
+## 🔗 Related Modules
+
+For details on making annotation processors work with your plugins, refer to the [annotation module](../annotation/README.md).
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
