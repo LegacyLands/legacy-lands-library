@@ -2,6 +2,9 @@
 
 This module is designed for processing player data within a distributed environment, employing L1 (Caffeine) and L2 (Redis) caches to ensure data consistency and efficient access.
 
+# HOLY FUCK
+# THIS README It's really UGLY, someone will rewrite it, really
+
 ### automation
 
 We automate the management and synchronization of player data across multiple layers, including caches and databases.

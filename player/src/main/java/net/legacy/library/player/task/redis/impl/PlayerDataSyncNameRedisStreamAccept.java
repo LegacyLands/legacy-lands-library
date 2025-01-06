@@ -32,7 +32,7 @@ public class PlayerDataSyncNameRedisStreamAccept implements RStreamAccepterInter
 
     @Override
     public boolean isRecodeLimit() {
-        return false;
+        return true;
     }
 
     @Override
