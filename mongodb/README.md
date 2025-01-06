@@ -1,31 +1,38 @@
-### mongodb
+# 🚀 MongoDB Module
 
-This module only encapsulates a more convenient MongoConfig based on [Morphia](https://morphia.dev/landing/index.html),
-and its implementation is very simple.
+[![Morphia](https://img.shields.io/badge/Morphia-2.4-blue.svg)](https://morphia.dev/landing/index.html)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-We recommend using Datastore directly for any CRUD operations, using [Morphia](https://morphia.dev/landing/index.html)
-for index creation or using the [aggregation](https://morphia.dev/morphia/2.4/aggregations.html).
+This module provides a convenient encapsulation of `MongoConfig` based on [Morphia](https://morphia.dev/landing/index.html). It simplifies the implementation of MongoDB operations.
 
-### cache
+## 📦 Features
 
-For the first and second level cache, it is actually implemented in the cache module.
+- **Datastore Operations**: Use `Datastore` directly for CRUD operations.
+- **Index Creation**: Utilize [Morphia](https://morphia.dev/landing/index.html) for creating indexes.
+- **Aggregation**: Perform aggregations using [Morphia Aggregations](https://morphia.dev/morphia/2.4/aggregations.html).
 
-### usage
+## 🗃️ Cache
+
+The first and second level caches are implemented in the cache module.
+
+## 📋 Usage
+
+### Gradle Dependency
 
 ```kotlin
-// Dependencies
 dependencies {
-    // mongodb module
     compileOnly(files("libs/mongodb-1.0-SNAPSHOT.jar"))
 }
 ```
 
-We recommend using `MongoDBConnectionFactory` to create connections instead of creating objects directly.
+### Example Code
+
+We recommend using `MongoDBConnectionFactory` to create connections instead of instantiating objects directly.
 
 ```java
 public class Example {
     public static void main(String[] args) {
-        // test object
+        // Create test objects
         Person person = new Person();
         person.setUuid(UUID.randomUUID());
         person.setName("Alice");
@@ -36,48 +43,50 @@ public class Example {
         person2.setName("Alice");
         person2.setAge(45);
 
-
-        // create connection
+        // Create connection
         MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
                 "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
         );
 
-        // get datastore
+        // Get datastore
         Datastore datastore = mongoConfig.getDatastore();
 
-
-        // save object
+        // Save objects
         datastore.save(person);
         datastore.save(person2);
 
-
-        // find object, its thread safety
+        // Find objects (thread-safe)
         @Cleanup
         MorphiaCursor<Person> iterator = datastore.find(Person.class)
                 .filter(Filters.and(
                         Filters.eq("_id", "2135ef6b-8915-4d4c-a677-b1f5482ed2aa"), // _id eq
                         Filters.eq("name", "Alice"), // name eq
-                        Filters.gt("age", 35) // age > 35, it's time to lay off employees lol
+                        Filters.gt("age", 35) // age > 35
                 ))
+                .iterator(); // Get iterator
 
-                // It should be noted that iterators are not thread-safe
-                .iterator(); // get iterator
-
-        // just print
+        // Print results
         for (Person person1 : iterator.toList()) {
             System.out.println(person1.getAge());
         }
     }
 }
 
-
 @Data
 @Entity("persons")
 class Person {
     @Id
     private UUID uuid;
-
     private String name;
     private int age;
 }
 ```
+
+## 🔗 Related Links
+
+- [Morphia Documentation](https://morphia.dev/landing/index.html)
+- [Morphia Aggregations](https://morphia.dev/morphia/2.4/aggregations.html)
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
