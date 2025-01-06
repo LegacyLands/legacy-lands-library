@@ -1,150 +1,91 @@
 ### player
 
-This module is primarily used for processing player data in a distributed environment. It includes `L1 (Caffeine)` and `L2 (Redis)` caches to ensure data consistency. The module facilitates player data management, enables rapid development, and eliminates concerns about data consistency issues.
+This module is designed for processing player data within a distributed environment, employing L1 (Caffeine) and L2 (Redis) caches to ensure data consistency and efficient access.
 
-### what do we automate for you?
+### automation
 
-We automate the management and synchronization of player data across multiple caching layers and the database, ensuring efficient data retrieval and consistency in a distributed system.
+We automate the management and synchronization of player data across multiple layers, including caches and databases.
 
-### overview
+### key components
 
-- **Implementation**: The `LegacyPlayerDataService` utilizes the **Lazy Initialization (懒汉式)** pattern and operates as a **composite object**.
-- **Reasoning**: Lazy initialization prevents the performance overhead associated with **Eager Initialization (饿汉式)**, especially when handling numerous `LegacyPlayerDataService` instances.
-- **Instance Components**: Each `LegacyPlayerDataService` instance includes:
-  - **L1 Cache**: Java in-memory cache specific to the instance (`Caffeine`).
-  - **L2 Connection**: Connection to Redis for secondary caching.
-  - **DB Connection**: Connection to MongoDB for persistent storage.
+#### legacyplayerdataservice
+- **Description**: A composite object that can be instantiated indefinitely, each instance having its own dedicated connections:
+    - **Redis Connection**: For L2 caching layer.
+    - **MongoDB Connection**: For persistent storage.
+    - **Redis Streams Connection**: For inter-server communication.
+
+#### caching layers
+- **L1 Cache (Caffeine)**: In-memory cache designed for online player data, offering ultra-fast data access.
+- **L2 Cache (Redis)**: Secondary caching layer meant for persistent storage of player data, providing a centralized view.
 
 ### player data query process
 
-When querying player data through a specified `LegacyPlayerDataService`, the following steps are executed:
+1. **Check L1 Cache**:
+    - **Note**: This layer is optimized for online players and is not queried for offline data.
 
-#### step 1: check L1 cache
+2. **Query L2 Cache (Redis)**:
+    - **Cache Hit**:
+        - Retrieve data from L2.
+        - Store the retrieved data in L1 for faster future access.
+        - Return data to the requester.
+    - **Cache Miss**:
+        - Proceed to query the MongoDB database.
 
-- **Action**: L1 cache is **not queried** because it holds data only for **online players**.
-- **Rationale**: L1 is optimized for quick access to active player data, minimizing the need to query slower caches or databases.
-
-#### step 2: query L2 cache (redis)
-
-- **If L2 Cache Hit**:
-  - **Action**:
-    - Retrieve the player data from L2.
-    - Write the retrieved data into L1 cache **without modifying L2**.
-    - Return the player data to the requester.
-  - **Benefit**: Enhances access speed for subsequent requests by populating L1.
-
-- **If L2 Cache Miss**:
-  - **Action**: Proceed to query the Database (MongoDB).
-
-#### step 3: query database (mongodb)
-
-- **If Database Query Success**:
-  - **Action**:
-    - Retrieve player data from MongoDB.
-    - Write the data into L1 cache **without updating L2**.
-    - Return the player data to the requester.
-  - **Benefit**: Ensures that newly accessed data is quickly available in L1 for future accesses.
-
-- **If Database Query Fails (No Data Found)**:
-  - **Action**:
-    - Create a new player data record.
-    - Write this new data directly into L1 cache.
-  - **Benefit**: Initializes player data efficiently without unnecessary L2 or DB interactions.
+3. **Query Database (MongoDB)**:
+    - **Success**:
+        - Retrieve player data from the database.
+        - Store this data in L1 for quick future access.
+        - Return the data to the requester.
+    - **No Data Found**:
+        - Create a new player record and store it directly in L1.
 
 ### player logout process
 
-When a player exits, the system performs the following actions:
+1. **Retrieve All Instances**: Gather all instances of `LegacyPlayerDataService`.
+2. **Compare L1 and L2 Cache**:
+    - **If Consistent**: No changes are needed.
+    - **If Inconsistent**: Update the L2 cache with data from the L1 cache.
+3. **Remove Player Data**: Delete the player’s data from the L1 cache to maintain its integrity.
 
-1. **Retrieve All LegacyPlayerDataService Instances**
-  - **Action**: Gather all instances managing player data.
+### data synchronization
 
-2. **Compare L1 and L2 Cache Contents**
-  - **If L1 and L2 Data Are Consistent**:
-    - **Action**: No overwrite is performed.
-  - **If L1 and L2 Data Are Inconsistent**:
-    - **Action**: Update the L2 cache with the data from L1.
-
-3. **Remove Player Data from L1 Cache**
-  - **Action**: Delete the player's data from L1 cache.
-  - **Benefit**: Frees up in-memory resources and maintains L1 cache integrity by removing offline player data.
-
-### L2 data synchronization
-
-Synchronization between L2 cache (Redis) and the database (MongoDB) is handled via automated tasks:
-
-1. **Synchronize L1 to L2**
-  - **Action**: Transfer all data from L1 caches to L2.
-  - **Benefit**: Ensures that Redis holds the latest data from active sessions.
-
-2. **Persist L2 Data to Database**
-  - **Action**: Extract all data from L2 cache and save it to MongoDB.
-  - **Benefit**: Maintains a persistent and durable data store reflecting the current state of all players.
+1. **Synchronize L1 to L2**: Transfer all current data from the L1 caches to the L2 cache.
+2. **Persist L2 Data to Database**: Save data from the L2 cache into MongoDB for persistent storage.
 
 ### player data modification process
 
-When modifying player data through a specified `LegacyPlayerDataService`, the following steps are taken:
+1. **Publish Update Tasks Using Redis Stream**:
+    - Send update tasks via Redis Stream to ensure distributed synchronization.
+    - Directly update the content in the L2 cache.
+    - **If the L2 Cache Misses the Data**: Update it in the database instead.
 
-1. **Determine Player Online Status**
-  - **Action**: Check if the player is currently online by verifying the presence of their data in L1 cache.
+2. **Process on Each Server**:
+    - **If Player is Online**: Retrieve the updated data from the L2 cache and synchronize it to the L1 cache.
 
-2. **Update Data Based on Online Status**
-  - **If Player is Online**:
-    - **Action**: Directly update the player's data in the **L1 cache** of the current server.
-    - **Benefit**: Provides immediate data consistency for active sessions.
+### player data acquisition process
 
-  - **If Player is Offline**:
-    - **Action**: Directly update the player's data in the **L2 cache** (Redis).
-    - **Benefit**: Efficiently manages data for inactive players without impacting in-memory caches.
-
-### redis streams for cross-server notifications
-
-To ensure data consistency across multiple servers, Redis Streams are utilized for inter-server communication:
-
-1. **Publish Update Notification**
-  - **Action**: When player data is updated in L2 cache, publish a task via Redis Streams to notify other servers of the change.
-  - **Benefit**: Facilitates real-time synchronization of data across the distributed system.
-
-2. **Handle Incoming Notifications on Each Server**
-  - **Action**:
-    - Upon receiving a notification, each server checks if the affected player has an active L1 cache.
-    - **If Player is Online**:
-      - **Action**: Update the player's data in the local L1 cache to reflect the changes.
-    - **If Player is Offline**:
-      - **Action**: No action is taken.
-  - **Benefit**: Ensures that online players have the most recent data without unnecessary updates for offline players.
+1. **L1 L2 data synchronization**: Use Redis Stream to synchronize all server L1 L2 caches.
+2. **Search**: Search directly in the L2 cache, and if it does not hit, search in the database
 
 ### performance optimizations
 
-Optimizing the performance of each caching layer and database interactions is crucial for maintaining system efficiency.
+- **L1 Cache**:
+    - Retains data indefinitely for active players, enabling rapid access without expiration management.
 
-#### L1 cache (caffeine)
+- **L2 Cache**:
+    - Functions as long-term storage with configurable expiration policies to manage stale data.
 
-- **Strategy**:
-  - **No Expiration Time**: L1 cache retains data indefinitely as long as players are online.
-- **Benefit**: Provides ultra-fast access to active player data without the overhead of managing expiration policies.
-
-#### L2 cache (redis)
-
-- **Strategy**:
-  - **Long-Term Storage**: Stores data that needs to persist beyond the online state of players, including all L1 data.
-  - **Expiration Policies**: Implements expiration times to manage stale data and optimize memory usage.
-  - **Data Synchronization via Redis Streams**: Ensures consistency across multiple servers.
-- **Benefit**: Balances the need for fast access with efficient memory management and data consistency across the system.
-
-#### database (mongodb)
-
-- **Strategy**:
-  - **Conditional Queries**: Accessed only when both L1 and L2 caches miss, or when querying cold (infrequently accessed) data.
-- **Benefit**: Reduces the load on the database by leveraging caching layers, enhancing overall system performance and scalability.
+- **Database**:
+    - Accessed mainly when the data is not found in either cache, minimizing database load and enhancing performance.
 
 ### summary
 
-This architecture leverages a multi-tier caching strategy to efficiently manage player data in a scalable and performant manner:
+This architecture utilizes a multi-tier caching strategy for efficient player data management:
 
-- **L1 Cache (Caffeine)**: Provides rapid access to data for online players, minimizing latency.
-- **L2 Cache (Redis)**: Acts as a centralized cache for all player data, supporting data persistence and cross-server consistency.
-- **Database (MongoDB)**: Serves as the ultimate data store for player information, accessed only when necessary to reduce load and improve performance.
-- **Redis Streams**: Facilitates real-time synchronization across multiple servers, ensuring data consistency.
-- **Lazy Initialization of LegacyPlayerDataService**: Optimizes resource usage by initializing services only when needed, avoiding the performance costs of eager initialization.
+- **L1 Cache (Caffeine)**: Provides speedy access for online players.
+- **L2 Cache (Redis)**: Centralized caching of persistent player data.
+- **Database (MongoDB)**: Acts as the main storage when cache misses occur.
+- **Redis Streams**: Enables real-time synchronization between servers for consistent data.
+- **LegacyPlayerDataService**: Instantiable composite objects with dedicated connections for Redis, MongoDB, and Redis Streams.
 
-By following this design, the system ensures efficient data retrieval, consistent state across distributed servers, and optimized resource utilization, ultimately providing a seamless experience for players.
+In conclusion, this design maximizes data retrieval efficiency, ensures consistency across distributed servers, and optimizes overall performance, thereby delivering a seamless experience for players.
