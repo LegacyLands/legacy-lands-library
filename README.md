@@ -28,6 +28,26 @@ To run the module as a plugin (which is the recommended way), run the `-plugin` 
 
 **_You need to be careful about dependencies between modules!_**
 
+### API
+
+Please configure GitHub username and GitHub token before use [Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+
+```kotlin
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+        }
+    }
+}
+
+dependencies {
+    implementation("net.legacy.library:subproject-name:version")
+}
+```
+
 ## modules
 
 - [annotation](annotation/README.md)

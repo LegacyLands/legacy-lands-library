@@ -95,7 +95,6 @@ subprojects {
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
         archiveClassifier.set("plugin")
-
     }
 
     // Configure sourcesJar task
@@ -131,16 +130,6 @@ publishing {
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
                 }
             }
-//            modules.forEach { module ->
-//                create<MavenPublication>("shadow-${module.capitalize()}") {
-//                    project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension>() {
-//                        from(tasks.named<ShadowJar>("shadowJar").get().archiveFile.get)
-//                        groupId = group.toString()
-//                        artifactId = "$module"
-//                        version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
-//                    }
-//                }
-//            }
         }
 
         // GitHub Packages
