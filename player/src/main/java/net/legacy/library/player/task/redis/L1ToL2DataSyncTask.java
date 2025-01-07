@@ -46,6 +46,13 @@ public class L1ToL2DataSyncTask implements TaskInterface {
 
                 String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
                 String bucketKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService, "bucket-key");
+                String nowCache = l2Cache.getWithType(client -> client.getBucket(bucketKey), null, null, false);
+
+                // If the data is the same, no need to sync
+                if (nowCache.equals(serialized)) {
+                    return;
+                }
+
                 String syncLockKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService, "l1-l2-sync-lock");
 
                 l2Cache.execute(

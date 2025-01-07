@@ -3,10 +3,9 @@ package net.legacy.library.player.listener;
 import io.fairyproject.bukkit.listener.RegisterAsListener;
 import io.fairyproject.container.InjectableComponent;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.task.PlayerQuitDataSaveTask;
+import net.legacy.library.player.task.redis.L1ToL2DataSyncTask;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,7 +14,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author qwq-dev
@@ -45,7 +43,7 @@ public class PlayerListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID uniqueId = event.getPlayer().getUniqueId();
 
-        // Schedule a task to save player data to L2 cache
-        PlayerQuitDataSaveTask.of(uniqueId, LockSettings.of(100, 100, TimeUnit.MILLISECONDS)).start();
+        // L1 L2 sync
+        LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getCache().asMap().forEach((name, service) -> L1ToL2DataSyncTask.of(uniqueId, service).start());
     }
 }
