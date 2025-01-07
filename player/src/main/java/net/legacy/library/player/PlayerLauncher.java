@@ -52,9 +52,16 @@ public class PlayerLauncher extends Plugin {
         Config config = new Config();
         config.useSingleServer().setAddress("redis://127.0.0.1:6379");
 
+        List<String> base = List.of(
+                "net.legacy.library.player"
+        );
+        List<ClassLoader> classLoader = List.of(
+                PlayerLauncher.class.getClassLoader()
+        );
+
         LegacyPlayerDataService.of(
                 "player-data-service", mongoConfig, config,
-                Duration.ofMinutes(10), Duration.ofSeconds(10)
+                Duration.ofMinutes(1), basePackages, classLoader, Duration.ofSeconds(1)
         );
     }
 

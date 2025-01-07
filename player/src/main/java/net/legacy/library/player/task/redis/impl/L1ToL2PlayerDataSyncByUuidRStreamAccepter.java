@@ -3,23 +3,23 @@ package net.legacy.library.player.task.redis.impl;
 import io.fairyproject.log.Log;
 import net.legacy.library.player.annotation.RStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.task.redis.L1ToL2DataSyncTask;
+import net.legacy.library.player.task.L1ToL2PlayerDataSyncTask;
 import net.legacy.library.player.task.redis.RStreamAccepterInterface;
 import org.apache.commons.lang3.tuple.Pair;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
-
-import java.util.UUID;
 
 /**
  * @author qwq-dev
  * @since 2025-01-04 20:59
  */
 @RStreamAccepterRegister
-public class PlayerDataSyncUUIDRedisStreamAccept implements RStreamAccepterInterface {
+public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepterInterface {
     @Override
     public String getActionName() {
-        return "player-data-sync-uuid";
+        return "player-data-sync-name";
     }
 
     @Override
@@ -29,10 +29,14 @@ public class PlayerDataSyncUUIDRedisStreamAccept implements RStreamAccepterInter
 
     @Override
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, Pair<String, String> data) {
-        // Scound must be player uuid
+        // Scound must be player name
         String second = data.getValue();
 
-        L1ToL2DataSyncTask.of(UUID.fromString(second), legacyPlayerDataService).start().getFuture().whenComplete((aVoid, throwable) -> {
+        // Very slow, but it's async so it's fine
+        OfflinePlayer offlinePlayer =
+                Bukkit.getOfflinePlayer(second);
+
+        L1ToL2PlayerDataSyncTask.of(offlinePlayer.getUniqueId(), legacyPlayerDataService).start().getFuture().whenComplete((aVoid, throwable) -> {
             if (throwable != null) {
                 Log.error("Error while syncing player data", throwable);
                 return;

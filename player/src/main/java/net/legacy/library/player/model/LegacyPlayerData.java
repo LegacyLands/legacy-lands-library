@@ -83,6 +83,17 @@ public class LegacyPlayerData {
     }
 
     /**
+     * Adds multiple key-value pairs to the player's data.
+     *
+     * @param data the map containing the key-value pairs to add
+     * @return the current instance of {@link LegacyPlayerData} for method chaining
+     */
+    public LegacyPlayerData addData(Map<String, String> data) {
+        this.data.putAll(data);
+        return this;
+    }
+
+    /**
      * Removes a key-value pair from the player's data by its key.
      *
      * @param key the key to remove from the data

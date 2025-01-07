@@ -52,6 +52,18 @@ public class RStreamAccepterTask implements TaskInterface {
         return new RStreamAccepterTask(legacyPlayerDataService, basePackages, classLoaders, interval);
     }
 
+    public void updateBasePacakges(List<String> basePackages) {
+        this.basePackages.clear();
+        this.basePackages.addAll(basePackages);
+        updateAccepter();
+    }
+
+    public void updateClassLoaders(List<ClassLoader> classLoaders) {
+        this.classLoaders.clear();
+        this.classLoaders.addAll(classLoaders);
+        updateAccepter();
+    }
+
     public void updateAccepter() {
         annotatedClasses.clear();
         annotatedClasses.addAll(AnnotationScanner.findAnnotatedClasses(

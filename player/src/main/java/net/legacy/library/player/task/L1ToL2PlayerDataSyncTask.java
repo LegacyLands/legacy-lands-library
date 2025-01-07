@@ -1,4 +1,4 @@
-package net.legacy.library.player.task.redis;
+package net.legacy.library.player.task;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
@@ -20,16 +20,16 @@ import java.util.concurrent.TimeUnit;
  * @since 2025-01-05 12:10
  */
 @RequiredArgsConstructor
-public class L1ToL2DataSyncTask implements TaskInterface {
+public class L1ToL2PlayerDataSyncTask implements TaskInterface {
     private final UUID uuid;
     private final LegacyPlayerDataService legacyPlayerDataService;
 
-    public static L1ToL2DataSyncTask of(LegacyPlayerDataService legacyPlayerDataService) {
-        return new L1ToL2DataSyncTask(null, legacyPlayerDataService);
+    public static L1ToL2PlayerDataSyncTask of(LegacyPlayerDataService legacyPlayerDataService) {
+        return new L1ToL2PlayerDataSyncTask(null, legacyPlayerDataService);
     }
 
-    public static L1ToL2DataSyncTask of(UUID uuid, LegacyPlayerDataService legacyPlayerDataService) {
-        return new L1ToL2DataSyncTask(uuid, legacyPlayerDataService);
+    public static L1ToL2PlayerDataSyncTask of(UUID uuid, LegacyPlayerDataService legacyPlayerDataService) {
+        return new L1ToL2PlayerDataSyncTask(uuid, legacyPlayerDataService);
     }
 
     @Override
@@ -45,7 +45,7 @@ public class L1ToL2DataSyncTask implements TaskInterface {
                 }
 
                 String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
-                String bucketKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService, "bucket-key");
+                String bucketKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService);
                 String nowCache = l2Cache.getWithType(client -> client.getBucket(bucketKey), null, null, false);
 
                 // If the data is the same, no need to sync
@@ -53,10 +53,10 @@ public class L1ToL2DataSyncTask implements TaskInterface {
                     return;
                 }
 
-                String syncLockKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService, "l1-l2-sync-lock");
+                String syncLockKey = RKeyUtil.getRLPDSReadWriteLockKey(bucketKey);
 
                 l2Cache.execute(
-                        client -> client.getLock(syncLockKey),
+                        client -> client.getReadWriteLock(syncLockKey).writeLock(),
                         client -> {
                             client.getBucket(bucketKey).set(serialized);
                             return null;

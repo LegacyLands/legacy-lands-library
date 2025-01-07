@@ -47,4 +47,8 @@ public class RKeyUtil {
     public static String getRLPDSKey(LegacyPlayerDataService legacyPlayerDataService, String... strings) {
         return legacyPlayerDataService.getName() + "-rlpds-" + String.join("-", strings);
     }
+
+    public static String getRLPDSReadWriteLockKey(String bucketKey) {
+        return bucketKey + "-" + "read-write-lock";
+    }
 }

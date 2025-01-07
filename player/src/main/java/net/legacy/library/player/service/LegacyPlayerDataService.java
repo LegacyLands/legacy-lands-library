@@ -14,7 +14,6 @@ import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
 import net.legacy.library.cache.service.multi.TieredCacheLevel;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
-import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
 import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
@@ -58,9 +57,15 @@ public class LegacyPlayerDataService {
      * @param mongoDBConnectionConfig   the MongoDB connection configuration
      * @param config                    the Redis configuration for initializing the Redis cache
      * @param autoSaveInterval          the interval for auto-saving player data to the database
+     * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
      * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
      */
-    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval, Duration redisStreamAcceptInterval) {
+    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
+                                   Config config, Duration autoSaveInterval, List<String> basePackages,
+                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval
+
+    ) {
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
@@ -92,16 +97,7 @@ public class LegacyPlayerDataService {
                 PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(50, 50, TimeUnit.MILLISECONDS), this).start();
 
         // Redis stream accept task
-        this.redisStreamAcceptTask = RStreamAccepterTask.of( // TODO: add to of method
-                this,
-                List.of(
-                        "net.legacy.library.player"
-                ),
-                List.of(
-                        PlayerLauncher.class.getClassLoader()
-                ),
-                redisStreamAcceptInterval
-        ).start();
+        this.redisStreamAcceptTask = RStreamAccepterTask.of(this, basePackages, classLoaders, redisStreamAcceptInterval).start();
     }
 
     /**
@@ -109,13 +105,17 @@ public class LegacyPlayerDataService {
      *
      * <p>The auto-save interval is set to 2 hours by default.
      *
-     * @param name                    the name
-     * @param mongoDBConnectionConfig the MongoDB connection configuration
-     * @param config                  the Redis configuration for initializing the Redis cache
+     * @param name                      the name
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration for initializing the Redis cache
+     * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
      * @return the {@link LegacyPlayerDataService}
      */
-    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2), Duration.ofSeconds(5));
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
+                                             List<String> basePackages, List<ClassLoader> classLoaders
+    ) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(5));
     }
 
     /**
@@ -125,11 +125,14 @@ public class LegacyPlayerDataService {
      * @param mongoDBConnectionConfig   the MongoDB connection configuration
      * @param config                    the Redis configuration for initializing the Redis cache
      * @param autoSaveInterval          the interval for auto-saving player data to the database
+     * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
      * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
      * @return the {@link LegacyPlayerDataService}
      */
-    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval, Duration redisStreamAcceptInterval) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, redisStreamAcceptInterval);
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval,
+                                             List<String> basePackages, List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval);
     }
 
     /**
@@ -142,7 +145,7 @@ public class LegacyPlayerDataService {
         return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
     }
 
-    public ScheduledTask<?> redisStreamPubTask(Pair<String, String> data, Duration duration) {
+    public ScheduledTask<?> pubRStreamTask(Pair<String, String> data, Duration duration) {
         return RStreamPubTask.of(this, data, duration).start();
     }
 
@@ -192,15 +195,19 @@ public class LegacyPlayerDataService {
 
         // Get L2 cache
         RedisCacheServiceInterface l2Cache = getL2Cache();
-        Object object =
-                l2Cache.getWithType(client -> client.getBucket(key).get(), () -> null, null, false);
+        String string =
+                l2Cache.getWithType(
+                        client -> client.getReadWriteLock(RKeyUtil.getRLPDSReadWriteLockKey(key)).readLock(),
+                        client -> client.getBucket(key).get(),
+                        () -> null, null, false, LockSettings.of(5, 5, TimeUnit.MILLISECONDS)
+                );
 
-        if (object == null) {
+        if (string == null || string.isEmpty()) {
             return Optional.empty();
         }
 
         // Deserialize JSON to LegacyPlayerData
-        return Optional.ofNullable(SimplixSerializer.deserialize(object.toString(), LegacyPlayerData.class));
+        return Optional.ofNullable(SimplixSerializer.deserialize(string, LegacyPlayerData.class));
     }
 
     /**

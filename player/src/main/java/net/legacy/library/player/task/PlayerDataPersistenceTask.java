@@ -9,7 +9,6 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.task.redis.L1ToL2DataSyncTask;
 import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
@@ -37,13 +36,14 @@ public class PlayerDataPersistenceTask implements TaskInterface {
             RedissonClient redissonClient = l2Cache.getCache();
 
             // Sync L1 cache to L2 cache
-            L1ToL2DataSyncTask.of(legacyPlayerDataService).start();
+            L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();
 
             // Persistence
             String lockKey = RKeyUtil.getRLPDSKey(legacyPlayerDataService, "persistence-lock");
             RLock lock = redissonClient.getLock(lockKey);
 
             try {
+                // Exclusive
                 if (!lock.tryLock(lockSettings.getWaitTime(), lockSettings.getLeaseTime(), lockSettings.getTimeUnit())) {
                     throw new RuntimeException("Could not acquire lock: " + lock.getName());
                 }
@@ -55,32 +55,25 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                      * Get all LPDS key (name + "-lpds-*") and deserialize and save all LPD
                      */
                     RKeys keys = redissonClient.getKeys();
-                    for (String string : keys.getKeys(
-                            KeysScanOptions.defaults()
-                                    .pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*")
-                    )) {
-                        RType type = keys.getType(string);
+                    KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*");
 
-                        if (type != RType.OBJECT) {
+                    for (String string : keys.getKeys(keysScanOptions)) {
+                        if (keys.getType(string) != RType.OBJECT) {
                             continue;
                         }
 
-                        LegacyPlayerData legacyPlayerData = l2Cache.getWithType(
-                                client -> SimplixSerializer.deserialize(client.getBucket(string).get().toString(), LegacyPlayerData.class), () -> null, null, false
-                        );
-                        datastore.save(legacyPlayerData);
+                        datastore.save(l2Cache.getWithType(client -> SimplixSerializer.deserialize(
+                                client.getBucket(string).get().toString(), LegacyPlayerData.class
+                        ), () -> null, null, false));
                     }
                 } finally {
-                    if (lock.isHeldByCurrentThread()) {
-                        lock.unlock();
-                    }
+                    // Some uncertain measures
+                    lock.forceUnlock();
                 }
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Thread interrupted while trying to acquire lock.", exception);
             } catch (Exception exception) {
-                // DEBUG print
-//                exception.printStackTrace();
                 throw new RuntimeException("Unexpected error during legacy player data migration.", exception);
             }
         });
