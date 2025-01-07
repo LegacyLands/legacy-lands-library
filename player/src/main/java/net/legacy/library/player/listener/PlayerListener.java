@@ -4,7 +4,6 @@ import io.fairyproject.bukkit.listener.RegisterAsListener;
 import io.fairyproject.container.InjectableComponent;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.legacy.library.cache.model.LockSettings;
-import net.legacy.library.commons.util.GsonUtil;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.PlayerQuitDataSaveTask;
@@ -33,8 +32,8 @@ public class PlayerListener implements Listener {
         LegacyPlayerDataService legacyPlayerDataService1 = legacyPlayerDataService.get();
         LegacyPlayerData legacyPlayerData = legacyPlayerDataService1.getLegacyPlayerData(event.getPlayer().getUniqueId());
 
-        Pair<String, String> pair = Pair.of("player-data-sync-name", GsonUtil.getGson().toJson(Pair.of("player-data-service", "PsycheQwQ")));
-        Pair<String, String> pair2 = Pair.of("player-data-sync-name", GsonUtil.getGson().toJson(Pair.of("player-data-service", "PsycheQwQ2")));
+        Pair<String, String> pair = Pair.of("player-data-sync-name", "PsycheQwQ");
+        Pair<String, String> pair2 = Pair.of("player-data-sync-name", "PsycheQwQ2");
 
         legacyPlayerDataService1.redisStreamPubTask(pair, Duration.ofSeconds(60));
         legacyPlayerDataService1.redisStreamPubTask(pair2, Duration.ofSeconds(65));

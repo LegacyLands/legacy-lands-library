@@ -74,6 +74,11 @@ public class RStreamAccepterTask implements TaskInterface {
         Runnable runnable = () -> {
             RedisCacheServiceInterface redisCacheService = legacyPlayerDataService.getL2Cache();
             RedissonClient redissonClient = redisCacheService.getCache();
+
+            /*
+             * Each LegacyPlayerDataService has its own RStream communication
+             * which will not contain data from other LegacyPlayerDataService
+             */
             RStream<Object, Object> rStream = redissonClient.getStream(RKeyUtil.getRStreamNameKey(legacyPlayerDataService));
 
             StreamReadArgs args = StreamReadArgs.greaterThan(StreamMessageId.ALL);
@@ -107,14 +112,16 @@ public class RStreamAccepterTask implements TaskInterface {
 
                 // Get all registed accepter
                 for (RStreamAccepterInterface accepter : accepters) {
-                    if (!accepter.getActionName().equals(left) ||
-                            !accepter.getTargetLegacyPlayerDataServiceName().equals(legacyPlayerDataService.getName())) {
+                    String actionName = accepter.getActionName();
+
+                    // Filter action name
+                    if (actionName != null && !actionName.equals(left)) {
                         continue;
                     }
 
                     // New thread async accept
                     ScheduledTask<?> schedule =
-                            schedule(() -> accepter.accept(rStream, streamMessageId, pair));
+                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair));
 
                     if (accepter.isRecodeLimit()) {
                         schedule.getFuture().whenComplete(

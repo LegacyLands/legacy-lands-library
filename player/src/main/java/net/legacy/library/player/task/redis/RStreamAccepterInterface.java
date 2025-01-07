@@ -1,5 +1,6 @@
 package net.legacy.library.player.task.redis;
 
+import net.legacy.library.player.service.LegacyPlayerDataService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
@@ -20,25 +21,17 @@ public interface RStreamAccepterInterface {
      * <p>This serves as a unique identifier or categorization for the specific type of task
      * being processed. For example, it could represent operations like "player-data-sync-name".
      *
-     * @return A {@link String} representing the action name of the task.
+     * <p>If we don't care, we can return {@code null}
+     *
+     * @return A {@link String} representing the action name of the task
      */
     String getActionName();
-
-    /**
-     * Get the target legacy player data service name that this task applies to.
-     *
-     * <p>This corresponds to the specific player data service instance this task
-     * targets. It helps in routing or contextualizing tasks in multiservice or distributed environments.
-     *
-     * @return A {@link String} representing the target service name, If {@code null} is returned, it means there is no limit
-     */
-    String getTargetLegacyPlayerDataServiceName();
 
     /**
      * Determine whether to limit task processing to prevent duplicates within a single server or connection.
      *
      * <p>If this method returns {@code true}, the task will be processed only once per
-     * connection on each server. After the {@link #accept(RStream, StreamMessageId, Pair)} method is executed,
+     * connection on each server. After the {@link #accept(RStream, StreamMessageId, LegacyPlayerDataService, Pair)} method is executed,
      * the task will not be executed again by the same instance unless explicitly deleted.
      *
      * <p>However, if another server or connection processes the task, it can still
@@ -46,11 +39,11 @@ public interface RStreamAccepterInterface {
      * and deleted, or until it expires.
      *
      * <p>If this method returns {@code false}, the task can be processed repeatedly,
-     * regardless of whether the {@link #accept(RStream, StreamMessageId, Pair)} method runs on the
+     * regardless of whether the {@link #accept(RStream, StreamMessageId, LegacyPlayerDataService, Pair)} method runs on the
      * same connection or instance.
      *
-     * @return {@code true} if task records are limited to a single handling per connection,
-     * {@code false} otherwise.
+     * @return {@code true} if task records are limited to a single handling per connection
+     * {@code false} otherwise
      */
     boolean isRecodeLimit();
 
@@ -62,7 +55,7 @@ public interface RStreamAccepterInterface {
      * <ul>
      *   <li>Determine if the task is valid and can be processed.</li>
      *   <li>If the task is successfully processed, it can be explicitly deleted using
-     *       methods provided by {@link RStream} (e.g. {@code rStream.remove()}).</li>
+     *       methods provided by {@link RStream} (e.g. {@link RStream#remove(StreamMessageId...)}).</li>
      *   <li>If the processing fails, the task will remain in the rStream and be available
      *       for handling by other connections or servers.</li>
      * </ul>
@@ -82,9 +75,10 @@ public interface RStreamAccepterInterface {
      * <p><b>Note:</b> This method is not exclusive, meaning multiple connections or servers
      * may attempt to process the same task concurrently unless additional controls are in place.
      *
-     * @param rStream         The {@link RStream} object representing the Redis stream containing the task.
-     * @param streamMessageId The {@link StreamMessageId} object representing the unique ID of the task.
-     * @param data            The data contained in the task, represented as a {@link Pair} of {@link String} objects.
+     * @param rStream                 The {@link RStream} object representing the Redis stream containing the task
+     * @param legacyPlayerDataService The {@link LegacyPlayerDataService} object representing the service for handling player data
+     * @param streamMessageId         The {@link StreamMessageId} object representing the unique ID of the task
+     * @param data                    The data contained in the task, represented as a {@link Pair} of {@link String} objects
      */
-    void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, Pair<String, String> data);
+    void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, Pair<String, String> data);
 }

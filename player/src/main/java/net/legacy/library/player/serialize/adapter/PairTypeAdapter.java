@@ -1,4 +1,4 @@
-package net.legacy.library.player.service.adapter;
+package net.legacy.library.player.serialize.adapter;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
