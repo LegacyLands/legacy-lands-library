@@ -11,7 +11,7 @@ import java.util.function.Supplier;
  * Utility class for handling {@link Gson} operations.
  *
  * <p>This class provides a thread-safe way to customize and access a shared Gson instance.
- * Customizations can be applied via the {@link #customizeGson(Consumer)} method, which safely modifies
+ * Customizations can be applied via the {@link #customizeGsonBuilder(Consumer)} method, which safely modifies
  * the shared Gson instance in a thread-safe manner.
  *
  * <p>It is safe to use in multithreaded environments, ensuring only one customized Gson instance at a time.

@@ -64,6 +64,7 @@ public class PlayerDataUpdateTask implements TaskInterface {
                 String bucketKey = RKeyUtil.getRLPDSKey(uuid, legacyPlayerDataService);
                 String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
 
+                // Save to cache, so we need write lock
                 legacyPlayerDataService.getL2Cache().execute(
                         client -> client.getReadWriteLock(RKeyUtil.getRLPDSReadWriteLockKey(bucketKey)).writeLock(),
                         client -> {

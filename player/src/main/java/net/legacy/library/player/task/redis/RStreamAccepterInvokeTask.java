@@ -27,7 +27,7 @@ import java.util.Set;
  * @since 2025-01-04 20:06
  */
 @Getter
-public class RStreamAccepterTask implements TaskInterface {
+public class RStreamAccepterInvokeTask implements TaskInterface {
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -37,7 +37,7 @@ public class RStreamAccepterTask implements TaskInterface {
     private final Set<RStreamAccepterInterface> accepters;
     private final Set<StreamMessageId> acceptedId;
 
-    public RStreamAccepterTask(LegacyPlayerDataService legacyPlayerDataService, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
+    public RStreamAccepterInvokeTask(LegacyPlayerDataService legacyPlayerDataService, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
         this.legacyPlayerDataService = legacyPlayerDataService;
         this.basePackages = basePackages;
         this.classLoaders = classLoaders;
@@ -48,8 +48,8 @@ public class RStreamAccepterTask implements TaskInterface {
         updateAccepter();
     }
 
-    public static RStreamAccepterTask of(LegacyPlayerDataService legacyPlayerDataService, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
-        return new RStreamAccepterTask(legacyPlayerDataService, basePackages, classLoaders, interval);
+    public static RStreamAccepterInvokeTask of(LegacyPlayerDataService legacyPlayerDataService, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
+        return new RStreamAccepterInvokeTask(legacyPlayerDataService, basePackages, classLoaders, interval);
     }
 
     public void updateBasePacakges(List<String> basePackages) {

@@ -55,6 +55,7 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface {
 
                 String syncLockKey = RKeyUtil.getRLPDSReadWriteLockKey(bucketKey);
 
+                // Write lock
                 l2Cache.execute(
                         client -> client.getReadWriteLock(syncLockKey).writeLock(),
                         client -> {

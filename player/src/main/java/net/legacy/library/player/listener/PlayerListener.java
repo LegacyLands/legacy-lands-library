@@ -6,7 +6,7 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.L1ToL2PlayerDataSyncTask;
-import org.apache.commons.lang3.tuple.Pair;
+import net.legacy.library.player.task.redis.RStreamTask;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -25,17 +25,17 @@ public class PlayerListener implements Listener {
     // DEBUG
     @EventHandler
     public void on(AsyncChatEvent event) {
-        System.out.println("1");
-
         Optional<LegacyPlayerDataService> legacyPlayerDataService = LegacyPlayerDataService.getLegacyPlayerDataService("player-data-service");
         LegacyPlayerDataService legacyPlayerDataService1 = legacyPlayerDataService.get();
         LegacyPlayerData legacyPlayerData = legacyPlayerDataService1.getLegacyPlayerData(event.getPlayer().getUniqueId());
 
-        Pair<String, String> pair = Pair.of("player-data-sync-name", "PsycheQwQ");
-        Pair<String, String> pair2 = Pair.of("player-data-sync-name", "PsycheQwQ2");
+        RStreamTask rStreamTask =
+                RStreamTask.of("player-data-sync-name", "PsycheQwQ", Duration.ofSeconds(5));
+        RStreamTask rStreamTask2 =
+                RStreamTask.of("player-data-sync-name", "PsycheQwQ2", Duration.ofSeconds(5));
 
-        legacyPlayerDataService1.pubRStreamTask(pair, Duration.ofSeconds(60));
-        legacyPlayerDataService1.pubRStreamTask(pair2, Duration.ofSeconds(65));
+        legacyPlayerDataService1.pubRStreamTask(rStreamTask);
+        legacyPlayerDataService1.pubRStreamTask(rStreamTask2);
 
         System.out.println(legacyPlayerData.getData());
     }

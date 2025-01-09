@@ -12,16 +12,17 @@ import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author qwq-dev
  * @since 2025-01-05 12:37
  */
 @RStreamAccepterRegister
-public class PlayerDataUpdateRStreamAccepter implements RStreamAccepterInterface {
+public class PlayerDataUpdateByUuidRStreamAccepter implements RStreamAccepterInterface {
     @Override
     public String getActionName() {
-        return "player-data-update-name";
+        return "player-data-update-uuid";
     }
 
     @Override
@@ -31,14 +32,16 @@ public class PlayerDataUpdateRStreamAccepter implements RStreamAccepterInterface
 
     @Override
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, Pair<String, String> data) {
-        String playerName = data.getKey();
+        String uuidString = data.getKey();
+        UUID uuid = UUID.fromString(uuidString);
         String playerDataString = data.getValue();
 
         Map<String, String> playerData =
-                GsonUtil.getGson().fromJson(playerDataString, new TypeToken<Map<String, String>>(){}.getType());
+                GsonUtil.getGson().fromJson(playerDataString, new TypeToken<Map<String, String>>() {
+                }.getType());
 
         // Now we can update the player data
-        Player player = Bukkit.getPlayer(playerName);
+        Player player = Bukkit.getPlayer(uuid);
 
         /*
          * If the player is online
@@ -49,6 +52,7 @@ public class PlayerDataUpdateRStreamAccepter implements RStreamAccepterInterface
          */
         if (player != null && player.isOnline()) {
             legacyPlayerDataService.getLegacyPlayerData(player.getUniqueId()).addData(playerData);
+            rStream.remove(streamMessageId);
         }
     }
 }

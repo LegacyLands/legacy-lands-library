@@ -5,13 +5,11 @@ import lombok.RequiredArgsConstructor;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
-import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.api.RMapCache;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.stream.StreamAddArgs;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -21,11 +19,10 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class RStreamPubTask implements TaskInterface {
     private final LegacyPlayerDataService legacyPlayerDataService;
-    private final Pair<String, String> data;
-    private final Duration duration;
+    private final RStreamTask rStreamTask;
 
-    public static RStreamPubTask of(LegacyPlayerDataService legacyPlayerDataService, Pair<String, String> data, Duration duration) {
-        return new RStreamPubTask(legacyPlayerDataService, data, duration);
+    public static RStreamPubTask of(LegacyPlayerDataService legacyPlayerDataService, RStreamTask rStreamTask) {
+        return new RStreamPubTask(legacyPlayerDataService, rStreamTask);
     }
 
     @Override
@@ -41,7 +38,10 @@ public class RStreamPubTask implements TaskInterface {
                     RKeyUtil.getTempRMapCacheKey(legacyPlayerDataService)
             );
 
-            mapCache.put(data.getLeft(), data.getRight(), duration.toMillis(), TimeUnit.MILLISECONDS);
+            mapCache.put(
+                    rStreamTask.getActionName(), rStreamTask.getData(),
+                    rStreamTask.getExpirationTime().toMillis(), TimeUnit.MILLISECONDS
+            );
             rStream.add(StreamAddArgs.entries(mapCache));
         });
     }

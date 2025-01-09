@@ -17,10 +17,10 @@ import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
 import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
-import net.legacy.library.player.task.redis.RStreamAccepterTask;
+import net.legacy.library.player.task.redis.RStreamAccepterInvokeTask;
 import net.legacy.library.player.task.redis.RStreamPubTask;
+import net.legacy.library.player.task.redis.RStreamTask;
 import net.legacy.library.player.util.RKeyUtil;
-import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.config.Config;
 
 import java.time.Duration;
@@ -97,7 +97,7 @@ public class LegacyPlayerDataService {
                 PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(50, 50, TimeUnit.MILLISECONDS), this).start();
 
         // Redis stream accept task
-        this.redisStreamAcceptTask = RStreamAccepterTask.of(this, basePackages, classLoaders, redisStreamAcceptInterval).start();
+        this.redisStreamAcceptTask = RStreamAccepterInvokeTask.of(this, basePackages, classLoaders, redisStreamAcceptInterval).start();
     }
 
     /**
@@ -105,11 +105,11 @@ public class LegacyPlayerDataService {
      *
      * <p>The auto-save interval is set to 2 hours by default.
      *
-     * @param name                      the name
-     * @param mongoDBConnectionConfig   the MongoDB connection configuration
-     * @param config                    the Redis configuration for initializing the Redis cache
-     * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
-     * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param name                    the name
+     * @param mongoDBConnectionConfig the MongoDB connection configuration
+     * @param config                  the Redis configuration for initializing the Redis cache
+     * @param basePackages            the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param classLoaders            the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
      * @return the {@link LegacyPlayerDataService}
      */
     public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
@@ -145,8 +145,18 @@ public class LegacyPlayerDataService {
         return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
     }
 
-    public ScheduledTask<?> pubRStreamTask(Pair<String, String> data, Duration duration) {
-        return RStreamPubTask.of(this, data, duration).start();
+    /**
+     * Use {@link org.redisson.RedissonStream} to publish a {@link RStreamTask}.
+     *
+     * <p>It should be noted that after the {@link ScheduledTask} returned by this method is executed,
+     * it only means that the task is successfully published. If you need to ensure that the task is successfully executed,
+     * you need to add logic in the corresponding {@link net.legacy.library.player.task.redis.RStreamAccepterInterface}.
+     *
+     * @param rStreamTask the task to be published
+     * @return a {@link ScheduledTask} instance to track the execution status of the task
+     */
+    public ScheduledTask<?> pubRStreamTask(RStreamTask rStreamTask) {
+        return RStreamPubTask.of(this, rStreamTask).start();
     }
 
     /**
