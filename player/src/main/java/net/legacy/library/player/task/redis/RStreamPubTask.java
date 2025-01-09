@@ -40,16 +40,17 @@ public class RStreamPubTask implements TaskInterface {
             );
 
             Duration expirationTime = rStreamTask.getExpirationTime();
+            long millis = expirationTime.toMillis();
 
             mapCache.put(
                     rStreamTask.getActionName(), rStreamTask.getData(),
-                    expirationTime.toMillis(), TimeUnit.MILLISECONDS
+                    millis, TimeUnit.MILLISECONDS
             );
 
             // Set expiration time for the cache
             mapCache.put(
-                    "expiration-time", String.valueOf(System.currentTimeMillis() + expirationTime.toMillis()),
-                    0, TimeUnit.MILLISECONDS
+                    "expiration-time", String.valueOf(System.currentTimeMillis() + millis),
+                    millis + 200, TimeUnit.MILLISECONDS
             );
 
             rStream.add(StreamAddArgs.entries(mapCache));
