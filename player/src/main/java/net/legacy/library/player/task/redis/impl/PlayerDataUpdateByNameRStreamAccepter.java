@@ -14,7 +14,6 @@ import org.redisson.api.StreamMessageId;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author qwq-dev
@@ -42,8 +41,7 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
                 GsonUtil.getGson().fromJson(data, new TypeToken<Pair<String, Map<String, String>>>() {
                 }.getType());
 
-        String uuidString = pairData.getLeft();
-        UUID uuid = UUID.fromString(uuidString);
+        String playerName = pairData.getLeft();
         Map<String, String> dataMap = pairData.getRight();
 
         // Now we can update the player data
