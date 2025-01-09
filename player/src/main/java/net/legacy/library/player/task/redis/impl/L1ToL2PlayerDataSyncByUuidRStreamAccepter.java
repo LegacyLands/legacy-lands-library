@@ -43,7 +43,7 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
                 Log.error("Error while syncing player data (L1ToL2PlayerDataSyncByUuidRStreamAccepter)", throwable);
                 return;
             }
-            rStream.remove(streamMessageId);
+            ack(rStream, streamMessageId);
         });
     }
 }

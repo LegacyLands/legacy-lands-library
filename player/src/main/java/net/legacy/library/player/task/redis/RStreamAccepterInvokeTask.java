@@ -112,33 +112,49 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
                     continue;
                 }
 
-                if (value.size() > 1) {
+                // Greater than 2 because, in addition to the data, there is also an expiration time
+                if (value.size() > 2) {
                     Log.error("RStream message is not a pair! StreamMessageId: " + streamMessageId);
                     continue;
                 }
 
-                Map.Entry<Object, Object> entry = value.entrySet().iterator().next();
-                String left = entry.getKey().toString();
-                String right = entry.getValue().toString();
-                Pair<String, String> pair = Pair.of(left, right);
+                long expirationTime =
+                        Long.parseLong(value.getOrDefault("expiration-time", 0).toString());
 
-                // Get all registed accepter
-                for (RStreamAccepterInterface accepter : accepters) {
-                    String actionName = accepter.getActionName();
+                if (expirationTime == 0 || System.currentTimeMillis() > expirationTime) {
+                    rStream.remove(streamMessageId);
+                    continue;
+                }
 
-                    // Filter action name
-                    if (actionName != null && !actionName.equals(left)) {
+                for (Map.Entry<Object, Object> entry : value.entrySet()) {
+                    Object key = entry.getKey();
+                    String left = key.toString();
+
+                    if (left.equals("expiration-time")) {
                         continue;
                     }
 
-                    // New thread async accept
-                    ScheduledTask<?> schedule =
-                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
+                    String right = entry.getValue().toString();
+                    Pair<String, String> pair = Pair.of(left, right);
 
-                    if (accepter.isRecodeLimit()) {
-                        schedule.getFuture().whenComplete(
-                                (result, throwable) -> acceptedId.add(streamMessageId)
-                        );
+                    // Get all registed accepter
+                    for (RStreamAccepterInterface accepter : accepters) {
+                        String actionName = accepter.getActionName();
+
+                        // Filter action name
+                        if (actionName != null && !actionName.equals(left)) {
+                            continue;
+                        }
+
+                        // New thread async accept
+                        ScheduledTask<?> schedule =
+                                schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
+
+                        if (accepter.isRecodeLimit()) {
+                            schedule.getFuture().whenComplete(
+                                    (result, throwable) -> acceptedId.add(streamMessageId)
+                            );
+                        }
                     }
                 }
             }

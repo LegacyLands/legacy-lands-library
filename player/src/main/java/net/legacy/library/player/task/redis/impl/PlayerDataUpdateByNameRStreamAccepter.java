@@ -56,7 +56,7 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
          */
         if (player != null && player.isOnline()) {
             legacyPlayerDataService.getLegacyPlayerData(player.getUniqueId()).addData(dataMap);
-            rStream.remove(streamMessageId);
+            ack(rStream, streamMessageId);
         }
     }
 }

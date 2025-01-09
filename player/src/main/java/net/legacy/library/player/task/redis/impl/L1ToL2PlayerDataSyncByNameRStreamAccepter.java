@@ -44,7 +44,7 @@ public class L1ToL2PlayerDataSyncByNameRStreamAccepter implements RStreamAccepte
                 Log.error("Error while syncing player data (L1ToL2PlayerDataSyncByNameRStreamAccepter)", throwable);
                 return;
             }
-            rStream.remove(streamMessageId);
+            ack(rStream, streamMessageId);
         });
     }
 }

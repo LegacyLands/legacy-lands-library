@@ -10,6 +10,7 @@ import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.stream.StreamAddArgs;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -38,10 +39,19 @@ public class RStreamPubTask implements TaskInterface {
                     RKeyUtil.getTempRMapCacheKey(legacyPlayerDataService)
             );
 
+            Duration expirationTime = rStreamTask.getExpirationTime();
+
             mapCache.put(
                     rStreamTask.getActionName(), rStreamTask.getData(),
-                    rStreamTask.getExpirationTime().toMillis(), TimeUnit.MILLISECONDS
+                    expirationTime.toMillis(), TimeUnit.MILLISECONDS
             );
+
+            // Set expiration time for the cache
+            mapCache.put(
+                    "expiration-time", String.valueOf(System.currentTimeMillis() + expirationTime.toMillis()),
+                    0, TimeUnit.MILLISECONDS
+            );
+
             rStream.add(StreamAddArgs.entries(mapCache));
         });
     }
