@@ -1,7 +1,6 @@
 package net.legacy.library.player.task.redis;
 
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
@@ -31,7 +30,7 @@ public interface RStreamAccepterInterface {
      * Determine whether to limit task processing to prevent duplicates within a single server or connection.
      *
      * <p>If this method returns {@code true}, the task will be processed only once per
-     * connection on each server. After the {@link #accept(RStream, StreamMessageId, LegacyPlayerDataService, Pair)} method is executed,
+     * connection on each server. After the {@link #accept(RStream, StreamMessageId, LegacyPlayerDataService, String)} method is executed,
      * the task will not be executed again by the same instance unless explicitly deleted.
      *
      * <p>However, if another server or connection processes the task, it can still
@@ -39,7 +38,7 @@ public interface RStreamAccepterInterface {
      * and deleted, or until it expires.
      *
      * <p>If this method returns {@code false}, the task can be processed repeatedly,
-     * regardless of whether the {@link #accept(RStream, StreamMessageId, LegacyPlayerDataService, Pair)} method runs on the
+     * regardless of whether the {@link #accept(RStream, StreamMessageId, LegacyPlayerDataService, String)} method runs on the
      * same connection or instance.
      *
      * @return {@code true} if task records are limited to a single handling per connection
