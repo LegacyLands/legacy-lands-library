@@ -1,6 +1,7 @@
 package net.legacy.library.player.task.redis;
 
 import net.legacy.library.player.service.LegacyPlayerDataService;
+import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
@@ -80,4 +81,9 @@ public interface RStreamAccepterInterface {
      * @param data                    The data contained in the {@link RStreamTask} object
      */
     void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, String data);
+
+    default void ack(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService) {
+        rStream.remove(streamMessageId);
+        legacyPlayerDataService.getL2Cache().getCache().getMapCache(RKeyUtil.getTempRMapCacheKey(legacyPlayerDataService)).remove(streamMessageId.toString());
+    }
 }
