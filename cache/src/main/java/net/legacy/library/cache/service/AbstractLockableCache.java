@@ -65,8 +65,9 @@ public abstract class AbstractLockableCache<C> implements LockableCacheInterface
                         lock.unlock();
                     }
                 }
+            } else {
+                throw new RuntimeException("Could not acquire lock within the specified time: " + simpleName);
             }
-            throw new RuntimeException("Could not acquire lock: " + simpleName);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Thread interrupted while trying to acquire lock: " + simpleName, exception);
