@@ -112,33 +112,29 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
                     continue;
                 }
 
-                if (value.size() > 1) {
-                    Log.error("RStream message is not a pair! StreamMessageId: " + streamMessageId);
-                    continue;
-                }
+                for (Map.Entry<Object, Object> entry : value.entrySet()) {
+                    String left = entry.getKey().toString();
+                    String right = entry.getValue().toString();
+                    Pair<String, String> pair = Pair.of(left, right);
 
-                Map.Entry<Object, Object> entry = value.entrySet().iterator().next();
-                String left = entry.getKey().toString();
-                String right = entry.getValue().toString();
-                Pair<String, String> pair = Pair.of(left, right);
+                    // Get all registed accepter
+                    for (RStreamAccepterInterface accepter : accepters) {
+                        String actionName = accepter.getActionName();
 
-                // Get all registed accepter
-                for (RStreamAccepterInterface accepter : accepters) {
-                    String actionName = accepter.getActionName();
+                        // Filter action name
+                        if (actionName != null && !actionName.equals(left)) {
+                            continue;
+                        }
 
-                    // Filter action name
-                    if (actionName != null && !actionName.equals(left)) {
-                        continue;
-                    }
+                        // New thread async accept
+                        ScheduledTask<?> schedule =
+                                schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
 
-                    // New thread async accept
-                    ScheduledTask<?> schedule =
-                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
-
-                    if (accepter.isRecodeLimit()) {
-                        schedule.getFuture().whenComplete(
-                                (result, throwable) -> acceptedId.add(streamMessageId)
-                        );
+                        if (accepter.isRecodeLimit()) {
+                            schedule.getFuture().whenComplete(
+                                    (result, throwable) -> acceptedId.add(streamMessageId)
+                            );
+                        }
                     }
                 }
             }
