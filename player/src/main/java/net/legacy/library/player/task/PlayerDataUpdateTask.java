@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyPlayerDataService;
+import net.legacy.library.player.task.redis.RStreamTask;
 import net.legacy.library.player.util.RKeyUtil;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.time.Duration;
 import java.util.Map;
@@ -44,10 +44,10 @@ public class PlayerDataUpdateTask implements TaskInterface {
             }
 
             boolean isUuid = uuid != null;
-            Pair<String, String> data = isUuid ?
-                    Pair.of("player-data-sync-uuid", uuid.toString()) : Pair.of("player-data-sync-name", name);
-
-            legacyPlayerDataService.pubRStreamTask(data, expirationTime);
+            RStreamTask rStreamTask = isUuid ?
+                    RStreamTask.of("player-data-sync-uuid", uuid.toString(), expirationTime) :
+                    RStreamTask.of("player-data-sync-name", name, expirationTime);
+            legacyPlayerDataService.pubRStreamTask(rStreamTask);
         };
 
         ScheduledTask<?> task = schedule(runnable);
