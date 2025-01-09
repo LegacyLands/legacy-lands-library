@@ -40,7 +40,7 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, String data) {
         L1ToL2PlayerDataSyncTask.of(UUID.fromString(data), legacyPlayerDataService).start().getFuture().whenComplete((aVoid, throwable) -> {
             if (throwable != null) {
-                Log.error("Error while syncing player data", throwable);
+                Log.error("Error while syncing player data (L1ToL2PlayerDataSyncByUuidRStreamAccepter)", throwable);
                 return;
             }
             rStream.remove(streamMessageId);

@@ -54,7 +54,7 @@ public class PlayerDataUpdateTask implements TaskInterface {
 
         task.getFuture().whenComplete((aVoid, throwable) -> {
             if (throwable != null) {
-                Log.error("Error while syncing player data", throwable);
+                Log.error("Error while syncing player data (PlayerDataUpdateTask)", throwable);
                 return;
             }
 

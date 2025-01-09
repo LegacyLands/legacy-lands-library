@@ -41,7 +41,7 @@ public class L1ToL2PlayerDataSyncByNameRStreamAccepter implements RStreamAccepte
 
         L1ToL2PlayerDataSyncTask.of(offlinePlayer.getUniqueId(), legacyPlayerDataService).start().getFuture().whenComplete((aVoid, throwable) -> {
             if (throwable != null) {
-                Log.error("Error while syncing player data", throwable);
+                Log.error("Error while syncing player data (L1ToL2PlayerDataSyncByNameRStreamAccepter)", throwable);
                 return;
             }
             rStream.remove(streamMessageId);
