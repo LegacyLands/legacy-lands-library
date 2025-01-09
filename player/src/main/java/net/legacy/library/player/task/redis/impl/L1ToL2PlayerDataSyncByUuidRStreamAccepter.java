@@ -5,11 +5,12 @@ import net.legacy.library.player.annotation.RStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.L1ToL2PlayerDataSyncTask;
 import net.legacy.library.player.task.redis.RStreamAccepterInterface;
-import org.apache.commons.lang3.tuple.Pair;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
+import net.legacy.library.player.task.redis.RStreamTask;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
+
+import java.time.Duration;
+import java.util.UUID;
 
 /**
  * @author qwq-dev
@@ -17,9 +18,17 @@ import org.redisson.api.StreamMessageId;
  */
 @RStreamAccepterRegister
 public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepterInterface {
+    public static RStreamTask createRStreamTask(UUID uuid, Duration expirationTime) {
+        return createRStreamTask(uuid.toString(), expirationTime);
+    }
+
+    public static RStreamTask createRStreamTask(String uuid, Duration expirationTime) {
+        return RStreamTask.of("player-data-sync-uuid", uuid, expirationTime);
+    }
+
     @Override
     public String getActionName() {
-        return "player-data-sync-name";
+        return "player-data-sync-uuid";
     }
 
     @Override
@@ -28,15 +37,8 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
     }
 
     @Override
-    public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, Pair<String, String> data) {
-        // Scound must be player name
-        String second = data.getValue();
-
-        // Very slow, but it's async so it's fine
-        OfflinePlayer offlinePlayer =
-                Bukkit.getOfflinePlayer(second);
-
-        L1ToL2PlayerDataSyncTask.of(offlinePlayer.getUniqueId(), legacyPlayerDataService).start().getFuture().whenComplete((aVoid, throwable) -> {
+    public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, String data) {
+        L1ToL2PlayerDataSyncTask.of(UUID.fromString(data), legacyPlayerDataService).start().getFuture().whenComplete((aVoid, throwable) -> {
             if (throwable != null) {
                 Log.error("Error while syncing player data", throwable);
                 return;

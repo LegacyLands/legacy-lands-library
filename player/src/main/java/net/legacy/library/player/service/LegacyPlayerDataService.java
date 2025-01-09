@@ -115,7 +115,7 @@ public class LegacyPlayerDataService {
     public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
                                              List<String> basePackages, List<ClassLoader> classLoaders
     ) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(5));
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2));
     }
 
     /**

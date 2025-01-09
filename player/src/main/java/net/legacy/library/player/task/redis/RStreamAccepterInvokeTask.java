@@ -133,7 +133,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
 
                     // New thread async accept
                     ScheduledTask<?> schedule =
-                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair));
+                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
 
                     if (accepter.isRecodeLimit()) {
                         schedule.getFuture().whenComplete(

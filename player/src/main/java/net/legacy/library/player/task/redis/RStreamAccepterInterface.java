@@ -78,7 +78,7 @@ public interface RStreamAccepterInterface {
      * @param rStream                 The {@link RStream} object representing the Redis stream containing the task
      * @param legacyPlayerDataService The {@link LegacyPlayerDataService} object representing the service for handling player data
      * @param streamMessageId         The {@link StreamMessageId} object representing the unique ID of the task
-     * @param data                    The data contained in the task, represented as a {@link Pair} of {@link String} objects
+     * @param data                    The data contained in the {@link RStreamTask} object
      */
-    void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, Pair<String, String> data);
+    void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, String data);
 }
