@@ -2,6 +2,7 @@ package net.legacy.library.player.task;
 
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import dev.morphia.Datastore;
+import io.fairyproject.log.Log;
 import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
@@ -62,9 +63,14 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                             continue;
                         }
 
-                        datastore.save(l2Cache.getWithType(client -> SimplixSerializer.deserialize(
-                                client.getBucket(string).get().toString(), LegacyPlayerData.class
-                        ), () -> null, null, false));
+                        String legacyPlayerDataString =
+                                l2Cache.getWithType(client -> client.getBucket(string).get(), () -> "", null, false);
+
+                        if (!legacyPlayerDataString.isEmpty()) {
+                            datastore.save(SimplixSerializer.deserialize(legacyPlayerDataString, LegacyPlayerData.class));
+                        } else {
+                            Log.error("The key value is not expected to be null, this should not happen!! key: " + string);
+                        }
                     }
                 } finally {
                     // Some uncertain measures
