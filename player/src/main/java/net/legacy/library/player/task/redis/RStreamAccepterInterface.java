@@ -1,7 +1,6 @@
 package net.legacy.library.player.task.redis;
 
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
@@ -75,15 +74,20 @@ public interface RStreamAccepterInterface {
      * <p><b>Note:</b> This method is not exclusive, meaning multiple connections or servers
      * may attempt to process the same task concurrently unless additional controls are in place.
      *
-     * @param rStream                 The {@link RStream} object representing the Redis stream containing the task
-     * @param legacyPlayerDataService The {@link LegacyPlayerDataService} object representing the service for handling player data
-     * @param streamMessageId         The {@link StreamMessageId} object representing the unique ID of the task
-     * @param data                    The data contained in the {@link RStreamTask} object
+     * @param rStream                 the {@link RStream} object representing the Redis stream containing the task
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} object representing the service for handling player data
+     * @param streamMessageId         the {@link StreamMessageId} object representing the unique ID of the task
+     * @param data                    the data contained in the {@link RStreamTask} object
      */
     void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService, String data);
 
-    default void ack(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService) {
+    /**
+     * Acknowledge the task after it has been successfully processed.
+     *
+     * @param rStream         the {@link RStream} object representing the Redis stream containing the task
+     * @param streamMessageId the {@link StreamMessageId} object representing the unique ID of the task
+     */
+    default void ack(RStream<Object, Object> rStream, StreamMessageId streamMessageId) {
         rStream.remove(streamMessageId);
-        legacyPlayerDataService.getL2Cache().getCache().getMapCache(RKeyUtil.getTempRMapCacheKey(legacyPlayerDataService)).remove(streamMessageId.toString());
     }
 }
