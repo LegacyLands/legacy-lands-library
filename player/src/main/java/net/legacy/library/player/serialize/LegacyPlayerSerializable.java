@@ -7,7 +7,7 @@ import net.legacy.library.configuration.serialize.annotation.SimplixSerializerSe
 import net.legacy.library.player.model.LegacyPlayerData;
 
 /**
- * Legacy player data serializer.
+ * Serializer for {@link LegacyPlayerData} objects using Gson.
  *
  * @author qwq-dev
  * @since 2025-01-03 15:12

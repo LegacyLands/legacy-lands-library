@@ -13,11 +13,21 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.lang.reflect.Type;
 
 /**
+ * Custom Gson type adapter for serializing and deserializing {@link Pair} objects.
+ *
  * @author qwq-dev
  * @since 2025-01-05 19:07
  */
 @TypeAdapterRegister(classType = Pair.class)
 public class PairTypeAdapter implements JsonSerializer<Pair<?, ?>>, JsonDeserializer<Pair<?, ?>> {
+    /**
+     * {@inheritDoc}
+     *
+     * @param src {@inheritDoc}
+     * @param typeOfSrc {@inheritDoc}
+     * @param context {@inheritDoc}
+     * @return {@inheritDoc}
+     */
     @Override
     public JsonElement serialize(Pair<?, ?> src, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject jsonObject = new JsonObject();
@@ -26,6 +36,15 @@ public class PairTypeAdapter implements JsonSerializer<Pair<?, ?>>, JsonDeserial
         return jsonObject;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param json {@inheritDoc}
+     * @param typeOfT {@inheritDoc}
+     * @param context {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws JsonParseException {@inheritDoc}
+     */
     @Override
     public Pair<?, ?> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();

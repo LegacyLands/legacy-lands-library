@@ -14,6 +14,11 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Task responsible for publishing {@link RStreamTask} instances to the Redis stream.
+ *
+ * <p>This task serializes the task data, sets expiration times, and adds the task
+ * to the appropriate Redis stream for processing by registered accepters.
+ *
  * @author qwq-dev
  * @since 2025-01-04 19:59
  */
@@ -22,10 +27,23 @@ public class RStreamPubTask implements TaskInterface {
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final RStreamTask rStreamTask;
 
+    /**
+     * Factory method to create a new {@link RStreamPubTask}.
+     *
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @param rStreamTask             the {@link RStreamTask} to be published
+     * @return a new instance of {@link RStreamPubTask}
+     */
     public static RStreamPubTask of(LegacyPlayerDataService legacyPlayerDataService, RStreamTask rStreamTask) {
         return new RStreamPubTask(legacyPlayerDataService, rStreamTask);
     }
 
+    /**
+     * Publishes the {@link RStreamTask} to the Redis stream.
+     *
+     * <p>This method serializes the task data, stores it in a temporary map with an expiration time,
+     * and then adds the task to the Redis stream for processing.
+     */
     @Override
     public ScheduledTask<?> start() {
         return schedule(() -> {

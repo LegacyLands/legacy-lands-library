@@ -16,6 +16,13 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Task responsible for synchronizing player data from the first-level (L1) cache to the
+ * second-level (L2) Redis cache.
+ *
+ * <p>This task iterates through the L1 cache, serializes the {@link LegacyPlayerData},
+ * and updates the corresponding entries in the L2 cache. It ensures that the data
+ * in both cache levels remains consistent.
+ *
  * @author qwq-dev
  * @since 2025-01-05 12:10
  */
@@ -24,14 +31,39 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface {
     private final UUID uuid;
     private final LegacyPlayerDataService legacyPlayerDataService;
 
+    /**
+     * Factory method to create a new {@link L1ToL2PlayerDataSyncTask} without specifying a UUID.
+     *
+     * <p>This variant synchronizes all player data in the L1 cache to the L2 cache.
+     *
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @return a new instance of {@link L1ToL2PlayerDataSyncTask}
+     */
     public static L1ToL2PlayerDataSyncTask of(LegacyPlayerDataService legacyPlayerDataService) {
         return new L1ToL2PlayerDataSyncTask(null, legacyPlayerDataService);
     }
 
+    /**
+     * Factory method to create a new {@link L1ToL2PlayerDataSyncTask} for a specific player UUID.
+     *
+     * @param uuid                     the UUID of the player whose data is to be synchronized
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @return a new instance of {@link L1ToL2PlayerDataSyncTask}
+     */
     public static L1ToL2PlayerDataSyncTask of(UUID uuid, LegacyPlayerDataService legacyPlayerDataService) {
         return new L1ToL2PlayerDataSyncTask(uuid, legacyPlayerDataService);
     }
 
+    /**
+     * Executes the synchronization task, transferring player data from L1 cache to L2 cache.
+     *
+     * <p>If a specific UUID is provided, only that player's data is synchronized.
+     * Otherwise, all player data in the L1 cache is synchronized.
+     *
+     * <p>Ensures that only changed data is updated in the L2 cache to optimize performance.
+     *
+     * @return a {@link ScheduledTask} representing the running synchronization task
+     */
     @Override
     public ScheduledTask<?> start() {
         return schedule(() -> {

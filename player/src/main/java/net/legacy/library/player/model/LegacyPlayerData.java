@@ -13,11 +13,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
- * Represents player-specific data in the Legacy library.
- * This class allows for managing custom key-value pairs associated with a player.
+ * Represents player-specific data within the Legacy library.
  *
- * <p>Data is stored in a thread-safe {@link ConcurrentHashMap}, ensuring safe concurrent access.
- * The class provides utility methods for adding, removing, and retrieving data.
+ * <p>This class manages custom key-value pairs associated with a player and ensures
+ * thread-safe access and modification of the data.
+ *
+ * <p>Data is stored in a {@link ConcurrentHashMap}, allowing for concurrent reads and writes.
+ * The class provides utility methods to add, remove, and retrieve data entries.
  *
  * @author qwq-dev
  * @since 2025-01-03 14:45

@@ -23,6 +23,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * Task responsible for invoking and managing {@link RStreamAccepterInterface}
+ * implementations to process tasks from Redis streams.
+ *
+ * <p>This class scans specified base packages and class loaders for classes annotated
+ * with {@link RStreamAccepterRegister}, instantiates them, and schedules periodic
+ * checks on the Redis streams to process incoming tasks.
+ *
  * @author qwq-dev
  * @since 2025-01-04 20:06
  */
@@ -37,6 +44,14 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
     private final Set<RStreamAccepterInterface> accepters;
     private final Set<StreamMessageId> acceptedId;
 
+    /**
+     * Constructs a new {@link RStreamAccepterInvokeTask}.
+     *
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to be used
+     * @param basePackages            the list of base packages to scan for annotated accepters
+     * @param classLoaders            the list of class loaders to use for scanning
+     * @param interval                the interval at which to invoke the task processing
+     */
     public RStreamAccepterInvokeTask(LegacyPlayerDataService legacyPlayerDataService, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
         this.legacyPlayerDataService = legacyPlayerDataService;
         this.basePackages = basePackages;
@@ -48,22 +63,45 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
         updateAccepter();
     }
 
+    /**
+     * Factory method to create a new {@link RStreamAccepterInvokeTask}.
+     *
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to be used
+     * @param basePackages            the list of base packages to scan for annotated accepters
+     * @param classLoaders            the list of class loaders to use for scanning
+     * @param interval                the interval at which to invoke the task processing
+     * @return a new instance of {@link RStreamAccepterInvokeTask}
+     */
     public static RStreamAccepterInvokeTask of(LegacyPlayerDataService legacyPlayerDataService, List<String> basePackages, List<ClassLoader> classLoaders, Duration interval) {
         return new RStreamAccepterInvokeTask(legacyPlayerDataService, basePackages, classLoaders, interval);
     }
 
+    /**
+     * Updates the list of base packages to scan for annotated accepters and refreshes the accepter instances.
+     *
+     * @param basePackages the new list of base packages to scan
+     */
     public void updateBasePacakges(List<String> basePackages) {
         this.basePackages.clear();
         this.basePackages.addAll(basePackages);
         updateAccepter();
     }
 
+    /**
+     * Updates the list of class loaders to scan for annotated accepters and refreshes the accepter instances.
+     *
+     * @param classLoaders the new list of class loaders to use for scanning
+     */
     public void updateClassLoaders(List<ClassLoader> classLoaders) {
         this.classLoaders.clear();
         this.classLoaders.addAll(classLoaders);
         updateAccepter();
     }
 
+    /**
+     * Scans the specified base packages and class loaders for classes annotated with
+     * {@link RStreamAccepterRegister}, instantiates them, and adds them to the accepter set.
+     */
     public void updateAccepter() {
         annotatedClasses.clear();
         annotatedClasses.addAll(AnnotationScanner.findAnnotatedClasses(
@@ -81,6 +119,11 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
         });
     }
 
+    /**
+     * Starts the scheduled task that periodically checks and processes tasks from Redis streams.
+     *
+     * @return a {@link ScheduledTask} representing the running scheduled task
+     */
     @Override
     public ScheduledTask<?> start() {
         Runnable runnable = () -> {
@@ -96,7 +139,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
             StreamReadArgs args = StreamReadArgs.greaterThan(StreamMessageId.ALL);
             Map<StreamMessageId, Map<Object, Object>> messages = rStream.read(args);
 
-            // Get all msg
+            // Get all messages
             for (Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry : messages.entrySet()) {
                 // LPDS name and data
                 StreamMessageId streamMessageId = streamMessageIdMapEntry.getKey();
@@ -137,7 +180,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
                     String right = entry.getValue().toString();
                     Pair<String, String> pair = Pair.of(left, right);
 
-                    // Get all registed accepter
+                    // Get all registered accepters
                     for (RStreamAccepterInterface accepter : accepters) {
                         String actionName = accepter.getActionName();
 

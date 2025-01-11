@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
+import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
@@ -18,6 +19,14 @@ import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
 /**
+ * Task responsible for persisting player data from the L2 cache (Redis) to the database.
+ *
+ * <p>This task ensures that all player data cached in Redis is serialized and stored
+ * in the underlying database, maintaining data consistency and durability.
+ *
+ * <p>The task acquires an exclusive lock to prevent concurrent persistence operations,
+ * scans the Redis cache for relevant keys, deserializes the data, and saves it to the database.
+ *
  * @author qwq-dev
  * @since 2025-01-04 12:53
  */
@@ -26,10 +35,24 @@ public class PlayerDataPersistenceTask implements TaskInterface {
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
 
+    /**
+     * Factory method to create a new {@link PlayerDataPersistenceTask}.
+     *
+     * @param lockSettings           the settings for lock acquisition
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @return a new instance of {@link PlayerDataPersistenceTask}
+     */
     public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService) {
         return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService);
     }
 
+    /**
+     * Executes the persistence task, transferring player data from L2 cache to the database.
+     *
+     * <p>Acquires an exclusive lock to prevent concurrent modifications, iterates through the
+     * Redis cache keys related to player data, deserializes the data, and saves it to the database.
+     * Ensures that only valid and non-expired data is persisted.
+     */
     @Override
     public ScheduledTask<?> start() {
         return schedule(() -> {
@@ -53,7 +76,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                     Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
 
                     /*
-                     * Get all LPDS key (name + "-lpds-*") and deserialize and save all LPD
+                     * Get all LPDS key (name + "-rlpds-*") and deserialize and save all LegacyPlayerData
                      */
                     RKeys keys = redissonClient.getKeys();
                     KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*");
@@ -73,13 +96,23 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                         }
                     }
                 } finally {
-                    // Some uncertain measures
+                    // Ensure the lock is always released
                     lock.forceUnlock();
                 }
             } catch (InterruptedException exception) {
+                if (PlayerLauncher.DEBUG) {
+                    //noinspection CallToPrintStackTrace
+                    exception.printStackTrace();
+                }
+
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Thread interrupted while trying to acquire lock.", exception);
             } catch (Exception exception) {
+                if (PlayerLauncher.DEBUG) {
+                    //noinspection CallToPrintStackTrace
+                    exception.printStackTrace();
+                }
+
                 throw new RuntimeException("Unexpected error during legacy player data migration.", exception);
             }
         });

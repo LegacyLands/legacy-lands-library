@@ -32,6 +32,9 @@ public class PlayerLauncher extends Plugin {
     @SuppressWarnings("unused")
     private AnnotationProcessingServiceInterface annotationProcessingService;
 
+    // DEBUG
+    public static final boolean DEBUG = false;
+
     @Override
     public void onPluginEnable() {
         List<String> basePackages = List.of(
@@ -45,24 +48,26 @@ public class PlayerLauncher extends Plugin {
         );
 
         // DEBUG
-        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
-                "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
-        );
+        if (DEBUG) {
+            MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
+                    "example", "mongodb://localhost:27017/", UuidRepresentation.STANDARD
+            );
 
-        Config config = new Config();
-        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+            Config config = new Config();
+            config.useSingleServer().setAddress("redis://127.0.0.1:6379");
 
-        List<String> base = List.of(
-                "net.legacy.library.player"
-        );
-        List<ClassLoader> classLoader = List.of(
-                PlayerLauncher.class.getClassLoader()
-        );
+            List<String> base = List.of(
+                    "net.legacy.library.player"
+            );
+            List<ClassLoader> classLoader = List.of(
+                    PlayerLauncher.class.getClassLoader()
+            );
 
-        LegacyPlayerDataService.of(
-                "player-data-service", mongoConfig, config,
-                Duration.ofMinutes(1), basePackages, classLoader, Duration.ofSeconds(1)
-        );
+            LegacyPlayerDataService.of(
+                    "player-data-service", mongoConfig, config,
+                    Duration.ofMinutes(1), basePackages, classLoader, Duration.ofSeconds(1)
+            );
+        }
     }
 
     @Override

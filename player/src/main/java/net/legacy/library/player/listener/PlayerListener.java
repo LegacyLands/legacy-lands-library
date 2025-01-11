@@ -3,6 +3,7 @@ package net.legacy.library.player.listener;
 import io.fairyproject.bukkit.listener.RegisterAsListener;
 import io.fairyproject.container.InjectableComponent;
 import io.papermc.paper.event.player.AsyncChatEvent;
+import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.L1ToL2PlayerDataSyncTask;
@@ -20,6 +21,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
+ * Listener class to handle player-related events such quit events.
+ *
  * @author qwq-dev
  * @since 2025-01-03 18:48
  */
@@ -29,6 +32,10 @@ public class PlayerListener implements Listener {
     // DEBUG
     @EventHandler
     public void on(AsyncChatEvent event) {
+        if (!PlayerLauncher.DEBUG) {
+            return;
+        }
+
         Optional<LegacyPlayerDataService> legacyPlayerDataService = LegacyPlayerDataService.getLegacyPlayerDataService("player-data-service");
         LegacyPlayerDataService legacyPlayerDataService1 = legacyPlayerDataService.get();
         LegacyPlayerData legacyPlayerData = legacyPlayerDataService1.getLegacyPlayerData(event.getPlayer().getUniqueId());
@@ -68,6 +75,15 @@ public class PlayerListener implements Listener {
         System.out.println(legacyPlayerData.getData());
     }
 
+    /**
+     * Handles player quit events to initiate synchronization tasks for player data.
+     *
+     * <p>When a player quits, this method retrieves all cached
+     * {@link LegacyPlayerDataService} instances and starts synchronization tasks
+     * to ensure that player data is persisted appropriately.
+     *
+     * @param event the player quit event triggered when a player leaves the server
+     */
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID uniqueId = event.getPlayer().getUniqueId();
