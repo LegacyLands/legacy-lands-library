@@ -7,7 +7,6 @@
 ## 📚 Table of Contents
 
 - [Introduction](#introduction)
-- [Automation](#automation)
 - [Key Components](#key-components)
 - [Data Flow](#data-flow)
 - [Performance Highlights](#performance-highlights)
@@ -25,21 +24,6 @@ The **Player Module** is a core part of a distributed system aimed at managing p
 - **MongoDB:** Document-based persistence for flexible schema and long-term data storage.
 
 This architecture ensures that both frequent reads/writes (online players) and less common operations (offline queries, global sync) are handled efficiently.
-
----
-
-## Automation
-
-- **L1 ↔ L2 Automatic Sync**
-    - Whenever a player’s data is updated in L1, tasks like `L1ToL2PlayerDataSyncTask` push changes to L2.
-    - Periodically or on-demand, Redis Streams also trigger updates across different servers.
-
-- **Automated Persistence**
-    - The module uses timed tasks (e.g., `PlayerDataPersistenceTask`) to write L2 (Redis) data into MongoDB, ensuring eventual consistency without manual intervention.
-
-- **Annotation-Driven Registration**
-    - Classes annotated with `@RStreamAccepterRegister` (like `L1ToL2PlayerDataSyncByNameRStreamAccepter`) automatically handle Redis Streams.
-    - Type adapters annotated with `@TypeAdapterRegister` are auto-registered for custom serialization/deserialization (see `PairTypeAdapter`).
 
 ---
 
