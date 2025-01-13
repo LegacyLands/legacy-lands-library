@@ -28,12 +28,11 @@ import java.util.concurrent.ConcurrentMap;
 @FairyLaunch
 @InjectableComponent
 public class PlayerLauncher extends Plugin {
+    // DEBUG
+    public static final boolean DEBUG = false;
     @Autowired
     @SuppressWarnings("unused")
     private AnnotationProcessingServiceInterface annotationProcessingService;
-
-    // DEBUG
-    public static final boolean DEBUG = false;
 
     @Override
     public void onPluginEnable() {

@@ -34,16 +34,29 @@ import org.redisson.api.options.KeysScanOptions;
 public class PlayerDataPersistenceTask implements TaskInterface {
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
+    private final int limit;
 
     /**
      * Factory method to create a new {@link PlayerDataPersistenceTask}.
      *
-     * @param lockSettings           the settings for lock acquisition
+     * @param lockSettings            the settings for lock acquisition
      * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
      * @return a new instance of {@link PlayerDataPersistenceTask}
      */
     public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService) {
-        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService);
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, 1000);
+    }
+
+    /**
+     * Factory method to create a new {@link PlayerDataPersistenceTask}.
+     *
+     * @param lockSettings            the settings for lock acquisition
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @param limit                   the maximum number of player data entries to process
+     * @return a new instance of {@link PlayerDataPersistenceTask}
+     */
+    public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService, int limit) {
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, limit);
     }
 
     /**
@@ -79,7 +92,10 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                      * Get all LPDS key (name + "-rlpds-*") and deserialize and save all LegacyPlayerData
                      */
                     RKeys keys = redissonClient.getKeys();
-                    KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*");
+                    KeysScanOptions keysScanOptions =
+                            KeysScanOptions.defaults()
+                                    .pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*")
+                                    .limit(limit);
 
                     for (String string : keys.getKeys(keysScanOptions)) {
                         if (keys.getType(string) != RType.OBJECT) {

@@ -90,7 +90,8 @@ public class PlayerDataUpdateByUuidRStreamAccepter implements RStreamAccepterInt
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId,
                        LegacyPlayerDataService legacyPlayerDataService, String data) {
         Pair<String, Map<String, String>> pairData =
-                GsonUtil.getGson().fromJson(data, new TypeToken<Pair<String, Map<String, String>>>() {}.getType());
+                GsonUtil.getGson().fromJson(data, new TypeToken<Pair<String, Map<String, String>>>() {
+                }.getType());
 
         String uuidString = pairData.getLeft();
         UUID uuid = UUID.fromString(uuidString);

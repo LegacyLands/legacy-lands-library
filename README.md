@@ -14,6 +14,8 @@
 
 The overall dependence is on the [Fairy Framework](https://github.com/FairyProject/fairy). It probably doesn't have a lot of overly complex stuff, like an unnecessary repackaging of some large library.
 
+Although it is more suitable for Folia scenarios, it can actually be used in the Spigot and Paper platform
+
 ## usage
 
 In the compressed package downloaded by [Actions](https://github.com/LegacyLands/legacy-lands-library/actions), `-javadoc` is the javadoc build, `-plugin` only has the compiled class files, and `-sources` has not only the compiled class files but also the source code.

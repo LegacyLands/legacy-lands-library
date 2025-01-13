@@ -23,9 +23,9 @@ public class PairTypeAdapter implements JsonSerializer<Pair<?, ?>>, JsonDeserial
     /**
      * {@inheritDoc}
      *
-     * @param src {@inheritDoc}
+     * @param src       {@inheritDoc}
      * @param typeOfSrc {@inheritDoc}
-     * @param context {@inheritDoc}
+     * @param context   {@inheritDoc}
      * @return {@inheritDoc}
      */
     @Override
@@ -39,7 +39,7 @@ public class PairTypeAdapter implements JsonSerializer<Pair<?, ?>>, JsonDeserial
     /**
      * {@inheritDoc}
      *
-     * @param json {@inheritDoc}
+     * @param json    {@inheritDoc}
      * @param typeOfT {@inheritDoc}
      * @param context {@inheritDoc}
      * @return {@inheritDoc}

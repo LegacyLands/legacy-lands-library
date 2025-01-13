@@ -46,7 +46,7 @@ public interface RStreamAccepterInterface {
      * same connection or instance.
      *
      * @return {@code true} if task records are limited to a single handling per connection,
-     *         {@code false} otherwise
+     * {@code false} otherwise
      */
     boolean isRecodeLimit();
 

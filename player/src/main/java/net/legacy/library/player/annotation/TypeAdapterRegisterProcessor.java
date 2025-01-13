@@ -37,7 +37,7 @@ public class TypeAdapterRegisterProcessor implements CustomAnnotationProcessor {
     /**
      * Handles exceptions that occur during the processing of annotations.
      *
-     * @param clazz the class being processed when the exception occurred
+     * @param clazz     the class being processed when the exception occurred
      * @param exception the exception that was thrown
      */
     @Override

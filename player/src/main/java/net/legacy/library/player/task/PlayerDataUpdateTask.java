@@ -37,10 +37,10 @@ public class PlayerDataUpdateTask implements TaskInterface {
     /**
      * Factory method to create a new {@link PlayerDataUpdateTask} using player name.
      *
-     * @param name             the name of the player
-     * @param expirationTime   the duration after which the task expires
-     * @param delay            the delay before executing the update
-     * @param data             the data to update
+     * @param name                    the name of the player
+     * @param expirationTime          the duration after which the task expires
+     * @param delay                   the delay before executing the update
+     * @param data                    the data to update
      * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
      * @return a new instance of {@link PlayerDataUpdateTask}
      */
@@ -51,10 +51,10 @@ public class PlayerDataUpdateTask implements TaskInterface {
     /**
      * Factory method to create a new {@link PlayerDataUpdateTask} using player UUID.
      *
-     * @param uuid             the UUID of the player
-     * @param expirationTime   the duration after which the task expires
-     * @param delay            the delay before executing the update
-     * @param data             the data to update
+     * @param uuid                    the UUID of the player
+     * @param expirationTime          the duration after which the task expires
+     * @param delay                   the delay before executing the update
+     * @param data                    the data to update
      * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
      * @return a new instance of {@link PlayerDataUpdateTask}
      */

@@ -46,7 +46,7 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface {
     /**
      * Factory method to create a new {@link L1ToL2PlayerDataSyncTask} for a specific player UUID.
      *
-     * @param uuid                     the UUID of the player whose data is to be synchronized
+     * @param uuid                    the UUID of the player whose data is to be synchronized
      * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
      * @return a new instance of {@link L1ToL2PlayerDataSyncTask}
      */
