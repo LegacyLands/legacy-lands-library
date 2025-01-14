@@ -137,7 +137,6 @@ publishing {
                 }
             }
         }
-
         // GitHub Packages
         repositories {
             maven {
