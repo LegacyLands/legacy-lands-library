@@ -1,5 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.archivesName
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -15,7 +14,7 @@ plugins {
     id("java-library") apply true
 
     // Fairy framework plugin
-    id("io.fairyproject") version "0.7.10b2-SNAPSHOT" apply false
+    id("io.fairyproject") version "0.7.11b1-SNAPSHOT" apply false
 
     // Dependency management plugin
     id("io.spring.dependency-management") version "1.1.0"
@@ -48,11 +47,13 @@ allprojects {
         maven(url = uri("https://repo.papermc.io/repository/maven-public/"))
     }
 }
+
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
+
 subprojects {
     // Apply necessary plugins
     apply(plugin = "java-library")
@@ -127,7 +128,7 @@ publishing {
                     artifact(shadowJarTask.get().archiveFile.get())
 
                     groupId = group.toString()
-                    artifactId = "$module"
+                    artifactId = module
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
                     description = ""
                 }
