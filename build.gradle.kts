@@ -96,6 +96,7 @@ subprojects {
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
         archiveClassifier.set("plugin")
+        mergeServiceFiles()
         exclude("META-INF/maven/**")
     }
 
@@ -131,10 +132,12 @@ publishing {
                     artifactId = module
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
                     description = ""
+                    pom {
+                        description.set("")
+                    }
                 }
             }
         }
-
         // GitHub Packages
         repositories {
             maven {
