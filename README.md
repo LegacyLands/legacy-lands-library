@@ -75,3 +75,7 @@ We are honored that this library can help more people!
 ## related tutorials (simplified Chinese)
 
 Currently, the production of [Fairy Framework](https://github.com/FairyProject/fairy) and related tutorial videos is being planned and carried out. We will post the detailed video on the bilibili [LegacyLands official account](https://space.bilibili.com/1253128469).
+
+## Chinese version
+
+A Chinese version of the README is available here: [中文文档 (README_ZHCN.md)](README_ZHCN.md)
