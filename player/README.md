@@ -1,164 +1,123 @@
 # 🎮 Player Module &nbsp; ![Version](https://img.shields.io/badge/version-1.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
-> A **high-performance** and **scalable** player data management system. It leverages **L1 (Caffeine)** and **L2 (Redis)** caching, **MongoDB** persistence, and **Redis Streams** for near “enterprise-level” performance in distributed Minecraft or similar server environments.
+A high-performance, multi-tier caching, and MongoDB-based player data management system. Suitable for single-server or distributed (multi-server) environments, it takes advantage of L1 caching (Caffeine), L2 caching (Redis), and MongoDB as a durable data layer. By combining Redis Streams, you gain real-time, cross-server data synchronization—akin to an "enterprise-level" architecture in a Minecraft setting.
 
 ---
 
 ## 📚 Table of Contents
 
 - [Introduction](#introduction)
-- [Key Components](#key-components)
-- [Data Flow](#data-flow)
-- [Performance Highlights](#performance-highlights)
-- [Why Near Enterprise-Level?](#why-near-enterprise-level)
-- [Summary](#summary)
+- [Architecture](#architecture)
+  - [Multi-Tier Caching (L1 & L2)](#multi-tier-caching-l1--l2)
+  - [Core Components](#core-components)
+  - [Data Flow](#data-flow)
+- [Main Classes & Services](#main-classes--services)
+  - [LegacyPlayerDataService](#legacyplayerdataservice)
+  - [LegacyPlayerData](#legacyplayerdata)
+- [Data Synchronization](#data-synchronization)
+- [Performance & Scalability](#performance--scalability)
+- [Additional Notes](#additional-notes)
 - [License](#license)
 
 ---
 
 ## Introduction
 
-The **Player Module** is a core part of a distributed system aimed at managing player data with **high throughput** and **low latency**. By integrating:
-- **L1 Cache (Caffeine):** In-memory, ultra-fast access for online players.
-- **L2 Cache (Redis):** Central cache for multi-server environments, synchronized via Redis Streams.
-- **MongoDB:** Document-based persistence for flexible schema and long-term data storage.
-
-This architecture ensures that both frequent reads/writes (online players) and less common operations (offline queries, global sync) are handled efficiently.
+The Player Module addresses a common challenge in modern Minecraft servers: managing player data with low latency, high throughput, and real-time synchronization across multiple instances or shards. By leveraging Caffeine (L1), Redis (L2 + Streams), and MongoDB (persistence), developers can manage player data efficiently, ensuring data consistency while maintaining top performance.
 
 ---
 
-## Key Components
+## Architecture
+
+### Multi-Tier Caching (L1 & L2)
+
+1. **L1: Caffeine (In-Memory)**  
+   - Ultra-fast, local-in-JVM cache for online players.  
+   - Eliminates network overhead for the most frequent operations.  
+
+2. **L2: Redis**  
+   - Centralized, distributed cache (via Redisson).  
+   - Redis Streams for publish/subscribe patterns (e.g., cross-server data sync).  
+
+3. **MongoDB (Persistence)**  
+   - Stores data long-term to handle offline players or rarely accessed data.  
+   - Transactional consistency and flexible document schemas.  
+
+Such a caching architecture ensures that high-demand data is served from memory while also providing a robust fallback to distributed caching and permanent storage.
+
+### Core Components
+
+• L1: Caffeine caches for near-instant data lookups.  
+• L2: Redis caches for cross-server consistency and asynchronous notifications through Redis Streams.  
+• Final Storage: MongoDB for guaranteed durability and flexible schema updates.  
+
+### Data Flow
+
+1. **Cache Miss** → Check Caffeine → If not found, check Redis → If not found, pull from MongoDB.  
+2. **Cache Hit** → Data is immediately returned, potentially within nanoseconds.  
+3. **Sync** → Data updates propagate to L2 (Redis), triggering streams that update other servers' L1 caches if that player is online there.  
+4. **Persistence** → Periodic or event-driven writes from L2 to MongoDB ensure data permanency.
+
+---
+
+## Main Classes & Services
 
 ### LegacyPlayerDataService
 
-A flexible “service object” encapsulating:
-- **Redis Connection** (L2 Cache + Streams)
-- **MongoDB Connection** (Persistence)
-- **Caffeine Cache** (L1 Cache)
+The core service that orchestrates caching and database interactions:  
+• Maintains references to L1 (Caffeine) and L2 (Redis) caches.  
+• Handles read/write requests using a "fetch or create" pattern.  
+• Provides sync tasks to push data from L1 → L2 or from Redis → MongoDB.  
+• Encourages concurrency-safe operations through lock settings.
 
-By creating multiple `LegacyPlayerDataService` instances, you can manage different database or Redis clusters independently.
-> Internally, it uses multi-level caching: L1 for ultra-fast memory-based access, and L2 for cross-server data sharing.
+Typical usage pattern:  
+• Create an instance (e.g., "player-data-service") with your MongoDB and Redis configs.  
+• Use getLegacyPlayerData(UUID) to retrieve or create player data from caches/database.  
+• On server shutdown or at intervals, trigger tasks to persist any pending data.
 
-### Caching Tiers
+### LegacyPlayerData
 
-1. **L1 (Caffeine)**
-    - **Fast Memory Access**
-    - Typically holds data for **online** or **recently active** players.
-    - Minimizes network overhead and database queries.
-
-2. **L2 (Redis)**
-    - **Distributed, Centralized View**
-    - Suited for multi-server setups.
-    - Uses **Redis Streams** for broadcasting player data changes (e.g., join/quit, data update) across nodes.
-
-### MongoDB
-
-- **Document-based Storage**
-- Efficient reads/writes for dynamic player data fields.
-- Durable final persistence layer if caches miss.
+Represents the per-player data object stored in the caches and database:  
+• Holds custom key-value pairs in a thread-safe map.  
+• Facilitates read/write logic for player-based attributes (e.g., stats, metadata, preferences).  
 
 ---
 
-## Data Flow
+## Data Synchronization
 
-Below is a simplified, high-level view of how player data moves between caches and the database:
+1. **Redis Streams**:  
+   - Allows broadcasting events like data changes to all servers.  
+   - Classes annotated with @RStreamAccepterRegister automatically handle incoming stream requests (e.g., updating L1 caches).  
 
-1. **Player Data Retrieval**
-    1. **L1 Cache Check**
-        - If the player is **online** and data is in L1, return immediately (fastest path).
-        - If **not found**, proceed to L2.
-    2. **L2 Cache (Redis) Check**
-        - If found, populate L1 for future quick lookups and return to caller.
-        - If still **not found**, query MongoDB.
-    3. **Database (MongoDB) Fetch**
-        - On success, load into L1.
-        - If the player has never been seen before, create a new record and store it in L1.
+2. **Periodic Tasks**:  
+   - Scheduled tasks push data from L1 to L2 or from L2 to MongoDB (ensuring data durability).  
+   - A read-write lock pattern prevents collisions.  
 
-2. **Player Logout & Data Sync**
-    1. **Gather All `LegacyPlayerDataService` Instances**
-        - Each has its own L1 + L2 caches.
-    2. **Compare & Sync L1 → L2**
-        - Any unsaved changes in L1 are written to L2.
-        - Allows later scheduled tasks to persist them into MongoDB.
-    3. **Remove Player Data from L1**
-        - Frees up memory, avoids stale data if the player stays offline for a long time.
-
-3. **Data Synchronization & Persistence**
-    1. **L1 → L2**:
-        - `L1ToL2PlayerDataSyncTask` iterates all L1 entries, pushing to Redis if differences are found.
-        - Runs periodically or on certain triggers (like logout).
-    2. **L2 → MongoDB**:
-        - `PlayerDataPersistenceTask` captures all data in Redis, writes it to MongoDB in a batched or scheduled manner.
-        - Ensures final, durable storage of changes.
-
-4. **Player Data Update (Cross-Server)**
-    1. **Publish to Redis Streams**
-        - Using methods like `pubRStreamTask`, an update command is added to the stream (`RStreamTask`).
-        - Example: `PlayerDataUpdateByNameRStreamAccepter` or `PlayerDataUpdateByUuidRStreamAccepter` consumes the stream and applies updates.
-    2. **Other Servers Receive & Update**
-        - If the player is online on another server, that server’s L1 cache is updated in real-time.
-        - This ensures data consistency across the network.
+3. **Offline & Online Players**:  
+   - Online players remain in L1 for quick access.  
+   - Once offline, data eventually moves to L2 and is persisted to MongoDB, freeing local memory.
 
 ---
 
-## Performance Highlights
+## Performance & Scalability
 
-- **High Throughput**
-    - **Caffeine L1** eliminates network round-trips for frequent reads/writes.
-    - **Redis L2** allows horizontal scaling with distributed caching.
+• **Local Memory**: Caffeine provides lightning-fast lookups (microseconds), eliminating frequent cross-network calls.  
+• **Redis**: Scales horizontally, suitable for multi-server or multi-proxy environments, keeping caches in sync.  
+• **Batched Writes**: Writes from L2 to MongoDB happen in batches or on intervals, greatly reducing database overhead.  
+• **Redisson**: Offers distributed locks, ensuring concurrency safety across servers.  
 
-- **Reduced DB Load**
-    - Most lookups are fulfilled by L1/L2 caches, hitting MongoDB only on cache misses or scheduled persistence.
-    - Frees the database from constant read pressure.
-
-- **Asynchronous Task Handling**
-    - Redis Streams + `RStreamAccepterInterface` classes (e.g., `L1ToL2PlayerDataSyncByUuidRStreamAccepter`) process updates asynchronously, preventing blocking or contention.
-    - Spreads out load across multiple servers.
-
-- **Document-Oriented Flexibility**
-    - Using MongoDB for final storage avoids rigid schema definitions and supports easy extension of player attributes.
+With this design, the system can accommodate thousands of players concurrently by separating "hot" data in memory from the "cold" data in Redis / MongoDB. Real-time updates are distributed using Redis Streams, matching many microservice or enterprise approaches.
 
 ---
 
-## Why Near Enterprise-Level?
+## Additional Notes
 
-1. **Multilayer Caching**:
-    - A pattern seen in large-scale enterprise systems: local (memory) + distributed caching for maximum throughput and minimal latency.
-
-2. **Distributed Messaging**:
-    - **Redis Streams** act like a message queue/bus, commonly used in microservices or high-scale systems for cross-node sync and event broadcasting.
-
-3. **Concurrency Control**:
-    - Uses distributed locks (Redisson) and concurrency settings (`LockSettings`) to ensure safe writes under high concurrency.
-
-4. **Annotation-Driven Architecture**:
-    - Similar to Spring Boot or other enterprise frameworks, you declare components (`@RStreamAccepterRegister`, `@TypeAdapterRegister`) and let reflection + scanning wire them up.
-
-5. **Scalable & Modular**:
-    - Multiple `LegacyPlayerDataService` can be spun up for different clusters or shards, each safely isolated.
-    - Add or remove services as your player base grows.
-
-While labeled for “Minecraft servers,” the structure and design choices (multi-tier cache, streaming, concurrency, flexible data layer) align well with many enterprise-level backend systems.
-
----
-
-## Summary
-
-Bringing together **Caffeine** (L1 Cache), **Redis** (L2 Cache + Streams), and **MongoDB** (persistence), this module delivers:
-- **Ultrafast read/writes** for active players (Caffeine).
-- **Cross-instance data consistency** (Redis).
-- **Reliable final storage** (MongoDB).
-- **Seamless distribution** of updates (Redis Streams).
-- **Robust task scheduling** for synchronization and persistence.
-
-By instantiating a dedicated `LegacyPlayerDataService`, you can manage:
-- **Player session data** in memory,
-- **Multi-server sync** via Redis,
-- **Long-term data** in MongoDB,  
-  all while keeping overhead low and performance high. This design can scale from single-server scenarios to large distributed networks, ensuring minimal data conflicts and fast responses—essentially approaching an enterprise-grade architecture within the realm of Minecraft (or similar) server applications.
+• You can spin up multiple LegacyPlayerDataService instances (for different shards or cluster segments).  
+• Extensively uses annotation scanning (e.g., for Redis stream accepters or type adapters), reducing boilerplate.  
+• If you want further customization (e.g., TTL strategies, advanced indexing, or custom tasks), the underlying architecture remains flexible.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.

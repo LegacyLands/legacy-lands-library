@@ -1,79 +1,99 @@
 # 🔧 Configuration Module
 
+A comprehensive and thread-safe configuration system built on top of 
+[SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage). This module adds extra 
+capabilities such as automatic serializer registration, factory-based builders, and robust 
+serialization annotations, simplifying how you manage and persist configuration data.
+
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![SimplixStorage](https://img.shields.io/badge/SimplixStorage-3.2.7-orange.svg)](https://github.com/Simplix-Softworks/SimplixStorage)
 
-A powerful configuration module that encapsulates [SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage) with additional features:
-- ✨ Serialization annotations
-- 🏭 Factory mode support
-- 🔒 Built-in thread safety
-- 🚀 Enhanced performance
+## 📋 Table of Contents
+- [Overview](#overview)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [1. Create Configuration Files](#1-create-configuration-files)
+  - [2. Thread Safety](#2-thread-safety)
+  - [3. Serializer Registration](#3-serializer-registration)
+- [Key Classes](#key-classes)
+  - [SimplixBuilderFactory](#simplixbuilderfactory)
+  - [SimplixSerializerSerializableAutoRegisterProcessor](#simplixserializerserializableautoregisterprocessor)
+- [Advanced Features](#advanced-features)
+- [License](#license)
+- [Contributing](#contributing)
 
-## 📋 Contents
+## Overview
 
-- [📦 Installation](#-installation)
-- [🚀 Quick Start](#-quick-start)
-- [💾 Serialization](#-serialization)
-  - [Custom Serializer](#custom-serializer)
-  - [Using SimplixSerializer](#using-simplixserializer)
-- [🔗 Related Links](#-related-links)
-- [📝 License](#-license)
+This configuration module allows you to:
+1. Build local or directory-based configuration files using SimplixBuilder without having to manually 
+   customize advanced settings each time.  
+2. Securely read and write configuration values (e.g., JSON, YAML, TOML) in a thread-safe manner.  
+3. Leverage annotation-based serialization via @SimplixSerializerSerializableAutoRegister, automatically 
+   registering custom classes for simplified data persistence.  
 
-## 📦 Installation
+It integrates seamlessly with the rest of the LegacyLands ecosystem, such as the annotation module 
+and Fairy IoC, ensuring an efficient and cohesive workflow.
 
-### Gradle Configuration
+## Installation
+
+Add the built artifact for the configuration module to your project. For example, in your Gradle 
+(Kotlin DSL) file:
 
 ```kotlin
 dependencies {
-    // Required modules
-    compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
     compileOnly(files("libs/configuration-1.0-SNAPSHOT.jar"))
 }
 ```
 
-## 🚀 Quick Start
+Adjust this to suit your preferred build system, repository placements, or versioning approach.
 
-Here's a basic example of how to use the configuration module:
+## Usage
+
+Below is an outline of how to use the configuration module effectively within a Fairy-based plugin or 
+other Java environment.
+
+### 1. Create Configuration Files
+
+You can utilize the SimplixBuilderFactory to create a SimplixBuilder in various ways (e.g., from a 
+single File, a directory, or a path string). Once you have the builder, you can pick what format 
+you'd like (YAML, JSON, etc.):
 
 ```java
-public class Example extends Plugin {
-    @Override
-    public void onPluginEnable() {
-        // Create a SimplixBuilder instance
-        SimplixBuilder simplixBuilder = 
-            SimplixBuilderFactory.createSimplixBuilder("example", "D:/");
+SimplixBuilder builder = SimplixBuilderFactory.createSimplixBuilder("example", "D:/");
 
-        // Choose your preferred format (JSON/TOML/YAML)
-        Yaml yaml = simplixBuilder.createYaml();
-
-        // Thread-safe operations
-        yaml.set("example", "test");
-        
-        // For more operations, visit:
-        // https://github.com/Simplix-Softworks/SimplixStorage/wiki
-    }
-}
+// Typically you will choose one (YAML/JSON/TOML).
+Yaml yamlFile = builder.createYaml();
+yamlFile.set("someConfigKey", "someValue");
 ```
 
-## 💾 Serialization
+### 2. Thread Safety
 
-### Custom Serializer
+The underlying data structures in SimplixStorage, combined with automatic synchronization in this 
+configuration module, allow safe concurrent reads/writes:
+• No need to implement additional locks or concurrency layers manually.  
+• Minimizes the risk of data corruption when multiple threads attempt to modify the same configuration.
 
-Create a custom serializer by implementing `SimplixSerializable` and using the `@SimplixSerializerSerializableAutoRegister` annotation:
+### 3. Serializer Registration
 
+With annotation scanning enabled (through the annotation module), any class annotated with 
+@SimplixSerializerSerializableAutoRegister will automatically be registered as a SimplixSerializable 
+implementation by the SimplixSerializerSerializableAutoRegisterProcessor. This ensures your custom 
+types can be serialized/deserialized without extra manual steps.
+
+Example:
 ```java
 @SimplixSerializerSerializableAutoRegister
 public class PlantSerializable implements SimplixSerializable<Plant> {
     @Override
-    public Plant deserialize(@NonNull Object object) throws ClassCastException {
-        // Implement deserialization logic
-        return plant;
+    public Plant deserialize(@NonNull Object serializedObject) {
+        // Implement your logic to turn "serializedObject" into a Plant instance
+        return plantInstance;
     }
 
     @Override
-    public Object serialize(@NonNull Plant plant) throws ClassCastException {
-        // Implement serialization logic
+    public Object serialize(@NonNull Plant plant) {
+        // Convert your Plant object into a structure (Map, String, etc.) for storage
         return serializedData;
     }
 
@@ -84,42 +104,44 @@ public class PlantSerializable implements SimplixSerializable<Plant> {
 }
 ```
 
-### Using SimplixSerializer
+This is especially valuable for advanced domain objects or complex data structures that need storage 
+in your configuration files.
 
-Easily serialize and deserialize objects using the `SimplixSerializer`:
+## Key Classes
 
-```java
-// Serialization
-String serialized = SimplixSerializer.serialize(plant).toString();
+### SimplixBuilderFactory
+Located at 
+[configuration/factory/SimplixBuilderFactory.java](src/main/java/net/legacy/library/configuration/factory/SimplixBuilderFactory.java).
 
-// Deserialization
-Plant plant = SimplixSerializer.deserialize(plantString, Plant.class);
-```
+• Bundles common settings (DataType, config comments, reload behavior) into any newly created 
+  SimplixBuilder.  
+• Provides various static methods to quickly generate builder instances from Files, directories, or paths.
 
-## 🌟 Key Features
+### SimplixSerializerSerializableAutoRegisterProcessor
+Annotated with @AnnotationProcessor to detect your custom classes that implement SimplixSerializable.  
+• Once triggered, it instantiates an object of that class and calls SimplixSerializer.registerSerializable(...).  
+• Ensures you can skip manual registration steps for every new serializable class.
 
-- **Thread Safety**: Built-in thread safety mechanisms for reliable concurrent operations
-- **Multiple Formats**: Support for JSON, YAML, and TOML configurations [1](https://github.com/Simplix-Softworks/SimplixStorage)
-- **Auto-Registration**: Automatic serializer registration using annotations
-- **Factory Pattern**: Simplified object creation through factory methods
-- **Type Safety**: Strong typing support for configuration values
+## Advanced Features
 
-## 🔗 Related Links
+• Multi-Format Support (YAML, JSON, TOML): Switch easily to any format supported by SimplixStorage.  
+• Automatic Reload Settings: By default, the SimplixBuilder uses ReloadSettings.AUTOMATICALLY, ensuring 
+  changes are picked up promptly.  
+• Fine-Tuned Data Sorting (DataType.SORTED): Keeps your configuration files organized for better readability.  
+• Integration with IoC, letting you create or manage configuration objects via injection if desired.
 
-- [SimplixStorage Documentation](https://github.com/Simplix-Softworks/SimplixStorage/wiki)
-- [SimplixStorage GitHub Repository](https://github.com/Simplix-Softworks/SimplixStorage)
+## License
 
-## 📝 License
+This project is licensed under the MIT License. Please see the [LICENSE](../LICENSE) file for more details.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Contributing
 
-## 🤝 Contributing
+We appreciate all contributions via pull requests, issue reports, and feature suggestions. Whether 
+it's improving documentation, optimizing builder settings, or introducing new advanced serialization 
+options, your help makes the module stronger for everyone!
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
 
-## ⚡ Performance
 
-The module is optimized for performance with:
-- Efficient thread synchronization
-- Minimal overhead for serialization operations
-- Smart caching mechanisms
+Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
+
