@@ -75,3 +75,11 @@ dependencies {
 ## 相关教程（简体中文）
 
 目前我们正在规划并制作 [Fairy Framework](https://github.com/FairyProject/fairy) 的使用教程视频和相关文档，后续会通过哔哩哔哩 [LegacyLands 官方账号](https://space.bilibili.com/1253128469) 进行发布，欢迎关注！ 
+
+
+## 技术交流
+
+我们欢迎各位开发者在遇到问题或有功能建议时来到这些地方进行反馈，这将帮助与激励我们不断完善它，并一直成长！
+
+- QQ Group: 1022665227
+- [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)

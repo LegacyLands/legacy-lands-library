@@ -79,3 +79,10 @@ Currently, the production of [Fairy Framework](https://github.com/FairyProject/f
 ## Chinese version
 
 A Chinese version of the README is available here: [中文文档 (README_ZHCN.md)](README_ZHCN.md)
+
+## technical exchange
+
+We welcome developers to come to these places to provide feedback when they encounter problems or have feature suggestions. This will help and motivate us to continuously improve it and keep growing!
+
+- QQ Group: 1022665227
+- [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
