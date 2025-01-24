@@ -34,6 +34,8 @@ To run the module as a plugin (which is the recommended way), run the `-plugin` 
 
 Please configure GitHub username and GitHub token before use [Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 
+If you don't want to do this, we also recommend importing the `-sources` file.
+
 ```kotlin
 repositories {
     maven {
