@@ -2,7 +2,6 @@ package net.legacy.library.annotation.service;
 
 import io.fairyproject.container.Containers;
 import io.fairyproject.container.InjectableComponent;
-import io.fairyproject.container.scope.InjectableScope;
 import io.fairyproject.log.Log;
 import net.legacy.library.annotation.util.AnnotationScanner;
 import net.legacy.library.annotation.util.ReflectUtil;

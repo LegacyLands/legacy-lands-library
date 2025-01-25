@@ -115,7 +115,7 @@ public final class CacheServiceFactory {
      * @param tieredCacheLevels a set of {@link TieredCacheLevel} instances
      * @return a new {@link CustomCacheService} instance
      */
-    public static FlexibleMultiLevelCacheService createFlexibleMultiLevelCacheService(Set<TieredCacheLevel<?, ?>> tieredCacheLevels){
+    public static FlexibleMultiLevelCacheService createFlexibleMultiLevelCacheService(Set<TieredCacheLevel<?, ?>> tieredCacheLevels) {
         return new FlexibleMultiLevelCacheService(tieredCacheLevels);
     }
 }

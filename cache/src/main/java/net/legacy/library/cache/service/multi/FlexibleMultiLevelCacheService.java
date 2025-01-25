@@ -51,10 +51,10 @@ public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<Ti
      * If the cache level is not found (i.e., the {@link Optional} is empty), it throws an exception
      * provided by the {@code exceptionSupplier}.
      *
-     * @param level the identifier of the level to look up
+     * @param level             the identifier of the level to look up
      * @param exceptionSupplier a {@link Supplier} that provides the exception to be thrown if the cache level is not found
-     * @param <L> the type of the level identifier
-     * @param <X> the type of the exception that may be thrown
+     * @param <L>               the type of the level identifier
+     * @param <X>               the type of the exception that may be thrown
      * @return the {@link TieredCacheLevel} associated with the given level identifier
      * @throws X if the cache level is not found, the exception provided by {@code exceptionSupplier} is thrown
      */

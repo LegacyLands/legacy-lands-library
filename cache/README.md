@@ -1,6 +1,8 @@
 # 🚀 Cache Module
 
-A powerful multi-level caching solution that leverages Caffeine and Redis, with functional programming support and automatic lock handling. This module is built for asynchronous, distributed, and multi-tier caching scenarios focused on flexible configurations and high performance.
+A powerful multi-level caching solution that leverages Caffeine and Redis, with functional programming support and
+automatic lock handling. This module is built for asynchronous, distributed, and multi-tier caching scenarios focused on
+flexible configurations and high performance.
 
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
@@ -20,25 +22,31 @@ A powerful multi-level caching solution that leverages Caffeine and Redis, with 
 - [Introduction](#introduction)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Caffeine Cache (Synchronous and Asynchronous)](#caffeine-cache-synchronous-and-asynchronous)
-  - [Redis Cache](#redis-cache)
-  - [Custom Cache](#custom-cache)
-  - [Multi-Level Cache](#multi-level-cache)
+    - [Caffeine Cache (Synchronous and Asynchronous)](#caffeine-cache-synchronous-and-asynchronous)
+    - [Redis Cache](#redis-cache)
+    - [Custom Cache](#custom-cache)
+    - [Multi-Level Cache](#multi-level-cache)
 - [Architecture](#architecture)
-  - [Core Classes](#core-classes)
-  - [Locking Mechanism](#locking-mechanism)
+    - [Core Classes](#core-classes)
+    - [Locking Mechanism](#locking-mechanism)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Introduction
 
-The "cache" module provides a flexible, extensible caching solution suitable for a variety of scenarios, from single-node in-memory caches to distributed systems requiring shared state across multiple nodes. By combining different caching technologies (Caffeine for in-memory and Redis for remote caching), you can create multi-tier caching strategies that optimize both performance and data consistency.
+The "cache" module provides a flexible, extensible caching solution suitable for a variety of scenarios, from
+single-node in-memory caches to distributed systems requiring shared state across multiple nodes. By combining different
+caching technologies (Caffeine for in-memory and Redis for remote caching), you can create multi-tier caching strategies
+that optimize both performance and data consistency.
 
 Key highlights include:
+
 1. Standardized access methods across all cache implementations.
-2. Lockable cache operations to handle concurrency, ensuring that only one thread computes or updates a cache entry at a time.
+2. Lockable cache operations to handle concurrency, ensuring that only one thread computes or updates a cache entry at a
+   time.
 3. Simple extension points enabling custom caches to integrate seamlessly.
-4. Multiple layers of caches that can be composed to form a hierarchical cache (e.g., a local memory cache tier, plus a Redis tier).
+4. Multiple layers of caches that can be composed to form a hierarchical cache (e.g., a local memory cache tier, plus a
+   Redis tier).
 
 ## Installation
 
@@ -54,11 +62,13 @@ Adjust according to your preferred build system and repository hosting.
 
 ## Usage
 
-Below are common use cases and examples showcasing how to instantiate and use the caches. For more detailed or advanced scenarios, refer to individual class documentation within the source code.
+Below are common use cases and examples showcasing how to instantiate and use the caches. For more detailed or advanced
+scenarios, refer to individual class documentation within the source code.
 
 ### Caffeine Cache (Synchronous and Asynchronous)
 
-Caffeine provides a high-performance, in-memory cache with excellent hit rates. You can create either synchronous or asynchronous cache services through the CacheServiceFactory.
+Caffeine provides a high-performance, in-memory cache with excellent hit rates. You can create either synchronous or
+asynchronous cache services through the CacheServiceFactory.
 
 • Synchronous Example:
 
@@ -139,7 +149,8 @@ String computedValue = customCache.get(
 
 ### Multi-Level Cache
 
-You can combine multiple cache layers (e.g., a fast local memory tier + a Redis tier) using FlexibleMultiLevelCacheService plus TieredCacheLevel objects. For instance:
+You can combine multiple cache layers (e.g., a fast local memory tier + a Redis tier) using
+FlexibleMultiLevelCacheService plus TieredCacheLevel objects. For instance:
 
 ```java
 // Primary in-memory Caffeine cache
@@ -167,27 +178,32 @@ String multiValue = multiLevelCache.applyFunctionWithoutLock(
 );
 ```
 
-Multi-level configurations allow you to decide priorities, fallback strategies, and lock usage for each tier, ensuring you get the speed of local caching while retaining the consistency or scalability of remote caches.
+Multi-level configurations allow you to decide priorities, fallback strategies, and lock usage for each tier, ensuring
+you get the speed of local caching while retaining the consistency or scalability of remote caches.
 
 ## Architecture
 
 ### Core Classes
 
 • CacheServiceInterface
-  - Defines essential get(...) methods for retrieving or computing values.
-  - Implemented by various cache service classes (RedisCacheService, CaffeineCacheService, etc.).
+
+- Defines essential get(...) methods for retrieving or computing values.
+- Implemented by various cache service classes (RedisCacheService, CaffeineCacheService, etc.).
 
 • AbstractCacheService & AbstractLockableCache
-  - Provide shared logic, enabling locked and non-locked operations.
-  - Manage concurrency with Lock or Redisson RLock.
+
+- Provide shared logic, enabling locked and non-locked operations.
+- Manage concurrency with Lock or Redisson RLock.
 
 • FlexibleMultiLevelCacheService
-  - Manages multiple caching tiers.
-  - Uses TieredCacheLevel objects to unify them under a single interface.
+
+- Manages multiple caching tiers.
+- Uses TieredCacheLevel objects to unify them under a single interface.
 
 • RedisCacheService & RedisCacheServiceInterface
-  - Wrap RedissonClient for persistent/distributed caching.
-  - Safe "shutdown" handling and extended typed retrieval methods.
+
+- Wrap RedissonClient for persistent/distributed caching.
+- Safe "shutdown" handling and extended typed retrieval methods.
 
 ### Locking Mechanism
 
@@ -195,11 +211,14 @@ One of the module's chief advantages is lock-based operations.
 • Redisson RLock is used when a Redis-based lock is required, typically for distributed locks.
 • ReentrantLock is used for local concurrency in non-Redis caches.
 
-The built-in logic (execute(...) in AbstractLockableCache) handles tryLock with configurable wait time, ensuring any thread that fails to acquire the lock can time out gracefully. This lock-based approach ensures that only one thread updates or computes a given cache entry at a time.
+The built-in logic (execute(...) in AbstractLockableCache) handles tryLock with configurable wait time, ensuring any
+thread that fails to acquire the lock can time out gracefully. This lock-based approach ensures that only one thread
+updates or computes a given cache entry at a time.
 
 ## Contributing
 
 Contributions are always welcome. You can:
+
 - Report bugs or suggest features through the issue tracker.
 - Create pull requests with enhancements, optimizations, or documentation improvements.
 - Expand functionality by adding new cache implementations or multi-tier strategies.
