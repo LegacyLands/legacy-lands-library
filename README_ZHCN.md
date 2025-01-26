@@ -10,21 +10,23 @@
     <p>基于 <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>，作为插件运行，旨在封装多种现有库来简化 <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> 插件的开发过程。</p>
 </div>
 
-## 📚 概述
+## 概述
 
 这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft 插件开发提供了必要的工具和实用程序。虽然针对 Folia 进行了优化，但完全兼容 Spigot 和 Paper 平台。
 
-## 🎯 核心模块
+## 核心模块
 
-- [🎯 **annotation**](annotation/README.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理
-- [🛠 **commons**](commons/README.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作
-- [⚙️ **configuration**](configuration/README.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化
-- [🗄️ **mongodb**](mongodb/README.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化
-- [🚀 **cache**](cache/README.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制
-- [👤 **player**](player/README.md) - 高性能玩家数据管理，支持多级缓存和实时同步
-- 🔒 **security** - *即将推出*
+- [**annotation**](annotation/README.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理
+- [**commons**](commons/README.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作
+- [**configuration**](configuration/README.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化
+- [**mongodb**](mongodb/README.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化
+- [**cache**](cache/README.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制
+- [**player**](player/README.md) - 高性能玩家数据管理，支持多级缓存和实时同步
 
-## 🚀 使用方法
+
+- **security** - *即将推出*
+
+## 使用方法
 
 ### 分发包说明
 
@@ -53,7 +55,7 @@ dependencies {
 }
 ```
 
-## 🌟 特性
+## 特性
 
 - **模块化架构**：各模块独立但无缝集成
 - **类型安全**：全面的泛型支持和编译时检查
@@ -61,35 +63,28 @@ dependencies {
 - **开发友好**：丰富的文档和直观的 API
 - **生产就绪**：在实际应用中经过验证
 
-## 🤝 贡献
-
-我们欢迎各种形式的贡献：
-- 报告问题
-- 提出功能建议
-- 提交代码改进
-
-## 📖 文档
+## 文档
 
 - 每个模块的 README 中都有详细文档
 - `-javadoc` 包中包含生成的 JavaDoc
 - [English Version](README.md)
 
-## 💬 社区
+## 社区
 
 - QQ群：1022665227
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [哔哩哔哩](https://space.bilibili.com/1253128469)（中文教程）
 
-## ❤️ 赞助商
+我们将在[哔哩哔哩](https://space.bilibili.com/1253128469)频道发布更多关于此模块和 [Fairy Framework](https://github.com/FairyProject/fairy) 的开发教程与经验分享！
+
+## 赞助商
 
 本项目由 [LegacyLands](https://github.com/LegacyLands) 全力赞助和维护。
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-## ⭐ Star 历史
+## Star 历史
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
 
 ---
-
-由 [LegacyLands Team](https://github.com/LegacyLands) 用 ❤️ 制作

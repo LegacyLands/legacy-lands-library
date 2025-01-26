@@ -10,21 +10,23 @@
     <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plugin, aiming to encapsulate various existing libraries to simplify the development of <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> plugins.</p>
 </div>
 
-## 📚 Overview
+## Overview
 
 A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and utilities for modern Minecraft plugin development. While optimized for Folia, it's fully compatible with Spigot and Paper platforms.
 
-## 🎯 Core Modules
+## Core Modules
 
-- [🎯 **annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and lifecycle management
-- [🛠 **commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON operations
-- [⚙️ **configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with serialization support
-- [🗄️ **mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence
-- [🚀 **cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock mechanisms
-- [👤 **player**](player/README.md) - High-performance player data management with multi-tier caching and real-time synchronization
-- 🔒 **security** - *Coming soon*
+- [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and lifecycle management
+- [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON operations
+- [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with serialization support
+- [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence
+- [**cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock mechanisms
+- [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time synchronization
 
-## 🚀 Usage
+
+- **security** - *Coming soon*
+
+## Usage
 
 ### Distribution Packages
 
@@ -53,7 +55,7 @@ dependencies {
 }
 ```
 
-## 🌟 Features
+## Features
 
 - **Modular Architecture**: Each module is independent yet integrates seamlessly
 - **Type Safety**: Comprehensive generic support and compile-time checks
@@ -61,35 +63,26 @@ dependencies {
 - **Developer Friendly**: Rich documentation and intuitive APIs
 - **Production Ready**: Battle-tested in real-world applications
 
-## 🤝 Contributing
-
-We welcome contributions! Feel free to:
-- Report issues
-- Suggest features
-- Submit pull requests
-
-## 📖 Documentation
+## Documentation
 
 - Detailed documentation in each module's README
 - Generated JavaDoc in `-javadoc` package
 - [中文文档](README_ZHCN.md)
 
-## 💬 Community
+## Community
 
 - QQ Group: 1022665227
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [Bilibili](https://space.bilibili.com/1253128469) (Chinese tutorials)
 
-## ❤️ Sponsors
+We will release more development tutorials and experience sharing about this module or [Fairy Framework](https://github.com/FairyProject/fairy) in the [Bilibili](https://space.bilibili.com/1253128469) channel!
+
+## Sponsors
 
 Fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-## ⭐ Star History
+## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
-
----
-
-Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
