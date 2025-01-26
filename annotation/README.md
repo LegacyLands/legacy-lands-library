@@ -1,208 +1,208 @@
-# 📚 Annotation Module
+# 🎯 Annotation Processing Framework
 
-Based on the [Reflections](https://github.com/ronmamo/reflections) library, this module automates the scanning and
-processing of annotations, supporting multiple scenarios and multiple ClassLoaders for plugins or other modular
-environments.
+A powerful yet elegant framework for automated annotation processing, built on top of [Reflections](https://github.com/ronmamo/reflections) library. Designed for modern Java applications with a focus on plugin architectures and modular systems.
 
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 
-## 📋 Table of Contents
+## ✨ Key Features
 
-- [Annotation Module](#-annotation-module)
-    - [Table of Contents](#table-of-contents)
-    - [Key Features](#key-features)
-    - [Module Overview](#module-overview)
-    - [Getting Started](#getting-started)
-        - [Dependency](#dependency)
-        - [Core Concept](#core-concept)
-        - [Usage Example](#usage-example)
-            - [1. Define an Annotation](#1-define-an-annotation)
-            - [2. Create a Custom Annotation Processor](#2-create-a-custom-annotation-processor)
-            - [3. Integrate Within a Plugin/Class](#3-integrate-within-a-pluginclass)
-    - [How It Works](#how-it-works)
-        - [1. Multiple ClassLoaders](#1-multiple-classloaders)
-        - [2. AnnotationProcessingService](#2-annotationprocessingservice)
-    - [Detailed Architecture](#detailed-architecture)
-        - [Key Classes and Responsibilities](#key-classes-and-responsibilities)
-    - [Additional Notes](#additional-notes)
-    - [License](#license)
+- 🔍 **Flexible Scanning Options**
+  - Package-based scanning via `processAnnotations(String basePackage, ...)`
+  - Multi-package scanning via `processAnnotations(List<String> basePackages, ...)`
+  - Direct URL scanning via `processAnnotations(Collection<URL> urls, ...)`
 
-## Key Features
+- 🔌 **ClassLoader Integration**
+  - Support for multiple ClassLoaders in a single scan
+  - Ideal for plugin architectures where classes are loaded by different ClassLoaders
+  - Utility methods in `ReflectUtil` for resolving URLs across ClassLoaders
 
-- 🔍 Automated annotation scanning using Reflections, configurable via package names or explicit URLs.
-- 📚 Supports multiple ClassLoaders, which is especially useful for cross-plugin or multi-module environments.
-- 🔄 Simplifies boilerplate by allowing you to write custom processors for a whole category of annotated classes.
+- 🛠 **Comprehensive Processor Lifecycle**
+  - `before()`: Pre-processing setup
+  - `process()`: Main processing logic
+  - `after()`: Post-processing cleanup
+  - `exception()`: Error handling
+  - `finallyAfter()`: Guaranteed cleanup execution
 
-## Module Overview
+- 🎯 **Fairy IoC Integration**
+  - Optional singleton injection via Fairy IoC container
+  - Support for both IoC-managed and reflection-based instantiation
+  - `@InjectableComponent` support for dependency injection
 
-This module uses the Reflections library to search for specified annotations within your codebase and pass each
-discovered class to your custom processor (implementing CustomAnnotationProcessor). In short:
+- ⚡️ **Efficient Processing**
+  - Lazy loading through Reflections library
+  - Optimized URL resolution for ClassLoader scanning
+  - Reusable scanning results via `AnnotationScanner`
 
-1. It can locate classes annotated with a target annotation across multiple package paths, JARs, or service URLs.
-2. It assigns these classes to their appropriate processor, as identified by the @AnnotationProcessor meta-annotation.
-3. It integrates with the Fairy IoC container; processors can be injected as singletons or instantiated via reflection,
-   offering flexibility depending on the application environment.
+- 🔒 **Error Handling**
+  - Dedicated exception handling per processor
+  - Granular error control at class level
+  - Comprehensive logging through Fairy's Log system
 
-This is particularly suited to environments such as BungeeCord/Spigot/Folia where it is common to scan multiple plugins
-for shared annotations, thus simplifying registration or initialization tasks.
+## 📚 Table of Contents
 
-## Getting Started
+- [Quick Start](#-quick-start)
+- [Core Concepts](#-core-concepts)
+- [Advanced Usage](#-advanced-usage)
+- [API Reference](#-api-reference)
+- [Use Cases](#-use-cases)
 
-### Dependency
+## 🚀 Quick Start
 
-Include this module's build artifact in your own project. The following example demonstrates how to reference it via a
-Gradle Kotlin DSL:
+### Installation
 
+#### Gradle (Kotlin DSL)
 ```kotlin
 dependencies {
-    // Annotation module
-    compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
+    implementation("net.legacy.library:annotation:1.0-SNAPSHOT")
 }
 ```
 
-> Note: Adjust the setup as needed for your build system (e.g., Maven, Gradle) and your preferred repository
-> arrangement.
+#### Maven
+```xml
+<dependency>
+    <groupId>net.legacy.library</groupId>
+    <artifactId>annotation</artifactId>
+    <version>1.0-SNAPSHOT</version>
+</dependency>
+```
 
-### Core Concept
+### Basic Usage
 
-You can think of this module as a "library book index":
-
-- You have a collection of "books" (classes) containing specific "stickers" (annotations).
-- You need to locate books with certain stickers (search for classes by annotation).
-- You then perform custom operations on these books (custom annotation processor logic).
-
-AnnotationProcessingService coordinates the overall scanning, while each CustomAnnotationProcessor implementation
-defines how to handle classes that match a specific annotation.
-
-### Usage Example
-
-#### 1. Define an Annotation
-
-Below is an example of an annotation (SimplixSerializerSerializableAutoRegister) indicating classes that should be
-automatically registered for serialization:
-
+1️⃣ **Define Your Annotation**
 ```java
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface SimplixSerializerSerializableAutoRegister {
+public @interface MyCustomAnnotation {
+    String value() default "";
 }
 ```
 
-#### 2. Create a Custom Annotation Processor
-
-Use the @AnnotationProcessor meta-annotation to specify the target annotation for your processor, then implement the
-CustomAnnotationProcessor interface:
-
+2️⃣ **Create a Processor**
 ```java
-@AnnotationProcessor(SimplixSerializerSerializableAutoRegister.class)
-public class SimplixSerializerSerializableAutoRegisterProcessor implements CustomAnnotationProcessor {
-
+@AnnotationProcessor(MyCustomAnnotation.class)
+public class MyCustomProcessor implements CustomAnnotationProcessor {
     @Override
     public void process(Class<?> clazz) throws Exception {
-        // Handle classes annotated with SimplixSerializerSerializableAutoRegister
+        MyCustomAnnotation annotation = clazz.getAnnotation(MyCustomAnnotation.class);
+        // Process the annotated class
     }
 
     @Override
     public void exception(Class<?> clazz, Exception exception) {
-        // Handle any exceptions arising during scanning or processing
+        // Handle exceptions
+    }
+    
+    // Optional lifecycle hooks
+    @Override
+    public void before(Class<?> clazz) {
+        // Pre-processing logic
+    }
+    
+    @Override
+    public void after(Class<?> clazz) {
+        // Post-processing logic
     }
 }
 ```
 
-You can optionally override the before, after, or finallyAfter methods to execute additional logic before or after
-processing each class.
-
-#### 3. Integrate Within a Plugin/Class
-
-In a Fairy-based plugin, you might configure the service in your plugin's main class. For example:
-
+3️⃣ **Initialize Processing**
 ```java
 @FairyLaunch
-public class Launcher extends Plugin {
+public class MyPlugin extends Plugin {
     @Autowired
-    private AnnotationProcessingServiceInterface annotationProcessingService;
+    private AnnotationProcessingServiceInterface processingService;
 
     @Override
-    public void onPluginEnable() {
-        List<String> basePackages = List.of(
-            "org.example",
-            "net.legacy.library.configuration.serialize.annotation"
-        );
-
-        // Pass multiple ClassLoaders to discover annotated classes within external modules/plugins
-        annotationProcessingService.processAnnotations(
-            basePackages,
-            false,
-            this.getClassLoader(),
-            ConfigurationLauncher.class.getClassLoader()
+    public void onEnable() {
+        processingService.processAnnotations(
+            List.of("com.example.package"),
+            true,  // Use Fairy IoC singleton
+            getClassLoader()
         );
     }
 }
 ```
 
-When you need to scan multiple plugins or modules for the same annotation, simply supply each relevant ClassLoader in
-the method call.
+## 🎯 Core Concepts
 
-## How It Works
+### Architecture Components
 
-### 1. Multiple ClassLoaders
+- **AnnotationProcessingService**
+  - Core service orchestrating the scanning and processing workflow
+  - Manages processor lifecycle and exception handling
+  - Supports multiple scanning strategies
 
-- Each plugin or module is typically managed by its own ClassLoader.
-- To discover classes from another plugin/module, pass the associated ClassLoader(s).
-- AnnotationProcessingService can aggregate classes from all these loaders, scanning them in a single run.
+- **CustomAnnotationProcessor**
+  - Interface for implementing custom processors
+  - Rich lifecycle hooks (before, process, after, exception)
+  - Type-safe annotation processing
 
-### 2. AnnotationProcessingService
+- **AnnotationScanner**
+  - Efficient class scanning using Reflections
+  - Support for multiple ClassLoaders
+  - URL-based and package-based scanning
 
-This service forms the core of the module's functionality:
+### Processing Lifecycle
 
-1. Given packages or URLs, it uses Reflections to find classes with the specified annotations.
-2. It checks each available processor (indicated by @AnnotationProcessor) and matches them to the correct annotation.
-3. For each discovered class, it calls the processor's process and exception methods, and optionally before, after, and
-   finallyAfter if implemented.
+1. **Initialization**: Configure scanning parameters and ClassLoaders
+2. **Discovery**: Scan for annotated classes using specified strategy
+3. **Processing**: Execute processor lifecycle for each discovered class
+4. **Completion**: Invoke cleanup and finalization hooks
 
-## Detailed Architecture
+## 🔧 Advanced Usage
 
-### Key Classes and Responsibilities
+### Multiple ClassLoader Support
 
-• AnnotationProcessingService
+```java
+processingService.processAnnotations(
+    List.of("com.example.package"),
+    true,
+    mainClassLoader,
+    pluginClassLoader,
+    moduleClassLoader
+);
+```
 
-- Implements AnnotationProcessingServiceInterface to govern scanning and invocation of processors.
-- Utilizes AnnotationScanner and ReflectUtil to locate annotated classes and manage processor instances.
+### Custom Scanning Strategy
 
-• AnnotationScanner
+```java
+Collection<URL> customUrls = Sets.newHashSet();
+customUrls.add(new URL("file:///path/to/classes"));
+processingService.processAnnotations(customUrls, true);
+```
 
-- Wraps Reflections usage, enabling you to locate annotated classes by package name or URL collection.
+### Error Handling
 
-• CustomAnnotationProcessor
+```java
+@AnnotationProcessor(MyCustomAnnotation.class)
+public class ResilientProcessor implements CustomAnnotationProcessor {
+    @Override
+    public void exception(Class<?> clazz, Exception exception) {
+        Log.error("Failed to process " + clazz.getName(), exception);
+        // Implement recovery strategy
+    }
+}
+```
 
-- Interface for creating custom processors; outlines how classes should be handled and how exceptions should be
-  processed.
+## 🎯 Use Cases
 
-• @AnnotationProcessor
+- **Plugin Systems**: Auto-registration of plugin components
+- **API Extensions**: Dynamic feature discovery and loading
+- **Configuration**: Annotation-based configuration processing
+- **Event Systems**: Automatic event handler registration
+- **Service Discovery**: Cross-module service registration
+- **Validation**: Automated validation rule processing
 
-- Meta-annotation designating which annotation the processor targets.
+## 📄 License
 
-• ReflectUtil
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
-- A utility class to combine multiple ClassLoader scanning paths (URLs), suitable for multi-package or multi-module
-  contexts.
+## 🤝 Contributing
 
-## Additional Notes
-
-When you need to handle multiple annotations, you can create separate processors or incorporate logic for multiple
-annotations in a single processor. Ensure each processor class is annotated with @AnnotationProcessor, specifying its
-target annotation(s).
-
-Furthermore, since Fairy IoC can automatically manage and inject class instances, you may choose between a singleton
-approach or reflection-based construction, accommodating different scopes as your application requires.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](../LICENSE) file for more information.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
-
 
 Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
 

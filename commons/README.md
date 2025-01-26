@@ -1,150 +1,148 @@
-# 🌟 Commons Module
+# 🛠 Commons Framework
 
-A versatile collection of utilities and services designed to simplify development tasks. Its features include
-reflection-based injection (e.g., VarHandleReflectionInjector), easy scheduling utilities (e.g., TaskInterface for timed
-and recurring tasks), and additional helpers like GsonUtil for JSON processing. The commons module integrates with
-ecosystem components such as Fairy IoC and the annotation module to streamline your workflow across various projects.
+A collection of essential utilities and tools focusing on reflection injection, task scheduling, and common operations. Built with flexibility and ease of use in mind.
 
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 
-## 📋 Table of Contents
+## ✨ Key Features
 
-- [Introduction](#introduction)
-- [Key Features](#key-features)
-- [Installation](#installation)
-- [Code Overview](#code-overview)
-    - [VarHandleReflectionInjector](#varhandlereflectioninjector)
-    - [Task Management](#task-management)
-    - [Miscellaneous Utilities](#miscellaneous-utilities)
-- [Related Modules](#related-modules)
-- [License](#license)
-- [Contributing](#contributing)
+- 🔄 **VarHandle Injection System**
+  - Automated VarHandle injection via `@VarHandleAutoInjection`
+  - Support for both direct and static method-based injection
+  - Thread-safe field access through VarHandle
+  - Flexible injection strategies with `StaticInjectorInterface`
 
-## Introduction
+- ⏰ **Task Management**
+  - Rich task scheduling API through `TaskInterface`
+  - Support for both sync and async execution
+  - Flexible scheduling with ticks or Duration
+  - Auto-start capability via `@TaskAutoStartAnnotation`
 
-The commons module acts as a foundation layer, providing a range of smaller utilities and abstractions that are
-frequently used across multiple modules. This includes reflection-based injection mechanisms, a flexible task scheduling
-system, and basic JSON utilities, among others.
+- 🔧 **Utility Components**
+  - Thread-safe JSON operations with `GsonUtil`
+  - Customizable Gson configuration
+  - Factory patterns for component creation
+  - Integration with Fairy IoC container
 
-Common use cases:
+## 📚 Quick Start
 
-1. Injecting VarHandle references into static fields without writing verbose reflection code.
-2. Scheduling periodic (or one-time) tasks in a consistent manner, integrated with Fairy's MCScheduler system.
-3. Simplifying JSON configuration and data handling with a shared Gson instance and optional customization methods.
-
-## Key Features
-
-• Simple reflection-based injection using VarHandleReflectionInjector  
-• Automated scheduling with TaskInterface and optional TaskAutoStartAnnotation  
-• Thread-safe JSON handling via GsonUtil (supporting custom builder modifications)  
-• Class-level injection integration with Fairy IoC  
-• Minimal setup, offering a set of ready-to-use patterns and classes
-
-## Installation
-
-Add the commons module's built artifact to your project. The following example is in Gradle (Kotlin DSL):
+### Installation
 
 ```kotlin
 dependencies {
-    compileOnly(files("libs/commons-1.0-SNAPSHOT.jar"))
+    implementation("net.legacy.library:commons:1.0-SNAPSHOT")
 }
 ```
 
-Adjust accordingly for your preferred build system or repository hosting method.
+### Basic Usage
 
-## Code Overview
-
-Below are some of the primary classes and submodules found within the commons source code, along with their typical
-usage scenarios.
-
-### VarHandleReflectionInjector
-
-Located
-in [VarHandleReflectionInjector.java](src/main/java/net/legacy/library/commons/injector/VarHandleReflectionInjector.java).  
-• Purpose: Injects a VarHandle reference into a static field annotated with @VarHandleAutoInjection.  
-• Typical Use Case: Allows you to manipulate a field (e.g., set or get its value) using VarHandle without writing
-repetitive reflection code.
-
-For example, if you annotate a static field:
-
+1️⃣ **VarHandle Injection**
 ```java
-@VarHandleAutoInjection(fieldName = "someField")
-public static VarHandle SOME_FIELD_HANDLE;
+public class MyClass {
+    @VarHandleAutoInjection(fieldName = "targetField")
+    private static VarHandle TARGET_FIELD_HANDLE;
+    
+    private String targetField;
+}
+
+// Inject the VarHandle
+StaticInjectorInterface injector = InjectorFactory.createVarHandleReflectionInjector();
+injector.inject(MyClass.class);
 ```
 
-VarHandleReflectionInjector automatically locates the declared field "someField" on the target class and assigns the
-resulting VarHandle to the static field. This can simplify concurrency-related operations or advanced reflection tasks.
-
-### Task Management
-
-Located under [task](src/main/java/net/legacy/library/commons/task) package.  
-• Classes of Interest: TaskInterface, TaskAutoStartAnnotation, TaskAutoStartAnnotationProcessor.  
-• Purpose: Provide a consistent approach to scheduling tasks using Fairy's MCSchedulers.
-
-Key points:
-
-1. Implementing TaskInterface in your class:
-    - Override start() to schedule recurring or one-time tasks asynchronously (by default).
-    - Utilize additional helper methods for intervals, durations, or custom repeat predicates.
-
-2. TaskAutoStartAnnotation & Processor:
-    - Annotate your class with @TaskAutoStartAnnotation if you want tasks to automatically start when the annotation
-      processor runs.
-    - The processor checks if the class should be IoC-managed or instantiated reflectively, then calls start().
-
-Example:
-
+2️⃣ **Task Scheduling**
 ```java
-@TaskAutoStartAnnotation(isFromFairyIoC = false)
-public class ExampleTask implements TaskInterface {
+@TaskAutoStartAnnotation
+public class MyTask implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
-        // Print a message every second
-        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 20);
+        return scheduleAtFixedRate(
+            () -> System.out.println("Task executed"),
+            Duration.ZERO,
+            Duration.ofSeconds(5)
+        );
     }
 }
 ```
 
-### Miscellaneous Utilities
-
-• GsonUtil (in [GsonUtil.java](src/main/java/net/legacy/library/commons/util/GsonUtil.java)):
-
-- Provides a thread-safe way to customize and access a shared Gson instance.
-- Supports chaining new settings or configuring the GsonBuilder with `customizeGsonBuilder(Consumer<GsonBuilder>)`.
-
-Example usage:
-
+3️⃣ **JSON Operations**
 ```java
-// Add custom serialization rules
+// Customize Gson
 GsonUtil.customizeGsonBuilder(builder -> {
-    builder.excludeFieldsWithoutExposeAnnotation();
     builder.setPrettyPrinting();
+    builder.serializeNulls();
 });
 
-// Retrieve the updated Gson
+// Use the shared Gson instance
 Gson gson = GsonUtil.getGson();
 ```
 
-## Related Modules
+## 🔧 Core Components
 
-• [Annotation Module](../annotation/README.md):
+### Injection System
+- `VarHandleReflectionInjector`: Core injection implementation
+- `StaticInjectorInterface`: Base interface for static injectors
+- `ObjectInjectorInterface`: Base interface for object injectors
+- `@VarHandleAutoInjection`: Annotation for marking injection targets
 
-- Delivers annotation scanning and processing functionality.
-- The commons module can rely on it for auto-start tasks (TaskAutoStartAnnotation) or other reflection-based tasks.
+### Task Framework
+- `TaskInterface`: Rich API for task scheduling
+- `@TaskAutoStartAnnotation`: Auto-start task marker
+- `TaskAutoStartAnnotationProcessor`: Annotation processor for tasks
+- Support for various scheduling patterns:
+  - Fixed-rate execution
+  - Delayed execution
+  - Conditional repetition
+  - Duration-based scheduling
 
-## License
+### Utilities
+- `GsonUtil`: Thread-safe JSON operations
+- `InjectorFactory`: Factory for creating injector instances
+
+## 🎯 Advanced Features
+
+### Custom VarHandle Injection
+```java
+@VarHandleAutoInjection(
+    fieldName = "field",
+    staticMethodName = "getHandle",
+    staticMethodPackage = "com.example.Handles"
+)
+private static VarHandle FIELD_HANDLE;
+```
+
+### Complex Task Scheduling
+```java
+@Override
+public ScheduledTask<?> start() {
+    return scheduleAtFixedRate(
+        () -> complexOperation(),
+        Duration.ofSeconds(1),
+        Duration.ofMinutes(5),
+        result -> shouldContinue(result)
+    );
+}
+```
+
+### Thread-Safe JSON Configuration
+```java
+GsonUtil.setNewGson(() -> new GsonBuilder()
+    .setPrettyPrinting()
+    .serializeNulls()
+    .registerTypeAdapter(MyType.class, new MyTypeAdapter())
+);
+```
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
-## Contributing
+## 🤝 Contributing
 
-You are welcome to contribute by opening issues, proposing new features, or making PRs that expand or refine the
-existing codebase. Whether it's improving documentation, adding new utility classes, or optimizing existing ones, your
-contributions help make the library more robust for everyone.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
-
 
 Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
 

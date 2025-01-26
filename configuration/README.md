@@ -1,154 +1,139 @@
-# 🔧 Configuration Module
+# 🔧 Configuration Framework
 
-A comprehensive and thread-safe configuration system built on top of
-[SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage). This module adds extra
-capabilities such as automatic serializer registration, factory-based builders, and robust
-serialization annotations, simplifying how you manage and persist configuration data.
+A flexible configuration framework built on top of [SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage), providing thread-safe configuration management with automatic serialization support.
 
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![SimplixStorage](https://img.shields.io/badge/SimplixStorage-3.2.7-orange.svg)](https://github.com/Simplix-Softworks/SimplixStorage)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
 
-## 📋 Table of Contents
+## ✨ Key Features
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Usage](#usage)
-    - [1. Create Configuration Files](#1-create-configuration-files)
-    - [2. Thread Safety](#2-thread-safety)
-    - [3. Serializer Registration](#3-serializer-registration)
-- [Key Classes](#key-classes)
-    - [SimplixBuilderFactory](#simplixbuilderfactory)
-    - [SimplixSerializerSerializableAutoRegisterProcessor](#simplixserializerserializableautoregisterprocessor)
-- [Advanced Features](#advanced-features)
-- [License](#license)
-- [Contributing](#contributing)
+- 🏭 **Factory-Based Builder System**
+  - Simplified builder creation via `SimplixBuilderFactory`
+  - Pre-configured settings for common use cases
+  - Support for file, directory, and path-based configurations
+  - Automatic reload capabilities
 
-## Overview
+- 📦 **Serialization Framework**
+  - Automatic serializer registration via `@SimplixSerializerSerializableAutoRegister`
+  - Integration with annotation processing system
+  - Thread-safe serialization operations
+  - Support for custom data types
 
-This configuration module allows you to:
+- 🔄 **I/O Operations**
+  - Comprehensive file operations through `IOUtil`
+  - Thread-safe file reading and writing
+  - Directory scanning and management
+  - File manipulation utilities
 
-1. Build local or directory-based configuration files using SimplixBuilder without having to manually
-   customize advanced settings each time.
-2. Securely read and write configuration values (e.g., JSON, YAML, TOML) in a thread-safe manner.
-3. Leverage annotation-based serialization via @SimplixSerializerSerializableAutoRegister, automatically
-   registering custom classes for simplified data persistence.
+## 📚 Quick Start
 
-It integrates seamlessly with the rest of the LegacyLands ecosystem, such as the annotation module
-and Fairy IoC, ensuring an efficient and cohesive workflow.
-
-## Installation
-
-Add the built artifact for the configuration module to your project. For example, in your Gradle
-(Kotlin DSL) file:
+### Installation
 
 ```kotlin
 dependencies {
-    compileOnly(files("libs/configuration-1.0-SNAPSHOT.jar"))
+    implementation("net.legacy.library:configuration:1.0-SNAPSHOT")
 }
 ```
 
-Adjust this to suit your preferred build system, repository placements, or versioning approach.
+### Basic Usage
 
-## Usage
-
-Below is an outline of how to use the configuration module effectively within a Fairy-based plugin or
-other Java environment.
-
-### 1. Create Configuration Files
-
-You can utilize the SimplixBuilderFactory to create a SimplixBuilder in various ways (e.g., from a
-single File, a directory, or a path string). Once you have the builder, you can pick what format
-you'd like (YAML, JSON, etc.):
-
+1️⃣ **Create Configuration**
 ```java
-SimplixBuilder builder = SimplixBuilderFactory.createSimplixBuilder("example", "D:/");
+// Create a builder with default settings
+SimplixBuilder builder = SimplixBuilderFactory.createSimplixBuilder(
+    "config",
+    "plugins/MyPlugin"
+);
 
-// Typically you will choose one (YAML/JSON/TOML).
-Yaml yamlFile = builder.createYaml();
-yamlFile.
-
-set("someConfigKey","someValue");
+// Create YAML configuration
+Yaml config = builder.createYaml();
+config.set("server.name", "MyServer");
+config.set("server.port", 25565);
 ```
 
-### 2. Thread Safety
-
-The underlying data structures in SimplixStorage, combined with automatic synchronization in this
-configuration module, allow safe concurrent reads/writes:
-• No need to implement additional locks or concurrency layers manually.  
-• Minimizes the risk of data corruption when multiple threads attempt to modify the same configuration.
-
-### 3. Serializer Registration
-
-With annotation scanning enabled (through the annotation module), any class annotated with
-@SimplixSerializerSerializableAutoRegister will automatically be registered as a SimplixSerializable
-implementation by the SimplixSerializerSerializableAutoRegisterProcessor. This ensures your custom
-types can be serialized/deserialized without extra manual steps.
-
-Example:
-
+2️⃣ **Custom Type Serialization**
 ```java
 @SimplixSerializerSerializableAutoRegister
-public class PlantSerializable implements SimplixSerializable<Plant> {
+public class PlayerDataSerializer implements SimplixSerializable<PlayerData> {
     @Override
-    public Plant deserialize(@NonNull Object serializedObject) {
-        // Implement your logic to turn "serializedObject" into a Plant instance
-        return plantInstance;
+    public PlayerData deserialize(Object obj) {
+        // Deserialize logic
     }
 
     @Override
-    public Object serialize(@NonNull Plant plant) {
-        // Convert your Plant object into a structure (Map, String, etc.) for storage
-        return serializedData;
-    }
-
-    @Override
-    public Class<Plant> getClazz() {
-        return Plant.class;
+    public Object serialize(PlayerData data) {
+        // Serialize logic
     }
 }
 ```
 
-This is especially valuable for advanced domain objects or complex data structures that need storage
-in your configuration files.
+3️⃣ **File Operations**
+```java
+// Read file content
+String content = IOUtil.readFileAsString("config.yml");
 
-## Key Classes
+// Write to file
+IOUtil.writeStringToFile("config.yml", "key: value");
 
-### SimplixBuilderFactory
+// List all files in directory
+List<File> files = IOUtil.getAllFiles("plugins/configs");
+```
 
-Located at
-[configuration/factory/SimplixBuilderFactory.java](src/main/java/net/legacy/library/configuration/factory/SimplixBuilderFactory.java).
+## 🔧 Core Components
 
-• Bundles common settings (DataType, config comments, reload behavior) into any newly created
-SimplixBuilder.  
-• Provides various static methods to quickly generate builder instances from Files, directories, or paths.
+### Configuration Building
+- `SimplixBuilderFactory`: Factory for creating pre-configured builders
+- Support for multiple formats (YAML, JSON, TOML)
+- Automatic reload and comment preservation
+- Sorted data storage for consistency
 
-### SimplixSerializerSerializableAutoRegisterProcessor
+### Serialization System
+- `@SimplixSerializerSerializableAutoRegister`: Auto-registration annotation
+- `SimplixSerializerSerializableAutoRegisterProcessor`: Registration processor
+- Integration with SimplixStorage serialization
+- Thread-safe operation handling
 
-Annotated with @AnnotationProcessor to detect your custom classes that implement SimplixSerializable.  
-• Once triggered, it instantiates an object of that class and calls SimplixSerializer.registerSerializable(...).  
-• Ensures you can skip manual registration steps for every new serializable class.
+### I/O Utilities
+- File reading and writing operations
+- Directory management
+- File copying and moving
+- Path manipulation utilities
 
-## Advanced Features
+## 🎯 Advanced Features
 
-• Multi-Format Support (YAML, JSON, TOML): Switch easily to any format supported by SimplixStorage.  
-• Automatic Reload Settings: By default, the SimplixBuilder uses ReloadSettings.AUTOMATICALLY, ensuring
-changes are picked up promptly.  
-• Fine-Tuned Data Sorting (DataType.SORTED): Keeps your configuration files organized for better readability.  
-• Integration with IoC, letting you create or manage configuration objects via injection if desired.
+### Custom Builder Configuration
+```java
+SimplixBuilder builder = SimplixBuilderFactory
+    .createSimplixBuilderFromFile(new File("config.yml"))
+    .setDataType(DataType.SORTED)
+    .setConfigSettings(ConfigSettings.PRESERVE_COMMENTS)
+    .setReloadSettings(ReloadSettings.AUTOMATICALLY);
+```
 
-## License
+### Complex File Operations
+```java
+// Copy with directory creation
+IOUtil.createDirectories("plugins/data");
+IOUtil.copyFile("source.yml", "plugins/data/target.yml");
 
-This project is licensed under the MIT License. Please see the [LICENSE](../LICENSE) file for more details.
+// Batch file processing
+List<File> files = IOUtil.getAllFiles("plugins/data");
+files.forEach(file -> {
+    if (IOUtil.getFileExtension(file.getPath()).equals("yml")) {
+        // Process YAML files
+    }
+});
+```
 
-## Contributing
+## 📄 License
 
-We appreciate all contributions via pull requests, issue reports, and feature suggestions. Whether
-it's improving documentation, optimizing builder settings, or introducing new advanced serialization
-options, your help makes the module stronger for everyone!
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
-
 
 Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
 
