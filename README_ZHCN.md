@@ -7,32 +7,35 @@
     <a><img alt="Forks" src="https://img.shields.io/github/forks/LegacyLands/legacy-lands-library"></a>
     <a><img alt="License" src="https://img.shields.io/github/license/LegacyLands/legacy-lands-library"></a>
     <br /><br />
-    <p>基于 <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>，作为插件运行，目标是封装多种已有库来简化 <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> 插件的开发过程。</p>
+    <p>基于 <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>，作为插件运行，旨在封装多种现有库来简化 <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> 插件的开发过程。</p>
 </div>
 
-## 概览
+## 📚 概述
 
-本项目整体依赖 [Fairy Framework](https://github.com/FairyProject/fairy)。并不会包含大量冗余或重复打包的大型库。目前最适用于 Folia 场景，但其实也可以在 Spigot 与 Paper 等平台使用。
+这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft 插件开发提供了必要的工具和实用程序。虽然针对 Folia 进行了优化，但完全兼容 Spigot 和 Paper 平台。
 
-## 使用方法
+## 🎯 核心模块
 
-在 [Actions](https://github.com/LegacyLands/legacy-lands-library/actions) 下载的压缩包中：  
-• "-javadoc" 包含生成后的 Javadoc。  
-• "-plugin" 仅包含编译完成的 class 文件，用于直接作为插件运行。  
-• "-sources" 不但包含编译好的 class 文件，同时也带有源代码，便于 IDE 内查看注释。
+- [🎯 **annotation**](annotation/README.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理
+- [🛠 **commons**](commons/README.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作
+- [⚙️ **configuration**](configuration/README.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化
+- [🗄️ **mongodb**](mongodb/README.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化
+- [🚀 **cache**](cache/README.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制
+- [👤 **player**](player/README.md) - 高性能玩家数据管理，支持多级缓存和实时同步
+- 🔒 **security** - *即将推出*
 
-各个模块的具体使用方式都写在对应模块的 `README.md` 文件里。
+## 🚀 使用方法
 
-值得注意的是，整个库完全依赖 [Fairy Framework](https://github.com/FairyProject/fairy)，极大简化了我们的开发流程，并提供了各种实用功能。其中也依赖了 [fairy-lib-plugin](https://github.com/FairyProject/fairy-lib-plugin)。
+### 分发包说明
 
-我们推荐开发者引入 "-sources" 包，以便在 IDE 中查看 Javadoc 以及源代码实现，从而更方便地理解与使用。
+从 [Actions](https://github.com/LegacyLands/legacy-lands-library/actions) 下载：
+- `-javadoc`：生成的 API 文档
+- `-plugin`：可直接用于服务器的编译插件
+- `-sources`：包含源代码和编译类（推荐用于开发）
 
-如果您想以插件形式运行（推荐方式），则直接将 "-plugin" 文件放入插件文件夹即可。  
-**请务必注意模块之间的依赖关系！**
+### Maven 仓库
 
-### API 配置示例
-
-使用前需先在本地或 CI 环境中配置 GitHub 用户名和 Token（参考 [GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)）。例如在 Gradle 的 Kotlin DSL 中：
+首先配置 GitHub 认证（[了解更多](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)）
 
 ```kotlin
 repositories {
@@ -46,40 +49,47 @@ repositories {
 }
 
 dependencies {
-    implementation("net.legacy.library:subproject-name:version")
+    implementation("net.legacy.library:模块名称:版本号")
 }
 ```
 
-## 模块列表
+## 🌟 特性
 
-- [annotation](annotation/README.md)  
-- [commons](commons/README.md)  
-- [configuration](configuration/README.md)  
-- [mongodb](mongodb/README.md)  
-- [cache](cache/README.md)  
-- [player](player/README.md) - 开发中  
-- security - 暂未开始
+- **模块化架构**：各模块独立但无缝集成
+- **类型安全**：全面的泛型支持和编译时检查
+- **性能优先**：针对高吞吐量服务器环境优化
+- **开发友好**：丰富的文档和直观的 API
+- **生产就绪**：在实际应用中经过验证
 
-## 赞助商
+## 🤝 贡献
 
-本项目由 [LegacyLands](https://github.com/LegacyLands) 全力赞助与维护。
+我们欢迎各种形式的贡献：
+- 报告问题
+- 提出功能建议
+- 提交代码改进
+
+## 📖 文档
+
+- 每个模块的 README 中都有详细文档
+- `-javadoc` 包中包含生成的 JavaDoc
+- [English Version](README.md)
+
+## 💬 社区
+
+- QQ群：1022665227
+- [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
+- [哔哩哔哩](https://space.bilibili.com/1253128469)（中文教程）
+
+## ❤️ 赞助商
+
+本项目由 [LegacyLands](https://github.com/LegacyLands) 全力赞助和维护。
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-## Star 记录
-
-感谢各位开发者对本库的支持！
+## ⭐ Star 历史
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
 
-## 相关教程（简体中文）
+---
 
-目前我们正在规划并制作 [Fairy Framework](https://github.com/FairyProject/fairy) 的使用教程视频和相关文档，后续会通过哔哩哔哩 [LegacyLands 官方账号](https://space.bilibili.com/1253128469) 进行发布，欢迎关注！ 
-
-
-## 技术交流
-
-我们欢迎各位开发者在遇到问题或有功能建议时来到这些地方进行反馈，这将帮助与激励我们不断完善它，并一直成长！
-
-- QQ Group: 1022665227
-- [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
+由 [LegacyLands Team](https://github.com/LegacyLands) 用 ❤️ 制作

@@ -7,34 +7,35 @@
     <a><img alt="Forks" src="https://img.shields.io/github/forks/LegacyLands/legacy-lands-library"></a>
     <a><img alt="License" src="https://img.shields.io/github/license/LegacyLands/legacy-lands-library"></a>
     <br /><br />
-    <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plug-in, aiming to encapsulate various existing libraries to simplify the development of <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> plug-ins.</p>
+    <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plugin, aiming to encapsulate various existing libraries to simplify the development of <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> plugins.</p>
 </div>
 
-## overview
+## 📚 Overview
 
-The overall dependence is on the [Fairy Framework](https://github.com/FairyProject/fairy). It probably doesn't have a lot of overly complex stuff, like an unnecessary repackaging of some large library.
+A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and utilities for modern Minecraft plugin development. While optimized for Folia, it's fully compatible with Spigot and Paper platforms.
 
-Although it is more suitable for Folia scenarios, it can actually be used in the Spigot and Paper platform
+## 🎯 Core Modules
 
-## usage
+- [🎯 **annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and lifecycle management
+- [🛠 **commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON operations
+- [⚙️ **configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with serialization support
+- [🗄️ **mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence
+- [🚀 **cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock mechanisms
+- [👤 **player**](player/README.md) - High-performance player data management with multi-tier caching and real-time synchronization
+- 🔒 **security** - *Coming soon*
 
-In the compressed package downloaded by [Actions](https://github.com/LegacyLands/legacy-lands-library/actions), `-javadoc` is the javadoc build, `-plugin` only has the compiled class files, and `-sources` has not only the compiled class files but also the source code.
+## 🚀 Usage
 
-The usage of a particular module is described in detail in the module's `README.md`.
+### Distribution Packages
 
-It should be noted that the entire library fully depends on [Fairy Framework](https://github.com/FairyProject/fairy), which will completely simplify our development process and provide various functions. It also depends on [fairy-lib-plugin](https://github.com/FairyProject/fairy-lib-plugin).
+Download from [Actions](https://github.com/LegacyLands/legacy-lands-library/actions):
+- `-javadoc`: Generated API documentation
+- `-plugin`: Compiled plugin for direct server use
+- `-sources`: Source code with compiled classes (recommended for development)
 
-We recommend that developers import `-sources` to view javadoc more conveniently in IDA.
+### Maven Repository
 
-To run the module as a plugin (which is the recommended way), run the `-plugin` file directly as a plugin.
-
-**_You need to be careful about dependencies between modules!_**
-
-### API
-
-Please configure GitHub username and GitHub token before use [Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-
-If you don't want to do this, we also recommend importing the `-sources` file.
+Configure GitHub authentication first ([Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens))
 
 ```kotlin
 repositories {
@@ -48,43 +49,47 @@ repositories {
 }
 
 dependencies {
-    implementation("net.legacy.library:subproject-name:version")
+    implementation("net.legacy.library:module-name:version")
 }
 ```
 
-## modules
+## 🌟 Features
 
-- [annotation](annotation/README.md)
-- [commons](commons/README.md)
-- [configuration](configuration/README.md)
-- [mongodb](mongodb/README.md)
-- [cache](cache/README.md)
-- [player](player/README.md) - In progress
-- security          - Not started yet
+- **Modular Architecture**: Each module is independent yet integrates seamlessly
+- **Type Safety**: Comprehensive generic support and compile-time checks
+- **Performance Focused**: Optimized for high-throughput server environments
+- **Developer Friendly**: Rich documentation and intuitive APIs
+- **Production Ready**: Battle-tested in real-world applications
 
-## sponsors
+## 🤝 Contributing
 
-The project is fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
+We welcome contributions! Feel free to:
+- Report issues
+- Suggest features
+- Submit pull requests
 
-![legacy-lands-logo.png](./legacy-lands-logo.png)
+## 📖 Documentation
 
-## star history
+- Detailed documentation in each module's README
+- Generated JavaDoc in `-javadoc` package
+- [中文文档](README_ZHCN.md)
 
-We are honored that this library can help more people!
-
-[![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
-
-## related tutorials (simplified Chinese)
-
-Currently, the production of [Fairy Framework](https://github.com/FairyProject/fairy) and related tutorial videos is being planned and carried out. We will post the detailed video on the bilibili [LegacyLands official account](https://space.bilibili.com/1253128469).
-
-## Chinese version
-
-A Chinese version of the README is available here: [中文文档 (README_ZHCN.md)](README_ZHCN.md)
-
-## technical exchange
-
-We welcome developers to come to these places to provide feedback when they encounter problems or have feature suggestions. This will help and motivate us to continuously improve it and keep growing!
+## 💬 Community
 
 - QQ Group: 1022665227
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
+- [Bilibili](https://space.bilibili.com/1253128469) (Chinese tutorials)
+
+## ❤️ Sponsors
+
+Fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
+
+![legacy-lands-logo.png](./legacy-lands-logo.png)
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
+
+---
+
+Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
