@@ -35,6 +35,8 @@ Download from [Actions](https://github.com/LegacyLands/legacy-lands-library/acti
 - `-plugin`: Compiled plugin for direct server use
 - `-sources`: Source code with compiled classes (recommended for development)
 
+Detailed documentation in each module's `README`
+
 ### Maven Repository
 
 Configure GitHub authentication first ([Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens))
@@ -55,22 +57,9 @@ dependencies {
 }
 ```
 
-## Features
-
-- **Modular Architecture**: Each module is independent yet integrates seamlessly
-- **Type Safety**: Comprehensive generic support and compile-time checks
-- **Performance Focused**: Optimized for high-throughput server environments
-- **Developer Friendly**: Rich documentation and intuitive APIs
-- **Production Ready**: Battle-tested in real-world applications
-
-## Documentation
-
-- Detailed documentation in each module's README
-- Generated JavaDoc in `-javadoc` package
-- [中文文档](README_ZHCN.md)
-
 ## Community
 
+- [中文文档](README_ZHCN.md)
 - QQ Group: 1022665227
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [Bilibili](https://space.bilibili.com/1253128469) (Chinese tutorials)
@@ -82,6 +71,11 @@ We will release more development tutorials and experience sharing about this mod
 Fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
+
+[Luminol](https://github.com/LuminolMC/Luminol)
+is a Folia fork with many useful optimizations, configurable vanilla features, and more API supports. We will use this for our main development work.
+
+![luminol-mc-logo.png](./luminol-mc-logo.png)
 
 ## Star History
 

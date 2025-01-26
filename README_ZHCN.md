@@ -35,6 +35,8 @@
 - `-plugin`：可直接用于服务器的编译插件
 - `-sources`：包含源代码和编译类（推荐用于开发）
 
+每个模块的 `README` 中都有详细文档
+
 ### Maven 仓库
 
 首先配置 GitHub 认证（[了解更多](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)）
@@ -55,22 +57,9 @@ dependencies {
 }
 ```
 
-## 特性
-
-- **模块化架构**：各模块独立但无缝集成
-- **类型安全**：全面的泛型支持和编译时检查
-- **性能优先**：针对高吞吐量服务器环境优化
-- **开发友好**：丰富的文档和直观的 API
-- **生产就绪**：在实际应用中经过验证
-
-## 文档
-
-- 每个模块的 README 中都有详细文档
-- `-javadoc` 包中包含生成的 JavaDoc
-- [English Version](README.md)
-
 ## 社区
 
+- [English Version](README.md)
 - QQ群：1022665227
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [哔哩哔哩](https://space.bilibili.com/1253128469)（中文教程）
@@ -82,6 +71,10 @@ dependencies {
 本项目由 [LegacyLands](https://github.com/LegacyLands) 全力赞助和维护。
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
+
+[Luminol](https://github.com/LuminolMC/Luminol) 是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API 支持。我们将使用它进行主要的开发工作。
+
+![luminol-mc-logo.png](./luminol-mc-logo.png)
 
 ## Star 历史
 
