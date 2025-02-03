@@ -7,12 +7,12 @@
     <a><img alt="Forks" src="https://img.shields.io/github/forks/LegacyLands/legacy-lands-library"></a>
     <a><img alt="License" src="https://img.shields.io/github/license/LegacyLands/legacy-lands-library"></a>
     <br /><br />
-    <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plugin, aiming to encapsulate various existing libraries to simplify the development of <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> plugins.</p>
+    <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plugin, aiming to encapsulate various existing libraries to simplify the development of plugins.</p>
 </div>
 
 ## Overview
 
-A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and utilities for modern Minecraft plugin development. While optimized for Folia, it's fully compatible with Spigot and Paper platforms.
+A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and utilities for modern Minecraft plugin development. It is cross-platform and supports Spigot Paper and Folia.
 
 ## Core Modules
 
