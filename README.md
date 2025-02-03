@@ -73,7 +73,7 @@ Fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
 [Luminol](https://github.com/LuminolMC/Luminol)
-is a Folia fork with many useful optimizations, configurable vanilla features, and more API supports. We will use this for our main development work.
+is a Folia fork with many useful optimizations, configurable vanilla features, and more API supports.
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
