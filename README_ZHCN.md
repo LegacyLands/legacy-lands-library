@@ -7,12 +7,12 @@
     <a><img alt="Forks" src="https://img.shields.io/github/forks/LegacyLands/legacy-lands-library"></a>
     <a><img alt="License" src="https://img.shields.io/github/license/LegacyLands/legacy-lands-library"></a>
     <br /><br />
-    <p>基于 <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>，作为插件运行，旨在封装多种现有库来简化 <a href="https://github.com/PaperMC/Folia" target="_blank">Folia</a> 插件的开发过程。</p>
+    <p>基于 <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>，作为插件运行，旨在封装多种现有库来简化插件的开发过程。</p>
 </div>
 
 ## 概述
 
-这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft 插件开发提供了必要的工具和实用程序。虽然针对 Folia 进行了优化，但完全兼容 Spigot 和 Paper 平台。
+这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft 插件开发提供了必要的工具和实用程序。它是跨平台的，支持 Spigot Paper 和 Folia。
 
 ## 核心模块
 
@@ -60,11 +60,11 @@ dependencies {
 ## 社区
 
 - [English Version](README.md)
-- QQ群：1022665227
+- [QQ 群](http://qq.legacylands.cn)
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [哔哩哔哩](https://space.bilibili.com/1253128469)（中文教程）
 
-我们将在[哔哩哔哩](https://space.bilibili.com/1253128469)频道发布更多关于此模块和 [Fairy Framework](https://github.com/FairyProject/fairy) 的开发教程与经验分享！
+我们将在 [哔哩哔哩](https://space.bilibili.com/1253128469) 频道发布更多关于此模块和 [Fairy Framework](https://github.com/FairyProject/fairy) 的开发教程与经验分享！
 
 ## 赞助商
 
@@ -72,7 +72,7 @@ dependencies {
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-[Luminol](https://github.com/LuminolMC/Luminol) 是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API 支持。我们将使用它进行主要的开发工作。
+[Luminol](https://github.com/LuminolMC/Luminol) 是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API 支持。
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 

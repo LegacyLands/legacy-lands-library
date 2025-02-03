@@ -60,7 +60,7 @@ dependencies {
 ## Community
 
 - [中文文档](README_ZHCN.md)
-- QQ Group: 1022665227
+- [QQ Group](http://qq.legacylands.cn)
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [Bilibili](https://space.bilibili.com/1253128469) (Chinese tutorials)
 
