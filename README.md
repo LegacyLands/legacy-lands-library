@@ -23,6 +23,8 @@ A comprehensive library built on [Fairy Framework](https://github.com/FairyProje
 - [**cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock mechanisms
 - [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time synchronization
 
+- [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but may be too complex to use or temporarily unstable
+
 
 - **security** - *Coming soon*
 
