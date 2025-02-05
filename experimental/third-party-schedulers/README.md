@@ -13,4 +13,4 @@ Even though the Bukkit API is tightly bound to Java, this module demonstrates th
 
 ## Implemented
 
-- [**Rust**](rust/README.md) - A high-performance task scheduler written in Rust
+- [**Rust**](task-scheduler-rust/README.md) - A high-performance task scheduler written in Rust
