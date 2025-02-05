@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package taskscheduler;
+
+service TaskScheduler {
+  // 提交任务（支持异步/阻塞模式）
+  rpc SubmitTask(TaskRequest) returns (TaskResponse);
+  // 查询任务结果
+  rpc GetResult(ResultRequest) returns (ResultResponse);
+}
+
+// 任务请求
+message TaskRequest {
+  string task_id = 1;
+  string method = 2;       // 方法名（如 "add"）
+  repeated google.protobuf.Any args = 3; // 入参
+  repeated string deps = 4;// 依赖的任务 ID
+  bool is_async = 5;       // 是否异步执行
+}
+
+// 任务响应
+message TaskResponse {
+  string task_id = 1;
+  enum Status {
+    PENDING = 0;
+    SUCCESS = 1;
+    FAILED = 2;
+  }
+  Status status = 2;
+  string result = 3;
+}
+
+// 结果查询请求
+message ResultRequest {
+  string task_id = 1;
+}
+
+// 结果查询响应
+message ResultResponse {
+  string result = 1;
+  bool is_ready = 2;
+}

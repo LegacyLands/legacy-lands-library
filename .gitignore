@@ -116,3 +116,9 @@ run/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
+
+# Rust artifacts
+**/build/
+
+# Cargo.lock
+Cargo.lock
