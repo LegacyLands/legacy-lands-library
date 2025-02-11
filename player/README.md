@@ -103,16 +103,10 @@ public class CustomDataAccepter implements RStreamAccepterInterface {
 
 ## 🎯 Advanced Features
 
-### Custom Type Adapters
-```java
-@TypeAdapterRegister(classType = CustomData.class)
-public class CustomDataAdapter implements JsonSerializer<CustomData>,
-                                        JsonDeserializer<CustomData> {
-    // Serialization logic
-}
-```
+### Cache Coherence
 
-### Cross-server data update
+We use Redis Stream to publish tasks to complete cross-server communication and ensure cache consistency between servers
+
 ```java
 Map<String, String> updates = new HashMap<>();
 updates.put("lastLogin", String.valueOf(System.currentTimeMillis()));

@@ -102,7 +102,9 @@ subprojects {
 
     // Configure sourcesJar task
     tasks.register<Jar>("sourcesJar") {
-        from(tasks.named<ShadowJar>("shadowJar").get().source)
+        dependsOn(tasks.named("shadowJar"))
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        from(zipTree(tasks.named<ShadowJar>("shadowJar").get().archiveFile.get().asFile))
         from(sourceSets.main.get().allSource)
         archiveClassifier.set("sources")
     }
