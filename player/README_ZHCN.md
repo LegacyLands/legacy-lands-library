@@ -1,10 +1,9 @@
-### Player Module
+### 玩家 (Player) 模块
 
-An enterprise-grade, powerful, scalable, and reliable system designed to handle the complex player data needs of
-large-scale, multi-server environments. It supports multi-tier caching, built on `Caffeine`, `Redis`, and `MongoDB` to
-achieve optimal performance and scalability for **handling thousands of players' data**.
+一个企业级的强大、可扩展且可靠的系统，旨在处理大规模、多服务器环境的复杂玩家数据需求。
+支持多级缓存，基于 `Caffeine`、`Redis` 和 `MongoDB` 构建，以实现 **处理数千名玩家数据** 的最佳性能和可扩展性。
 
-### Usage
+### 用法
 
 ```kotlin
 // Dependencies
@@ -15,74 +14,73 @@ dependencies {
     implementation("net.legacy.library:cache:1.0-SNAPSHOT")
     implementation("net.legacy.library:commons:1.0-SNAPSHOT")
     implementation("net.legacy.library:mongodb:1.0-SNAPSHOT")
-    
+
     // player module
     implementation("net.legacy.library:player:1.0-SNAPSHOT")
 }
 ```
 
-### Cache
+### 缓存
 
-This module uses `Caffeine` to store data for all *online* players and `Redis` to store hot data.
+该模块使用 `Caffeine` 来存储所有 `在线` 玩家的数据，并使用 `Redis` 存储热数据。
 
-### Service Configuration
+### 服务配置
 
 ```java
 public class Example {
     public static void main(String[] args) {
-        // MongoDB
+        // mongodb
         MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
                 "playerdb",
                 "mongodb://localhost:27017/",
                 UuidRepresentation.STANDARD
         );
 
-        // Redis
+        // redis
         Config redisConfig = new Config();
         redisConfig.useSingleServer().setAddress("redis://127.0.0.1:6379");
 
-        // Create the service
+        // 创建服务
         LegacyPlayerDataService service = LegacyPlayerDataService.of(
                 "player-data-service",
                 mongoConfig,
                 redisConfig,
-                basePackages, // List of packages to scan, e.g., List.of("com.example.player")
-                classLoaders  // List of ClassLoaders, e.g., List.of(getClassLoader())
+                basePackages, // 扫描的包列表，例如: List.of("com.example.player")
+                classLoaders  // 类加载器列表，例如: List.of(getClassLoader())
         );
     }
 }
 ```
 
-### Data Operations
+### 数据操作
 
-Only suitable for data updates in single-instance scenarios.
+仅适合用于单端情况下的数据更新。
 
 ```java
 public class Example {
     public static void main(String[] args) {
-        // Get player data
+        // 获取玩家数据
         LegacyPlayerData playerData = service.getLegacyPlayerData(player.getUniqueId());
 
-        // Update data
+        // 更新数据
         playerData.addData("coins", "1000").addData("rank", "VIP");
     }
 }
 ```
 
-When cross-server data consistency is required, we use `Redis Stream` to publish tasks to facilitate cross-server
-communication and ensure cache consistency between servers.
+当需要进行跨服涉及数据一致性时，我们使用 `Redis Stream` 发布任务来完成跨服务器通信，并确保服务器之间的缓存一致性。
 
 ```java
 public class Example {
     public static void main(String[] args) {
-        // Data to be updated
+        // 需要更新的数据
         Map<String, String> updates = new HashMap<>();
         updates.put("lastLogin", String.valueOf(System.currentTimeMillis()));
         updates.put("status", "ONLINE");
 
-        // Publish the RStream task
+        // 发布 RStream 任务
         service.pubRStreamTask(
-                // Create a PlayerDataUpdateByName task via an Accepter
+                // 通过 Accepter (接受器) 来创建 PlayerDataUpdateByName 任务
                 PlayerDataUpdateByNameRStreamAccepter.createRStreamTask(
                         playerName,
                         updates,
@@ -93,10 +91,10 @@ public class Example {
 }
 ```
 
-### Custom RStream Task Accepter (for Cross-Server Use)
+### 自定义 RStream 任务接受器 (跨服使用)
 
 ```java
-// Annotation to register the receiver
+// 注册接收器的注解
 @RStreamAccepterRegister
 public class CustomDataAccepter implements RStreamAccepterInterface {
     @Override
@@ -104,19 +102,19 @@ public class CustomDataAccepter implements RStreamAccepterInterface {
                        StreamMessageId id,
                        LegacyPlayerDataService service,
                        String data) {
-        // Process incoming data
+        // 处理传入的数据
     }
 }
 ```
 
-### Batch Operations
+### 批处理操作
 
 ```java
 public class Example {
     public static void main(String[] args) {
         /*
-          Get data for all online players from the L1 cache.
-          Then, use L1ToL2PlayerDataSyncTask to synchronize all L1 (Caffeine) cache data to L2 (Redis).
+          从 L1 缓存获取所有在线玩家的数据
+          随后使用 L1ToL2PlayerDataSyncTask 将 L1 (Caffeine) 缓存数据全部同步至 L2 (Redis)
          */
         service.getL1Cache().getCache().asMap().forEach((uuid, data) -> {
             L1ToL2PlayerDataSyncTask.of(uuid, service).start();

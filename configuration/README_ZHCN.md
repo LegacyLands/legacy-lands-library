@@ -1,10 +1,9 @@
-### configuration
+### 配置 (Configuration) 模块
 
-This module simply encapsulates [SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage) and provides
-serialization annotations and factory mode for faster use. It handles thread safety internally, so it can be used
-safely in a multithreaded environment.
+本模块简单地封装了 [SimplixStorage](https://github.com/Simplix-Softworks/SimplixStorage)
+，并提供了序列化注解和工厂模式，以便更快地使用。它在内部处理线程安全，因此可以在多线程环境中安全使用。
 
-### usage
+### 用法
 
 ```kotlin
 // Dependencies
@@ -26,21 +25,19 @@ public class Example extends Plugin {
 
         Yaml yaml = simplixBuilder.createYaml(); // json / toml / yaml
 
-        // do something eg:
-        yaml.set("example", "test"); // thread safety
+        // 进行一些操作，例如：
+        yaml.set("example", "test"); // 线程安全
 
-        // more about SimplixStorage: https://github.com/Simplix-Softworks/SimplixStorage/wiki
+        // 更多关于 SimplixStorage 的信息：https://github.com/Simplix-Softworks/SimplixStorage/wiki
     }
 }
 ```
 
-We recommend using `SimplixSerializer` for serialization and deserialization, which can be implemented internally using
-`Gson`.
+我们建议使用 `SimplixSerializer` 进行序列化和反序列化，它可以在内部使用 `Gson` 实现。
 
-The `SimplixSerializerSerializableAutoRegister` annotation will automatically register the serializer.
+`SimplixSerializerSerializableAutoRegister` 注解将自动注册序列化器。
 
 ```java
-
 @SimplixSerializerSerializableAutoRegister
 public class PlantSerializable implements SimplixSerializable<Plant> {
     @Override
@@ -55,7 +52,7 @@ public class PlantSerializable implements SimplixSerializable<Plant> {
 
     @Override
     public Class<Plant> getClazz() {
-        return Plant.class; // return the class of the object
+        return Plant.class; // 返回对象的类
     }
 }
 ```

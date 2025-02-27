@@ -1,148 +1,126 @@
-# 🛠 Commons Framework
+### commons
 
-A collection of essential utilities and tools focusing on reflection injection, task scheduling, and common operations. Built with flexibility and ease of use in mind.
+This is a module full of good stuff that is useful in every way, so it's a bit of a mixed bag, but I'll always update
+this document when there's new content.
 
-[![JDK](https://img.shields.io/badge/JDK-17%2B-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](../LICENSE)
-
-## ✨ Key Features
-
-- 🔄 **VarHandle Injection System**
-  - Automated VarHandle injection via `@VarHandleAutoInjection`
-  - Support for both direct and static method-based injection
-  - Thread-safe field access through VarHandle
-  - Flexible injection strategies with `StaticInjectorInterface`
-
-- ⏰ **Task Management**
-  - Rich task scheduling API through `TaskInterface`
-  - Support for both sync and async execution
-  - Flexible scheduling with ticks or Duration
-  - Auto-start capability via `@TaskAutoStartAnnotation`
-
-- 🔧 **Utility Components**
-  - Thread-safe JSON operations with `GsonUtil`
-  - Customizable Gson configuration
-  - Factory patterns for component creation
-  - Integration with Fairy IoC container
-
-## 📚 Quick Start
-
-### Installation
+### usage
 
 ```kotlin
+// Dependencies
 dependencies {
-    implementation("net.legacy.library:commons:1.0-SNAPSHOT")
+    // annotation module
+    compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
+  
+    // commons module
+    compileOnly(files("libs/commons-1.0-SNAPSHOT.jar"))
 }
 ```
 
-### Basic Usage
+### [VarHandleReflectionInjector](src/main/java/net/legacy/library/commons/injector/VarHandleReflectionInjector.java)
 
-1️⃣ **VarHandle Injection**
+This is an `injector`, and its main use is to be used
+with [VarHandleAutoInjection](src/main/java/net/legacy/library/commons/injector/annotation/VarHandleAutoInjection.java).
+
+Yes, just like its name, we don't have to write a bunch of ugly code to assign `VarHandle`, let it all disappear, Amen.
+
 ```java
-public class MyClass {
-    @VarHandleAutoInjection(fieldName = "targetField")
-    private static VarHandle TARGET_FIELD_HANDLE;
-    
-    private String targetField;
-}
+public class Example {
+    public static void main(String[] args) {
+        Test test = new Test();
 
-// Inject the VarHandle
-StaticInjectorInterface injector = InjectorFactory.createVarHandleReflectionInjector();
-injector.inject(MyClass.class);
-```
+        // we can use TField_HANDLE
+        Test.TField_HANDLE.set(test, 2);
 
-2️⃣ **Task Scheduling**
-```java
-@TaskAutoStartAnnotation
-public class MyTask implements TaskInterface {
-    @Override
-    public ScheduledTask<?> start() {
-        return scheduleAtFixedRate(
-            () -> System.out.println("Task executed"),
-            Duration.ZERO,
-            Duration.ofSeconds(5)
-        );
+        // prints 2
+        System.out.println(test.getTField());
     }
 }
 ```
 
-3️⃣ **JSON Operations**
 ```java
-// Customize Gson
-GsonUtil.customizeGsonBuilder(builder -> {
-    builder.setPrettyPrinting();
-    builder.serializeNulls();
-});
 
-// Use the shared Gson instance
-Gson gson = GsonUtil.getGson();
-```
+@Getter
+@Setter
+public class Test {
+    private volatile int tField = 100;
 
-## 🔧 Core Components
+    @VarHandleAutoInjection(fieldName = "tField")
+    public static VarHandle TField_HANDLE;
 
-### Injection System
-- `VarHandleReflectionInjector`: Core injection implementation
-- `StaticInjectorInterface`: Base interface for static injectors
-- `ObjectInjectorInterface`: Base interface for object injectors
-- `@VarHandleAutoInjection`: Annotation for marking injection targets
-
-### Task Framework
-- `TaskInterface`: Rich API for task scheduling
-- `@TaskAutoStartAnnotation`: Auto-start task marker
-- `TaskAutoStartAnnotationProcessor`: Annotation processor for tasks
-- Support for various scheduling patterns:
-  - Fixed-rate execution
-  - Delayed execution
-  - Conditional repetition
-  - Duration-based scheduling
-
-### Utilities
-- `GsonUtil`: Thread-safe JSON operations
-- `InjectorFactory`: Factory for creating injector instances
-
-## 🎯 Advanced Features
-
-### Custom VarHandle Injection
-```java
-@VarHandleAutoInjection(
-    fieldName = "field",
-    staticMethodName = "getHandle",
-    staticMethodPackage = "com.example.Handles"
-)
-private static VarHandle FIELD_HANDLE;
-```
-
-### Complex Task Scheduling
-```java
-@Override
-public ScheduledTask<?> start() {
-    return scheduleAtFixedRate(
-        () -> complexOperation(),
-        Duration.ofSeconds(1),
-        Duration.ofMinutes(5),
-        result -> shouldContinue(result)
-    );
+    static {
+        /*
+         * This class is a singleton and is managed by Fairy IoC.
+         * Of course, it is also allowed to create it directly using the factory or directly creating it.
+         * This is not so strict.
+         */
+        InjectorFactory.createVarHandleReflectionInjector().inject(Test.class);
+    }
 }
 ```
 
-### Thread-Safe JSON Configuration
+### [Task](src/main/java/net/legacy/library/commons/task)
+
+The [TaskInterface](src/main/java/net/legacy/library/commons/task/TaskInterface.java)
+simplifies task scheduling by providing convenience methods with consistent naming and argument order with the Fairy
+Framework [MCScheduler](https://docs.fairyproject.io/core/minecraft/scheduler).
+
 ```java
-GsonUtil.setNewGson(() -> new GsonBuilder()
-    .setPrettyPrinting()
-    .serializeNulls()
-    .registerTypeAdapter(MyType.class, new MyTypeAdapter())
-);
+public class Example {
+    public static void main(String[] args) {
+        TaskInterface taskInterface = new TaskInterface() {
+            @Override
+            public ScheduledTask<?> start() {
+                // This is a simple example of a task that prints "Hello, world!" every second.
+                return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+            }
+        };
+
+        // start the task
+        taskInterface.start();
+    }
+}
 ```
 
-## 📄 License
+It also
+provides [TaskAutoStartAnnotation](src/main/java/net/legacy/library/commons/task/annotation/TaskAutoStartAnnotation.java)
+to handle some tasks that need to be automatically started at a specific time. When there are many tasks to start,
+annotation automation will help us avoid manually managing the creation and calling of these instances, thereby
+simplifying the code.
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+```java
 
-## 🤝 Contributing
+@TaskAutoStartAnnotation(isFromFairyIoC = false)
+public class Example implements TaskInterface {
+    @Override
+    public ScheduledTask<?> start() {
+        // This is a simple example of a task that prints "Hello, world!" every second.
+        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+    }
+}
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+As for how to make annotation processors work on your own plugins, please see the [annotation](../annotation/README.md)
+module.
 
----
+### [GsonUtil](src/main/java/net/legacy/library/commons/util/GsonUtil.java)
 
-Made with ❤️ by [LegacyLands Team](https://github.com/LegacyLands)
+`GsonUtil` provides a thread-safe way to manage and customize a shared `Gson` instance. It allows for consistent `Gson`
+configuration across your application, preventing scattered and potentially conflicting settings.
 
+```java
+public class Example {
+    public static void main(String[] args) {
+        // Pretty-print JSON output
+        GsonUtil.customizeGsonBuilder(builder -> builder.setPrettyPrinting());
+
+        // Add a custom type adapter
+        GsonUtil.customizeGsonBuilder(builder -> builder.registerTypeAdapter(MyClass.class, new MyClassTypeAdapter()));
+
+        // Get the shared Gson instance for use
+        Gson gson = GsonUtil.getGson();
+    }
+}
+```
+
+We have a `TypeAdapterRegister` annotation in the `player` module, which can be used to simplify the registration of
+`Type Adapter`.
