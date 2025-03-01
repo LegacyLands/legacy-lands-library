@@ -51,11 +51,15 @@ repositories {
         }
     }
 }
-
+        
 dependencies {
     implementation("net.legacy.library:模块名称:版本号")
 }
 ```
+
+### Jenkins
+
+[项目链接](http://129.226.219.222:8080/job/legacy-lands-library/)
 
 ## 社区
 
