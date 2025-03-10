@@ -82,6 +82,7 @@ subprojects {
         compileOnlyApi("io.fairyproject:bukkit-nbt")
         compileOnlyApi("io.fairyproject:mc-tablist")
         compileOnly("org.spigotmc:spigot-api:${properties("spigot.version")}-R0.1-SNAPSHOT")
+        implementation("org.apache.commons:commons-lang3:3.17.0")
     }
 
     // Configure ShadowJar task
