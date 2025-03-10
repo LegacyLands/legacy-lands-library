@@ -2,7 +2,6 @@ package net.legacy.library.player.listener;
 
 import io.fairyproject.bukkit.listener.RegisterAsListener;
 import io.fairyproject.container.InjectableComponent;
-import io.papermc.paper.event.player.AsyncChatEvent;
 import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
@@ -12,6 +11,7 @@ import net.legacy.library.player.task.redis.impl.L1ToL2PlayerDataSyncByNameRStre
 import net.legacy.library.player.task.redis.impl.PlayerDataUpdateByNameRStreamAccepter;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.time.Duration;
@@ -31,7 +31,7 @@ import java.util.UUID;
 public class PlayerListener implements Listener {
     // DEBUG
     @EventHandler
-    public void on(AsyncChatEvent event) {
+    public void on(AsyncPlayerChatEvent event) {
         if (!PlayerLauncher.DEBUG) {
             return;
         }

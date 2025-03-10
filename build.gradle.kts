@@ -81,7 +81,7 @@ subprojects {
         compileOnlyApi("io.fairyproject:bukkit-timer")
         compileOnlyApi("io.fairyproject:bukkit-nbt")
         compileOnlyApi("io.fairyproject:mc-tablist")
-        compileOnlyApi("dev.folia:folia-api:${properties("spigot.version")}-R0.1-SNAPSHOT")
+        compileOnly("org.spigotmc:spigot-api:${properties("spigot.version")}-R0.1-SNAPSHOT")
     }
 
     // Configure ShadowJar task
