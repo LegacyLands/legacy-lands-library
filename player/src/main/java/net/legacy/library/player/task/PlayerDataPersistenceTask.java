@@ -117,7 +117,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                 }
             } catch (InterruptedException exception) {
                 if (PlayerLauncher.DEBUG) {
-                    //noinspection CallToPrintStackTrace
+                    // noinspection CallToPrintStackTrace
                     exception.printStackTrace();
                 }
 
@@ -125,7 +125,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                 throw new RuntimeException("Thread interrupted while trying to acquire lock.", exception);
             } catch (Exception exception) {
                 if (PlayerLauncher.DEBUG) {
-                    //noinspection CallToPrintStackTrace
+                    // noinspection CallToPrintStackTrace
                     exception.printStackTrace();
                 }
 
