@@ -17,7 +17,6 @@ import org.redisson.api.StreamMessageId;
  * @since 2025-01-04 20:30
  */
 public interface RStreamAccepterInterface {
-
     /**
      * Gets the action name associated with this task.
      *

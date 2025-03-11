@@ -289,7 +289,7 @@ public class LegacyPlayerDataService {
         PlayerDataPersistenceTask.of(LockSettings.of(5, 5, TimeUnit.MILLISECONDS), this).start().wait();
 
         // Remove this LegacyPlayerDataService from the cache
-        LEGACY_PLAYER_DATA_SERVICES.getCache().invalidate(String.valueOf(hashCode()));
+        LEGACY_PLAYER_DATA_SERVICES.getCache().asMap().remove(name);
 
         // Shutdown L2 cache
         RedisCacheServiceInterface redisCacheService = getL2Cache();

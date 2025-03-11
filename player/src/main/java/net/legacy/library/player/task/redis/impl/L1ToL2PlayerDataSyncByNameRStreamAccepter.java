@@ -29,7 +29,6 @@ import java.time.Duration;
  */
 @RStreamAccepterRegister
 public class L1ToL2PlayerDataSyncByNameRStreamAccepter implements RStreamAccepterInterface {
-
     /**
      * Creates a new {@link RStreamTask} for synchronizing player data based on the player's name.
      *

@@ -33,7 +33,6 @@ import java.util.Map;
  */
 @RStreamAccepterRegister
 public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInterface {
-
     /**
      * Creates a new {@link RStreamTask} for updating player data based on the player's name.
      *

@@ -15,7 +15,6 @@ import java.util.UUID;
  * @since 2025-01-03 19:37
  */
 public class RKeyUtil {
-
     /**
      * Generates the Redis stream name key for a given {@link LegacyPlayerDataService}.
      *

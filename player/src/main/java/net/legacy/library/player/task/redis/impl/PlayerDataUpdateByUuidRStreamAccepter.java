@@ -34,7 +34,6 @@ import java.util.UUID;
  */
 @RStreamAccepterRegister
 public class PlayerDataUpdateByUuidRStreamAccepter implements RStreamAccepterInterface {
-
     /**
      * Creates a new {@link RStreamTask} for updating player data based on the player's UUID (string form).
      *
