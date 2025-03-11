@@ -15,9 +15,8 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * A simple utility class to randomly return an object based on specified probabilities.
  *
- * <p><a href=
- * "https://github.com/QwQ-dev/AdvancedWish/blob/main/src/main/java/twomillions/plugin/advancedwish/utils/random/RandomGenerator.java"
- * >Original Source Code, from my previous project (AdvancedWish)
+ * <p><a href="https://github.com/QwQ-dev/AdvancedWish/blob/main/src/main/java/twomillions/plugin/advancedwish/utils/random/RandomGenerator.java"></a>
+ * Original Source Code, from my previous project (AdvancedWish)
  *
  * @param <T> The type of the random object
  * @author 2000000

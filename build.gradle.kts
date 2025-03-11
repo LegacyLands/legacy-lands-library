@@ -103,11 +103,20 @@ subprojects {
 
     // Configure sourcesJar task
     tasks.register<Jar>("sourcesJar") {
+        exclude("fairy.json")
         dependsOn(tasks.named("shadowJar"))
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         from(zipTree(tasks.named<ShadowJar>("shadowJar").get().archiveFile.get().asFile))
         from(sourceSets.main.get().allSource)
         archiveClassifier.set("sources")
+    }
+
+    // Disable Javadoc warnings
+    tasks.withType<Javadoc> {
+        options {
+            this as StandardJavadocDocletOptions
+            addStringOption("Xdoclint:-missing", "-quiet")
+        }
     }
 
     // Configure javadocJar task
