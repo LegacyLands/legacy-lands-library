@@ -19,11 +19,25 @@ dependencies {
 
 This module provides two powerful `JavaScript` engine implementations:
 
-- **Rhino Engine**: Mozilla's `JavaScript` implementation, offering good compatibility, suitable for most scenarios.
-- **Nashorn Engine**: A commonly used and efficient `JavaScript` engine, providing better ES6 support.
+- **Rhino engine**: Mozilla's `JavaScript` implementation, with good compatibility and suitable for most scenarios.
+- **Nashorn engine**: A commonly used and efficient `JavaScript` engine that provides better ES6 support.
+- **V8 engine**: Google's high-performance `JavaScript` and `WebAssembly` engine, suitable for scenarios that require extremely high performance and low latency.
 
 Both engines implement the same interface, allowing you to choose flexibly based on your needs. In terms of
 extensibility, we allow any new implementation based on `ScriptEngineInterface` and `ScriptScope`.
+
+V8 limitations:
+
+- **Script compilation is not supported:** `V8ScriptEngine`'s `compile`, `executeCompiled`, and `invokeCompiledFunction` methods throw
+  `UnsupportedOperationException`.
+- **ScriptScope is not supported**: `V8ScriptEngine` does not support `ScriptScope`,
+  all operations (`execute`, `invokeFunction`, setting/getting/deleting global variables) are performed in the global scope of the V8 runtime. The `ScriptScope` parameter is ignored (but it is still checked for `null`).
+- **JavaScript and Java type mapping:** `V8ScriptEngine` handles conversions between `JavaScript` and `Java` types internally:
+* Primitive types (`null`, `Integer`, `Double`, `Boolean`, `String`) are automatically converted.
+* Java `Map` is converted to `V8Object`.
+* Java `List` is converted to `V8Array`.
+* `V8Object`, `V8Array`, `V8Function`, `V8TypedArray` are passed directly between Java and JavaScript without conversion.
+* Other types are not supported and will throw `IllegalArgumentException`.
 
 ### Basic Usage
 
@@ -36,10 +50,12 @@ public class Example {
         ScriptEngineInterface rhinoEngine = ScriptEngineFactory.createRhinoScriptEngine();
         // Or create a Nashorn engine
         ScriptEngineInterface nashornEngine = ScriptEngineFactory.createNashornScriptEngine();
+        // Or create a V8 engine
+        ScriptEngineInterface v8Engine = ScriptEngineFactory.createV8ScriptEngine();
 
         try {
             // Execute a script directly
-            Object result = rhinoEngine.execute("1 + 1", null);
+            Object result = rhinoEngine.execute("1 + 1", null); // or rhinoEngine.execute("1 + 1");
             System.out.println(result); // Output: 2.0
         } catch (ScriptException exception) {
             exception.printStackTrace();
@@ -85,6 +101,10 @@ public class Example {
     }
 }
 ```
+
+When `ScriptScope` is passed `null`, the engine-level scope is used.
+
+Note: `V8ScriptEngine` does not support `ScriptScope`, and the passed one will be automatically ignored.
 
 ### Function Invocation
 
@@ -206,6 +226,8 @@ public class Example {
 [16:41:58 INFO]: [script] [STDOUT] Performance improvement: 3425%
 [16:41:58 INFO]: [script] [STDOUT] Time saved: 266 ms
 ```
+
+Note: `V8ScriptEngine` does not support `compile`, `executeCompiled`, and `invokeCompiledFunction`.
 
 ### Global Variable Management
 

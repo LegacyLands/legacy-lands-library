@@ -30,6 +30,15 @@ dependencies {
     // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8
     implementation("com.eclipsesource.j2v8:j2v8:6.2.1")
 
+    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8_linux_x86_64
+    implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.8.0")
+
+    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8_win32_x86_64
+    implementation("com.eclipsesource.j2v8:j2v8_win32_x86_64:4.6.0")
+
+    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8_macosx_x86_64
+    implementation("com.eclipsesource.j2v8:j2v8_macosx_x86_64:4.6.0")
+
     // https://mvnrepository.com/artifact/org.mozilla/rhino
     implementation("org.mozilla:rhino:1.8.0")
 }

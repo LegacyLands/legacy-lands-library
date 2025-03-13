@@ -17,11 +17,26 @@ dependencies {
 
 该模块提供了两种强大的 `JavaScript` 引擎实现：
 
-- **Rhino 引擎**：Mozilla 的 `JavaScript` 实现，兼容性好，适合大多数场景
-- **Nashorn 引擎**：一种常用且高效的 `JavaScript` 引擎，提供更好的 ES6 支持
+- **Rhino 引擎**：Mozilla 的 `JavaScript` 实现，兼容性好，适合大多数场景。
+- **Nashorn 引擎**：一种常用且高效的 `JavaScript` 引擎，提供更好的 ES6 支持。
+- **V8 引擎**: Google 的高性能 `JavaScript` 和 `WebAssembly` 引擎，适用于需要极高性能和低延迟的场景。
 
 两种引擎都实现了相同的接口，可以根据需要灵活选择。
 在拓展性上，我们允许任何基于 `ScriptEngineInterface` 与 `ScriptScope` 的新实现。
+
+V8 的限制：
+
+- **不支持脚本编译 (compile):**  `V8ScriptEngine` 的 `compile`、`executeCompiled` 和 `invokeCompiledFunction` 方法会抛出
+  `UnsupportedOperationException`。
+- **不支持 ScriptScope**: `V8ScriptEngine` 不支持 `ScriptScope`，
+  所有操作（`execute`、`invokeFunction`、全局变量的设置/获取/删除）都在 V8 运行时的全局作用域中进行。 传入 `ScriptScope`
+  参数会被忽略 (但仍然会检查是否为 `null`).
+- **JavaScript 和 Java 类型映射：**  `V8ScriptEngine` 在内部处理了 `JavaScript` 和 `Java` 类型之间的转换：
+    * 基本类型（`null`、`Integer`、`Double`、`Boolean`、`String`）会进行自动转换。
+    * Java `Map` 会转换为 `V8Object`。
+    * Java `List` 会转换为 `V8Array`。
+    * `V8Object`、`V8Array`、`V8Function`、`V8TypedArray` 会在 Java 和 JavaScript 之间直接传递，不做转换。
+    * 其他类型不受支持，会抛出 `IllegalArgumentException`。
 
 ### 基本用法
 
@@ -34,10 +49,12 @@ public class Example {
         ScriptEngineInterface rhinoEngine = ScriptEngineFactory.createRhinoScriptEngine();
         // 或创建 Nashorn 引擎
         ScriptEngineInterface nashornEngine = ScriptEngineFactory.createNashornScriptEngine();
+        // 或创建 V8 引擎
+        ScriptEngineInterface v8Engine = ScriptEngineFactory.createV8ScriptEngine();
 
         try {
             // 直接执行脚本
-            Object result = rhinoEngine.execute("1 + 1", null);
+            Object result = rhinoEngine.execute("1 + 1", null); // 或 rhinoEngine.execute("1 + 1");
             System.out.println(result); // 输出：2.0
         } catch (ScriptException exception) {
             exception.printStackTrace();
@@ -81,6 +98,10 @@ public class Example {
     }
 }
 ```
+
+当 `ScriptScope` 传入 `null`，则使用引擎级别作用域。
+
+注意：`V8ScriptEngine` 不支持 `ScriptScope`，传入将会自动忽略。
 
 ### 函数调用
 
@@ -202,6 +223,8 @@ public class Example {
 [16:41:58 INFO]: [script] [STDOUT] 性能提升: 3425%
 [16:41:58 INFO]: [script] [STDOUT] 时间节省: 266 毫秒
 ```
+
+注意：`V8ScriptEngine` 不支持 `compile`、`executeCompiled` 和 `invokeCompiledFunction`。
 
 ### 全局变量管理
 

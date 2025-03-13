@@ -23,6 +23,17 @@ public interface ScriptEngineInterface {
     Object execute(String script, ScriptScope scriptScope) throws ScriptException;
 
     /**
+     * Executes a script using the engine-level scope.
+     *
+     * @param script The script string to execute.
+     * @return The result of the script execution. The specific type of the result depends on the scripting engine and the script itself.
+     * @throws ScriptException If an error occurs during script execution.
+     */
+    default Object execute(String script) throws ScriptException {
+        return execute(script, null);
+    }
+
+    /**
      * Invokes a function defined in a script.
      *
      * @param script       Optional script string. If provided, this script will be executed first.
@@ -61,6 +72,33 @@ public interface ScriptEngineInterface {
     }
 
     /**
+     * Invokes a function defined in a script, using the engine-level scope.
+     *
+     * @param script       Optional script string.  See {@link #invokeFunction(String, String, ScriptScope, Object...)} for details.
+     * @param functionName The name of the function to invoke.
+     * @param args         The arguments to pass to the function.
+     * @return The result of the function invocation.
+     * @throws ScriptException If an error occurs during script execution or function invocation.
+     */
+    default Object invokeFunction(String script, String functionName, Object... args) throws ScriptException {
+        return invokeFunction(script, functionName, null, args);
+    }
+
+    /**
+     * Invokes a function defined within a previously executed script, using the engine-level scope.
+     *
+     * @param functionName The name of the function to invoke.
+     *                     The function must have been defined within a script that
+     *                     was previously executed using {@link #execute}.
+     * @param args         The arguments to pass to the function.
+     * @return The result of the function invocation.
+     * @throws ScriptException If an error occurs during script execution or function invocation.
+     */
+    default Object invokeFunction(String functionName, Object... args) throws ScriptException {
+        return invokeFunction(null, functionName, null, args);
+    }
+
+    /**
      * Compiles a script for later execution.
      * This can improve performance if the same script will be executed multiple times.
      *
@@ -82,6 +120,17 @@ public interface ScriptEngineInterface {
      * @throws ScriptException If an error occurs during script execution
      */
     Object executeCompiled(Object compiledScript, ScriptScope scriptScope) throws ScriptException;
+
+    /**
+     * Executes a previously compiled script using the engine-level scope.
+     *
+     * @param compiledScript The compiled script object (returned by {@link #compile}).
+     * @return The result of the script execution.
+     * @throws ScriptException If an error occurs during script execution.
+     */
+    default Object executeCompiled(Object compiledScript) throws ScriptException {
+        return executeCompiled(compiledScript, null);
+    }
 
     /**
      * Invokes a function defined in a previously compiled script.
@@ -111,6 +160,34 @@ public interface ScriptEngineInterface {
      */
     default Object invokeCompiledFunction(String functionName, ScriptScope scriptScope, Object... args) throws ScriptException {
         return invokeCompiledFunction(null, functionName, scriptScope, args);
+    }
+
+    /**
+     * Invokes a function defined in a previously compiled script, using the engine-level scope.
+     *
+     * @param compiledScript The compiled script object (returned by {@link #compile}).  If null, the function must have been
+     *                       defined in a previously *executed* script.
+     * @param functionName   The name of the function to invoke.
+     * @param args           The arguments to pass to the function.
+     * @return The result of the function invocation.
+     * @throws ScriptException If an error occurs during function invocation.
+     */
+    default Object invokeCompiledFunction(Object compiledScript, String functionName, Object... args) throws ScriptException {
+        return invokeCompiledFunction(compiledScript, functionName, null, args);
+    }
+
+    /**
+     * Invokes a function defined within a previously executed compiled script using engine-level scope.
+     *
+     * @param functionName The name of the function to invoke.
+     *                     The function must have been defined within a compiled script that
+     *                     was previously executed using {@link #executeCompiled}
+     * @param args The arguments to pass to the function.
+     * @return The result of the function invocation.
+     * @throws ScriptException If an error occurs during function invocation.
+     */
+    default Object invokeCompiledFunction(String functionName, Object... args) throws ScriptException {
+        return invokeCompiledFunction(null, functionName, null, args);
     }
 
     /**

@@ -22,7 +22,7 @@ A comprehensive library built on [Fairy Framework](https://github.com/FairyProje
 - [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence
 - [**cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock mechanisms
 - [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time synchronization
-- [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper that supports both `Rhino` and `Nashorn` `JavaScript` engines.
+- [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper that supports both `Rhino`, `Nashorn` and `V8` `JavaScript` engines.
 
 - [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but may be too complex to use or temporarily unstable.
 

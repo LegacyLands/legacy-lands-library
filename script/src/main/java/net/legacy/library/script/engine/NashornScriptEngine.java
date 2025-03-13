@@ -28,15 +28,14 @@ public class NashornScriptEngine implements ScriptEngineInterface {
     /**
      * Constructor, initializes the Nashorn script engine.
      *
-     * @throws IllegalStateException If the Nashorn script engine is not found
+     * @throws IllegalStateException If the Nashorn script engine could not be initialized
      */
     public NashornScriptEngine() {
         try {
             scriptEngine = new NashornScriptEngineFactory().getScriptEngine("--language=es6");
             engineScopeBindings = scriptEngine.getContext().getBindings(ScriptContext.ENGINE_SCOPE);
         } catch (Exception exception) {
-            throw new IllegalStateException("Nashorn script engine not found. " +
-                    "Make sure you are include the 'org.openjdk.nashorn:nashorn-core' dependency.", exception);
+            throw new IllegalStateException("Nashorn script engine could not be initialized.", exception);
         }
     }
 

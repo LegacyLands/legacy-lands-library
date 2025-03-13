@@ -24,7 +24,7 @@ public class RhinoScriptEngine implements ScriptEngineInterface {
     /**
      * Constructor, initializes the Rhino script engine.
      *
-     * @throws IllegalStateException If the Rhino script engine is not found.
+     * @throws IllegalStateException If the Rhino script engine could not be initialized.
      */
     public RhinoScriptEngine() {
         try {
@@ -39,8 +39,7 @@ public class RhinoScriptEngine implements ScriptEngineInterface {
             // Create a root scope for the engine
             rootScope = rhinoContext.initStandardObjects();
         } catch (Exception exception) {
-            throw new IllegalStateException("Rhino script engine could not be initialized.  " +
-                    "Make sure you have included the 'org.mozilla:rhino' dependency in your project.", exception);
+            throw new IllegalStateException("Rhino script engine could not be initialized.", exception);
         }
     }
 
