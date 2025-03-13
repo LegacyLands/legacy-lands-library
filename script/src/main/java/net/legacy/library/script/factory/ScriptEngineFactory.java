@@ -2,6 +2,7 @@ package net.legacy.library.script.factory;
 
 import lombok.experimental.UtilityClass;
 import net.legacy.library.script.engine.NashornScriptEngine;
+import net.legacy.library.script.engine.RhinoScriptEngine;
 import net.legacy.library.script.engine.ScriptEngineInterface;
 
 /**
@@ -20,5 +21,15 @@ public class ScriptEngineFactory {
      */
     public static ScriptEngineInterface createNashornScriptEngine() {
         return new NashornScriptEngine();
+    }
+
+    /**
+     * Creates a {@link RhinoScriptEngine}.
+     *
+     * @return a new {@link RhinoScriptEngine} instance
+     * @see RhinoScriptEngine
+     */
+    public static ScriptEngineInterface createRhinoScriptEngine() {
+        return new RhinoScriptEngine();
     }
 }

@@ -1,8 +1,7 @@
 package net.legacy.library.script.engine;
 
 import net.legacy.library.script.exception.ScriptException;
-
-import javax.script.Bindings;
+import net.legacy.library.script.scope.ScriptScope;
 
 /**
  * Interface for interacting with a scripting engine.
@@ -15,14 +14,13 @@ public interface ScriptEngineInterface {
     /**
      * Executes a script.
      *
-     * @param script   The script string to execute
-     * @param bindings The bindings to use for the script execution.
-     *                 This can be used to provide variables and functions to the script.
-     *                 If {@code null}, a new {@link Bindings} object will typically be created by the engine
+     * @param script      The script string to execute
+     * @param scriptScope The bindings to use for the script execution.
+     *                    This can be used to provide variables and functions to the script. If {@code null}, use engine-level scope
      * @return The result of the script execution.  The specific type of the result depends on the scripting engine and the script itself
      * @throws ScriptException If an error occurs during script execution
      */
-    Object execute(String script, Bindings bindings) throws ScriptException;
+    Object execute(String script, ScriptScope scriptScope) throws ScriptException;
 
     /**
      * Invokes a function defined in a script.
@@ -31,16 +29,20 @@ public interface ScriptEngineInterface {
      *                     Generally, you should execute the script using the {@link #execute} method first,
      *                     and then set this parameter to {@code null} to invoke a defined function.
      *                     It is not recommended to pass a script here directly.
-     *                     It's better to separate script execution (using {@link #execute}) and function invocation
+     *                     It's better to separate script execution (using {@link #execute}) and function invocation.
+     *                     <br>For optimal performance with repeated function calls, it is strongly recommended to pre-compile
+     *                     the script using {@link #compile} and then use {@link #invokeCompiledFunction}.
+     *                     This avoids repeated parsing and compilation of the script.
+     *                     If pre-compilation is not possible, then you should execute the script once using {@link #execute}
+     *                     and then call this method with a {@code null} value for the {@code script} parameter
      * @param functionName The name of the function to invoke
-     * @param bindings     The bindings to use. It's important to use the same {@link Bindings} context
-     *                     that was used when the function was defined (typically by a prior call to {@link #execute}).
-     *                     If {@code null}, the behavior is engine-specific, but it will likely use a default or engine-level scope
+     * @param scriptScope  The bindings to use for the script execution.
+     *                     This can be used to provide variables and functions to the script. If {@code null}, use engine-level scope
      * @param args         The arguments to pass to the function
      * @return The result of the function invocation
      * @throws ScriptException If an error occurs during script execution or function invocation
      */
-    Object invokeFunction(String script, String functionName, Bindings bindings, Object... args) throws ScriptException;
+    Object invokeFunction(String script, String functionName, ScriptScope scriptScope, Object... args) throws ScriptException;
 
     /**
      * Compiles a script for later execution.
@@ -58,19 +60,32 @@ public interface ScriptEngineInterface {
      * Executes a previously compiled script.
      *
      * @param compiledScript The compiled script object (returned by {@link #compile}).
-     * @param bindings       The bindings to use for script execution.
-     *                       If {@code null}, the behavior is engine-specific,
-     *                       but it will often create new bindings or use bindings associated with the compiled script
+     * @param scriptScope    The bindings to use for the script execution.
+     *                       This can be used to provide variables and functions to the script. If {@code null}, use engine-level scope
      * @return The result of the script execution
      * @throws ScriptException If an error occurs during script execution
      */
-    Object executeCompiled(Object compiledScript, Bindings bindings) throws ScriptException;
+    Object executeCompiled(Object compiledScript, ScriptScope scriptScope) throws ScriptException;
+
+    /**
+     * Invokes a function defined in a previously compiled script.
+     *
+     * @param compiledScript The compiled script object (returned by {@link #compile}}).
+     *                       This must be a valid-compiled script object; otherwise, the behavior is undefined and may result in an exception
+     * @param functionName   The name of the function to invoke
+     * @param scriptScope    The bindings to use for the script execution.
+     *                       This can be used to provide variables and functions to the script. If {@code null}, use engine-level scope
+     * @param args           The arguments to pass to the function
+     * @return The result of the function invocation
+     * @throws ScriptException If an error occurs during script execution or function invocation
+     */
+    Object invokeCompiledFunction(Object compiledScript, String functionName, ScriptScope scriptScope, Object... args) throws ScriptException;
 
     /**
      * Gets the value of a global variable from the engine's scope.
      *
      * @param name The name of the global variable
-     * @return The value of the global variable, or {@code null} if the variable is not defined
+     * @return The value of the global variable
      */
     Object getGlobalVariable(String name);
 
@@ -85,7 +100,7 @@ public interface ScriptEngineInterface {
     /**
      * Remove the value of a global variable in the engine's scope.
      *
-     * @param name  The name of the global variable
+     * @param name The name of the global variable
      */
     void removeGlobalVariable(String name);
 }
