@@ -16,15 +16,18 @@
 
 ## 核心模块
 
-- [**annotation**](annotation/README.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理
-- [**commons**](commons/README.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作
-- [**configuration**](configuration/README.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化
-- [**mongodb**](mongodb/README.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化
-- [**cache**](cache/README.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制
-- [**player**](player/README.md) - 高性能玩家数据管理，支持多级缓存和实时同步
+- [**annotation**](annotation/README_ZHCN.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理。
+- [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作。
+- [**configuration**](configuration/README_ZHCN.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化。
+- [**mongodb**](mongodb/README_ZHCN.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化。
+- [**cache**](cache/README_ZHCN.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制。
+- [**player**](player/README_ZHCN.md) - 高性能玩家数据管理，支持多级缓存和实时同步。
+- [**script**](script/README_ZHCN.md) - 这是一个强大、灵活、可拓展且高性能的脚本执行引擎封装，支持 `Rhino` 和 `Nashorn` 两种 `JavaScript` 引擎。
+
+- [**experimental**](experimental/README.md) - 一些实验性的模块，可以显著提高性能，但可能过于复杂而无法使用或暂时不稳定。
 
 
-- **security** - *即将推出*
+- **security** - *即将推出。*
 
 ## 使用方法
 
