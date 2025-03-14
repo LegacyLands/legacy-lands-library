@@ -13,6 +13,37 @@ dependencies {
 }
 ```
 
+### 线程安全的资源管理
+
+`LockableInterface` 与 `AbstractLockable` 是与缓存无关的通用组件，用于提供线程安全的资源访问机制。
+这两个组件的设计目的是将锁定操作从具体业务逻辑中分离出来，提供一种通用的、可重用的锁管理框架：
+
+```java
+public class CacheLauncher {
+    public static void main(String[] args) {
+        // 创建可锁定的资源实例（以数据库连接为例）
+        DatabaseConnection dbConnection = new DatabaseConnection();
+        LockableInterface<DatabaseConnection> lockableDb = new AbstractLockable<>(dbConnection) {
+        };
+
+        // 在锁保护下执行操作
+        User user = lockableDb.execute(
+                // 获取锁
+                conn -> new ReentrantLock(),
+
+                // 在锁保护下执行的操作
+                conn -> conn.queryUserById(123),
+
+                // 锁设置
+                LockSettings.of(1, 1, TimeUnit.MINUTES)
+        );
+    }
+}
+```
+
+这种设计使得同一套锁定机制可以应用于多种不同类型的资源，包括但不限于缓存、数据库连接、文件系统访问等。
+缓存服务接口继承了这个通用接口，因此具备了相同的线程安全能力。
+
 ### 举个例子
 
 ```java
@@ -20,7 +51,7 @@ public class CacheLauncher {
     public static void main(String[] args) {
         Config config = new Config();
         config.useSingleServer().setAddress("redis://127.0.0.1:6379");
-        
+
 
         /*
          * Redis 缓存
@@ -130,9 +161,9 @@ public class CacheLauncher {
 
         /*
          * caffeine 的大多数方法都是线程安全的，
-         * 我们可以直接使用 getCache() 来操作这些方法。
+         * 我们可以直接使用 getResource() 来操作这些方法。
          */
-        caffeineCache.getCache().put(2, "hi");
+        caffeineCache.getResource().put(2, "hi");
 
 
         /*
@@ -149,18 +180,18 @@ public class CacheLauncher {
                 CacheServiceFactory.createCustomCache(new ConcurrentHashMap<>());
 
         // 获取实现缓存，我们可以像其他缓存服务一样使用 get，execute 等方法
-        Map<Integer, String> cache = customCache.getCache();
-        
+        Map<Integer, String> cache = customCache.getResource();
+
 
         /*
          * 多级缓存
          */
         Set<TieredCacheLevel<?, ?>> tiers = Set.of(
                 // L1 cache 是 caffeine
-                TieredCacheLevel.of("L1", caffeineCache.getCache()),
-                
+                TieredCacheLevel.of("L1", caffeineCache.getResource()),
+
                 // L2 cache 是 redis
-                TieredCacheLevel.of("L2", redisCache.getCache())
+                TieredCacheLevel.of("L2", redisCache.getResource())
         );
 
         FlexibleMultiLevelCacheService multiLevelCache =

@@ -13,6 +13,41 @@ dependencies {
 }
 ```
 
+### Thread-Safe Resource Management
+
+`LockableInterface` and `AbstractLockable` are generic, cache-agnostic components designed to provide a thread-safe
+mechanism for accessing resources.
+The design goal of these components is to separate the locking operations from the specific business logic, offering a
+universal and reusable locking management framework:
+
+```java
+public class CacheLauncher {
+    public static void main(String[] args) {
+        // Create an instance of the lockable resource (e.g., a database connection)
+        DatabaseConnection dbConnection = new DatabaseConnection();
+        LockableInterface<DatabaseConnection> lockableDb = new AbstractLockable<>(dbConnection) {
+        };
+
+        // Execute operations under lock protection
+        User user = lockableDb.execute(
+                // get lock
+                conn -> new ReentrantLock(),
+
+                // the operation to be performed under lock protection
+                conn -> conn.queryUserById(123),
+
+                // lock settings
+                LockSettings.of(1, 1, TimeUnit.MINUTES)
+        );
+    }
+}
+```
+
+This design allows the same locking mechanism to be applied to a variety of different resource types, including, but not
+limited to, caches, database connections, file system access, and so on.
+The cache service interface inherits from this generic interface, thereby inheriting the same thread-safety
+capabilities.
+
 ### Example
 
 ```java
@@ -130,9 +165,9 @@ public class CacheLauncher {
 
         /*
          * Most of caffeine's methods are thread-safe,
-         * we can directly use getCache() to operate these methods.
+         * we can directly use getResource() to operate these methods.
          */
-        caffeineCache.getCache().put(2, "hi");
+        caffeineCache.getResource().put(2, "hi");
 
 
         /*
@@ -149,7 +184,7 @@ public class CacheLauncher {
                 CacheServiceFactory.createCustomCache(new ConcurrentHashMap<>());
 
         // get impl cache, we can use get, execute, and more method like other cache service
-        Map<Integer, String> cache = customCache.getCache();
+        Map<Integer, String> cache = customCache.getResource();
 
 
         /*
@@ -157,10 +192,10 @@ public class CacheLauncher {
          */
         Set<TieredCacheLevel<?, ?>> tiers = Set.of(
                 // L1 cache is caffeine
-                TieredCacheLevel.of("L1", caffeineCache.getCache()),
+                TieredCacheLevel.of("L1", caffeineCache.getResource()),
 
                 // L2 cache is redis
-                TieredCacheLevel.of("L2", redisCache.getCache())
+                TieredCacheLevel.of("L2", redisCache.getResource())
         );
 
         FlexibleMultiLevelCacheService multiLevelCache =
