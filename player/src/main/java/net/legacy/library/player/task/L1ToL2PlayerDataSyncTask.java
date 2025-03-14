@@ -71,7 +71,7 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface {
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
 
-            l1Cache.getCache().asMap().forEach((key, legacyPlayerData) -> {
+            l1Cache.getResource().asMap().forEach((key, legacyPlayerData) -> {
                 if (this.uuid != null && !this.uuid.equals(key)) {
                     return;
                 }

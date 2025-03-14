@@ -95,7 +95,7 @@ public class LegacyPlayerDataService {
         ));
 
         // Record all LegacyPlayerDataService
-        Cache<String, LegacyPlayerDataService> cache = LEGACY_PLAYER_DATA_SERVICES.getCache();
+        Cache<String, LegacyPlayerDataService> cache = LEGACY_PLAYER_DATA_SERVICES.getResource();
 
         if (cache.getIfPresent(name) != null) {
             throw new IllegalStateException("LegacyPlayerDataService with name " + name + " already exists");
@@ -151,7 +151,7 @@ public class LegacyPlayerDataService {
      * @return an {@link Optional} containing the {@link LegacyPlayerDataService} if found, or empty if not found
      */
     public static Optional<LegacyPlayerDataService> getLegacyPlayerDataService(String name) {
-        return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getCache().getIfPresent(name));
+        return Optional.ofNullable(LEGACY_PLAYER_DATA_SERVICES.getResource().getIfPresent(name));
     }
 
     /**
@@ -188,7 +188,7 @@ public class LegacyPlayerDataService {
     public Optional<LegacyPlayerData> getFromL1Cache(UUID uuid) {
         // Get L1 cache
         CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
-        Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
+        Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getResource();
 
         // Retrieve data from L1 cache
         return Optional.ofNullable(l1CacheImpl.getIfPresent(uuid));
@@ -268,7 +268,7 @@ public class LegacyPlayerDataService {
         }
 
         CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
-        Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getCache();
+        Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getResource();
         LegacyPlayerData legacyPlayerData = getFromL2Cache(uuid).orElseGet(() -> getFromDatabase(uuid));
 
         l1CacheImpl.put(uuid, legacyPlayerData);
@@ -289,7 +289,7 @@ public class LegacyPlayerDataService {
         PlayerDataPersistenceTask.of(LockSettings.of(5, 5, TimeUnit.MILLISECONDS), this).start().wait();
 
         // Remove this LegacyPlayerDataService from the cache
-        LEGACY_PLAYER_DATA_SERVICES.getCache().asMap().remove(name);
+        LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().remove(name);
 
         // Shutdown L2 cache
         RedisCacheServiceInterface redisCacheService = getL2Cache();

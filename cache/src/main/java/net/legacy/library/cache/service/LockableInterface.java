@@ -6,23 +6,25 @@ import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
 
 /**
- * Interface defining basic lockable cache operations.
+ * Interface defining basic lockable resource operations.
  *
- * <p>Provides core functionality for cache access and lock-protected operations.
+ * <p>Provides core functionality for resource access and lock-protected operations.
+ * This interface can be used for any type of resource that requires thread-safe access
+ * through locking mechanisms.
  *
- * @param <C> the cache implementation type
+ * @param <R> the resource type
  * @author qwq-dev
  * @see Lock
  * @see LockSettings
  * @since 2024-12-21 19:13
  */
-public interface LockableCacheInterface<C> {
+public interface LockableInterface<R> {
     /**
-     * Gets the underlying cache implementation.
+     * Gets the underlying resource.
      *
-     * @return the cache implementation
+     * @return the resource
      */
-    C getCache();
+    R getResource();
 
     /**
      * Executes a function with lock protection.
@@ -33,5 +35,5 @@ public interface LockableCacheInterface<C> {
      * @param <T>             the return type of the function
      * @return the result of the executed function
      */
-    <T> T execute(Function<C, Lock> getLockFunction, Function<C, T> function, LockSettings lockSettings);
+    <T> T execute(Function<R, Lock> getLockFunction, Function<R, T> function, LockSettings lockSettings);
 }

@@ -8,29 +8,30 @@ import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
 
 /**
- * Abstract base class for lockable cache implementations.
+ * Abstract base class for lockable resource implementations.
  *
- * <p>This class provides a foundation for implementing thread-safe cache operations
+ * <p>This class provides a foundation for implementing thread-safe operations
  * through locking mechanisms, with configurable timeout and retry policies.
+ * It can be used for any resource that requires protected access.
  *
- * @param <C> the cache implementation type
+ * @param <R> the resource type
  * @author qwq-dev
- * @see LockableCacheInterface
+ * @see LockableInterface
  * @see LockSettings
  * @see Lock
  * @since 2024-12-21 20:03
  */
 @Data
-public abstract class AbstractLockableCache<C> implements LockableCacheInterface<C> {
-    private final C cache;
+public abstract class AbstractLockable<R> implements LockableInterface<R> {
+    private final R resource;
 
     /**
-     * Creates a new lockable cache instance with the specified cache implementation.
+     * Creates a new lockable instance with the specified resource.
      *
-     * @param cache the underlying cache implementation to be used
+     * @param resource the underlying resource to be used
      */
-    protected AbstractLockableCache(C cache) {
-        this.cache = cache;
+    protected AbstractLockable(R resource) {
+        this.resource = resource;
     }
 
     /**
@@ -47,16 +48,16 @@ public abstract class AbstractLockableCache<C> implements LockableCacheInterface
      * @see LockSettings
      */
     @Override
-    public <T> T execute(Function<C, Lock> getLockFunction,
-                         Function<C, T> function,
+    public <T> T execute(Function<R, Lock> getLockFunction,
+                         Function<R, T> function,
                          LockSettings lockSettings) {
-        Lock lock = getLockFunction.apply(cache);
+        Lock lock = getLockFunction.apply(resource);
         String simpleName = lock.getClass().getSimpleName();
 
         try {
             if (lock.tryLock(lockSettings.getWaitTime(), lockSettings.getTimeUnit())) {
                 try {
-                    return function.apply(cache);
+                    return function.apply(resource);
                 } finally {
                     // Making RLock more secure
                     if (lock instanceof RLock rLock && rLock.isHeldByCurrentThread()) {

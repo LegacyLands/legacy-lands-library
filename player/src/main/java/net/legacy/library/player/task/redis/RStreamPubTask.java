@@ -47,7 +47,7 @@ public class RStreamPubTask implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
         return schedule(() -> {
-            RedissonClient redissonClient = legacyPlayerDataService.getL2Cache().getCache();
+            RedissonClient redissonClient = legacyPlayerDataService.getL2Cache().getResource();
 
             RStream<String, String> rStream = redissonClient.getStream(
                     RKeyUtil.getRStreamNameKey(legacyPlayerDataService)

@@ -70,7 +70,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
     public ScheduledTask<?> start() {
         return schedule(() -> {
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
-            RedissonClient redissonClient = l2Cache.getCache();
+            RedissonClient redissonClient = l2Cache.getResource();
 
             // Sync L1 cache to L2 cache
             L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();

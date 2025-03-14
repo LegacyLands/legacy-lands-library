@@ -16,12 +16,12 @@ import java.util.function.Supplier;
  * @param <C> the cache implementation type, representing the underlying cache technology
  * @param <V> the cache value type that will be stored and retrieved
  * @author qwq-dev
- * @see AbstractLockableCache
+ * @see AbstractLockable
  * @see LockSettings
  * @see Lock
  * @since 2024-12-21 18:53
  */
-public abstract class AbstractCacheService<C, V> extends AbstractLockableCache<C> {
+public abstract class AbstractCacheService<C, V> extends AbstractLockable<C> {
     /**
      * Creates a new cache service instance with the specified cache implementation.
      *
@@ -45,7 +45,7 @@ public abstract class AbstractCacheService<C, V> extends AbstractLockableCache<C
      */
     public V get(Function<C, V> getCacheFunction, Supplier<V> query,
                  BiConsumer<C, V> cacheBiConsumer, boolean cacheAfterQuery) {
-        return retrieveOrStoreInCache(getCacheFunction.apply(getCache()),
+        return retrieveOrStoreInCache(getCacheFunction.apply(getResource()),
                 query, cacheBiConsumer, cacheAfterQuery);
     }
 
@@ -90,7 +90,7 @@ public abstract class AbstractCacheService<C, V> extends AbstractLockableCache<C
         value = query.get();
 
         if (value != null && cacheAfterQuery) {
-            cacheBiConsumer.accept(getCache(), value);
+            cacheBiConsumer.accept(getResource(), value);
         }
 
         return value;

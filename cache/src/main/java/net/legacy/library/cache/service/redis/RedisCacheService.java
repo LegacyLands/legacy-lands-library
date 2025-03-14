@@ -2,7 +2,7 @@ package net.legacy.library.cache.service.redis;
 
 import io.fairyproject.log.Log;
 import net.legacy.library.cache.model.LockSettings;
-import net.legacy.library.cache.service.AbstractLockableCache;
+import net.legacy.library.cache.service.AbstractLockable;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -21,10 +21,10 @@ import java.util.function.Supplier;
  * @author qwq-dev
  * @see RedissonClient
  * @see RedisCacheServiceInterface
- * @see AbstractLockableCache
+ * @see AbstractLockable
  * @since 2024-12-21 20:03
  */
-public class RedisCacheService extends AbstractLockableCache<RedissonClient> implements RedisCacheServiceInterface {
+public class RedisCacheService extends AbstractLockable<RedissonClient> implements RedisCacheServiceInterface {
     /**
      * Constructs a new Redis cache service with the specified Redisson client.
      *
@@ -49,7 +49,7 @@ public class RedisCacheService extends AbstractLockableCache<RedissonClient> imp
     @SuppressWarnings("unchecked")
     public <R> R getWithType(Function<RedissonClient, ?> getCacheFunction, Supplier<Object> query,
                              BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery) {
-        return (R) retrieveOrStoreInCache(getCacheFunction.apply(getCache()), query, cacheBiConsumer, cacheAfterQuery);
+        return (R) retrieveOrStoreInCache(getCacheFunction.apply(getResource()), query, cacheBiConsumer, cacheAfterQuery);
     }
 
     /**
@@ -88,7 +88,7 @@ public class RedisCacheService extends AbstractLockableCache<RedissonClient> imp
     @Override
     public Object get(Function<RedissonClient, Object> getCacheFunction, Supplier<Object> query,
                       BiConsumer<RedissonClient, Object> cacheBiConsumer, boolean cacheAfterQuery) {
-        return retrieveOrStoreInCache(getCacheFunction.apply(getCache()), query, cacheBiConsumer, cacheAfterQuery);
+        return retrieveOrStoreInCache(getCacheFunction.apply(getResource()), query, cacheBiConsumer, cacheAfterQuery);
     }
 
     /**
@@ -132,7 +132,7 @@ public class RedisCacheService extends AbstractLockableCache<RedissonClient> imp
         value = query.get();
 
         if (value != null && cacheAfterQuery && cacheBiConsumer != null) {
-            cacheBiConsumer.accept(getCache(), value);
+            cacheBiConsumer.accept(getResource(), value);
         }
 
         return value;
@@ -143,7 +143,7 @@ public class RedisCacheService extends AbstractLockableCache<RedissonClient> imp
      */
     @Override
     public void shutdown() {
-        RedissonClient cache = getCache();
+        RedissonClient cache = getResource();
 
         if (cache != null) {
             try {

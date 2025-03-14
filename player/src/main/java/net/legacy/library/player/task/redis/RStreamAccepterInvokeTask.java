@@ -128,7 +128,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
     public ScheduledTask<?> start() {
         Runnable runnable = () -> {
             RedisCacheServiceInterface redisCacheService = legacyPlayerDataService.getL2Cache();
-            RedissonClient redissonClient = redisCacheService.getCache();
+            RedissonClient redissonClient = redisCacheService.getResource();
 
             /*
              * Each LegacyPlayerDataService has its own RStream communication

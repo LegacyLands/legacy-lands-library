@@ -1,7 +1,7 @@
 package net.legacy.library.cache.service.multi;
 
 import net.legacy.library.cache.model.LockSettings;
-import net.legacy.library.cache.service.AbstractLockableCache;
+import net.legacy.library.cache.service.AbstractLockable;
 
 import java.util.Optional;
 import java.util.Set;
@@ -15,7 +15,7 @@ import java.util.function.Supplier;
  * @author qwq-dev
  * @since 2024-12-27 19:15
  */
-public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<TieredCacheLevel<?, ?>>> {
+public class FlexibleMultiLevelCacheService extends AbstractLockable<Set<TieredCacheLevel<?, ?>>> {
     /**
      * A set of tiered cache levels that this service manages.
      */
@@ -88,7 +88,7 @@ public class FlexibleMultiLevelCacheService extends AbstractLockableCache<Set<Ti
      *
      * <p>This method obtains the lock from the targeted cache (using the provided function),
      * then executes the desired operation via {@link #execute(Function, Function, LockSettings)}
-     * of the parent class {@link AbstractLockableCache}.
+     * of the parent class {@link AbstractLockable}.
      *
      * @param level           the identifier of the cache level
      * @param getLockFunction a function to obtain a {@link Lock} from the specific cache

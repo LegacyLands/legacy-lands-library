@@ -1,7 +1,7 @@
 ### Script Module
 
 This is a powerful, flexible, extensible, and high-performance script execution engine wrapper
-that supports both `Rhino` and `Nashorn` `JavaScript` engines. It provides a unified interface for script execution,
+that supports `Rhino`, `Nashorn` and `V8` `JavaScript` engines. It provides a unified interface for script execution,
 function invocation, compilation optimization, and other features, suitable for scenarios where you need to embed
 scripting capabilities in your application.
 
@@ -21,22 +21,28 @@ This module provides two powerful `JavaScript` engine implementations:
 
 - **Rhino engine**: Mozilla's `JavaScript` implementation, with good compatibility and suitable for most scenarios.
 - **Nashorn engine**: A commonly used and efficient `JavaScript` engine that provides better ES6 support.
-- **V8 engine**: Google's high-performance `JavaScript` and `WebAssembly` engine, suitable for scenarios that require extremely high performance and low latency.
+- **V8 engine**: Google's high-performance `JavaScript` and `WebAssembly` engine, suitable for scenarios that require
+  extremely high performance and low latency.
 
 Both engines implement the same interface, allowing you to choose flexibly based on your needs. In terms of
 extensibility, we allow any new implementation based on `ScriptEngineInterface` and `ScriptScope`.
 
 V8 limitations:
 
-- **Script compilation is not supported:** `V8ScriptEngine`'s `compile`, `executeCompiled`, and `invokeCompiledFunction` methods throw
+- **Script compilation is not supported:** `V8ScriptEngine`'s `compile`, `executeCompiled`, and `invokeCompiledFunction`
+  methods throw
   `UnsupportedOperationException`.
 - **ScriptScope is not supported**: `V8ScriptEngine` does not support `ScriptScope`,
-  all operations (`execute`, `invokeFunction`, setting/getting/deleting global variables) are performed in the global scope of the V8 runtime. The `ScriptScope` parameter is ignored (but it is still checked for `null`).
-- **JavaScript and Java type mapping:** `V8ScriptEngine` handles conversions between `JavaScript` and `Java` types internally:
+  all operations (`execute`, `invokeFunction`, setting/getting/deleting global variables) are performed in the global
+  scope of the V8 runtime. The `ScriptScope` parameter is ignored (but it is still checked for `null`).
+- **JavaScript and Java type mapping:** `V8ScriptEngine` handles conversions between `JavaScript` and `Java` types
+  internally:
+
 * Primitive types (`null`, `Integer`, `Double`, `Boolean`, `String`) are automatically converted.
 * Java `Map` is converted to `V8Object`.
 * Java `List` is converted to `V8Array`.
-* `V8Object`, `V8Array`, `V8Function`, `V8TypedArray` are passed directly between Java and JavaScript without conversion.
+* `V8Object`, `V8Array`, `V8Function`, `V8TypedArray` are passed directly between Java and JavaScript without
+  conversion.
 * Other types are not supported and will throw `IllegalArgumentException`.
 
 ### Basic Usage

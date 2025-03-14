@@ -70,7 +70,7 @@ public class PlayerLauncher extends Plugin {
     public void onPluginDisable() {
         CacheServiceInterface<Cache<String, LegacyPlayerDataService>, LegacyPlayerDataService> legacyPlayerDataServices =
                 LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES;
-        ConcurrentMap<String, LegacyPlayerDataService> map = legacyPlayerDataServices.getCache().asMap();
+        ConcurrentMap<String, LegacyPlayerDataService> map = legacyPlayerDataServices.getResource().asMap();
 
         // Shut down all cache services
         map.forEach((key, value) -> {
