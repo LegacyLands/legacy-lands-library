@@ -31,6 +31,8 @@
 
 ## 使用方法
 
+虽然版本号目前仍是 SNAPSHOT，但这并不代表它不能用于生产环境。事实上，我们计划在一个大型插件开发项目中广泛使用此版本，并在充分验证其稳定性和功能性后，发布第一个正式版本。
+
 ### 分发包说明
 
 从 [Actions](https://github.com/LegacyLands/legacy-lands-library/actions) 下载：

@@ -12,28 +12,41 @@
 
 ## Overview
 
-A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and utilities for modern Minecraft plugin development. It is cross-platform and supports Spigot Paper and Folia.
+A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and
+utilities for modern Minecraft plugin development. It is cross-platform and supports Spigot Paper and Folia.
 
 ## Core Modules
 
-- [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and lifecycle management
-- [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON operations
-- [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with serialization support
+- [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and
+  lifecycle management
+- [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON
+  operations
+- [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with
+  serialization support
 - [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence
-- [**cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock mechanisms
-- [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time synchronization
-- [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper that supports `Rhino`, `Nashorn` and `V8` `JavaScript` engines.
+- [**cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock
+  mechanisms
+- [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time
+  synchronization
+- [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper
+  that supports `Rhino`, `Nashorn` and `V8` `JavaScript` engines.
 
-- [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but may be too complex to use or temporarily unstable.
+- [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but
+  may be too complex to use or temporarily unstable.
 
 
 - **security** - *Coming soon.*
 
 ## Usage
 
+Although the version number is currently still a SNAPSHOT, this does not mean it is unsuitable for production use.
+In fact, we plan to extensively utilize this version in a large-scale plugin development project, and will release the
+first official version once we have thoroughly validated its stability and functionality.
+
 ### Distribution Packages
 
 Download from [Actions](https://github.com/LegacyLands/legacy-lands-library/actions):
+
 - `-javadoc`: Generated API documentation
 - `-plugin`: Compiled plugin for direct server use
 - `-sources`: Source code with compiled classes (recommended for development)
@@ -42,7 +55,8 @@ Detailed documentation in each module's `README`
 
 ### Maven Repository
 
-Configure GitHub authentication first ([Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens))
+Configure GitHub authentication
+first ([Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens))
 
 ```kotlin
 repositories {
@@ -71,7 +85,9 @@ dependencies {
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [Bilibili](https://space.bilibili.com/1253128469) (Chinese tutorials)
 
-We will release more development tutorials and experience sharing about this module or [Fairy Framework](https://github.com/FairyProject/fairy) in the [Bilibili](https://space.bilibili.com/1253128469) channel!
+We will release more development tutorials and experience sharing about this module
+or [Fairy Framework](https://github.com/FairyProject/fairy) in the [Bilibili](https://space.bilibili.com/1253128469)
+channel!
 
 ## Sponsors
 
