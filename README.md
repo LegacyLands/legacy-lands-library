@@ -18,16 +18,16 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 ## Core Modules
 
 - [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and
-  lifecycle management
+  lifecycle management.
 - [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON
-  operations
+  operations.
 - [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with
-  serialization support
-- [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence
-- [**cache**](cache/README.md) - Multi-level caching system integrating Caffeine and Redis with comprehensive lock
-  mechanisms
+  serialization support.
+- [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence.
+- [**cache**](cache/README.md) - Multi-tier caching system integrating Caffeine and Redis, providing comprehensive lock
+  management and a generic framework for thread-safe resource access.
 - [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time
-  synchronization
+  synchronization.
 - [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper
   that supports `Rhino`, `Nashorn` and `V8` `JavaScript` engines.
 

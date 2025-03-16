@@ -12,7 +12,8 @@
 
 ## 概述
 
-这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft 插件开发提供了必要的工具和实用程序。它是跨平台的，支持 Spigot Paper 和 Folia。
+这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft
+插件开发提供了必要的工具和实用程序。它是跨平台的，支持 Spigot Paper 和 Folia。
 
 ## 核心模块
 
@@ -20,9 +21,10 @@
 - [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作。
 - [**configuration**](configuration/README_ZHCN.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化。
 - [**mongodb**](mongodb/README_ZHCN.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化。
-- [**cache**](cache/README_ZHCN.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制。
+- [**cache**](cache/README_ZHCN.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制与通用的线程安全资源管理框架。
 - [**player**](player/README_ZHCN.md) - 高性能玩家数据管理，支持多级缓存和实时同步。
-- [**script**](script/README_ZHCN.md) - 这是一个强大、灵活、可拓展且高性能的脚本执行引擎封装，支持 `Rhino`, `Nashorn`, `V8` 三种 `JavaScript` 引擎。
+- [**script**](script/README_ZHCN.md) - 这是一个强大、灵活、可拓展且高性能的脚本执行引擎封装，支持 `Rhino`, `Nashorn`, `V8`
+  三种 `JavaScript` 引擎。
 
 - [**experimental**](experimental/README.md) - 一些实验性的模块，可以显著提高性能，但可能过于复杂而无法使用或暂时不稳定。
 
@@ -36,6 +38,7 @@
 ### 分发包说明
 
 从 [Actions](https://github.com/LegacyLands/legacy-lands-library/actions) 下载：
+
 - `-javadoc`：生成的 API 文档
 - `-plugin`：可直接用于服务器的编译插件
 - `-sources`：包含源代码和编译类（推荐用于开发）
@@ -44,7 +47,8 @@
 
 ### Maven 仓库
 
-首先配置 GitHub 认证（[了解更多](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)）
+首先配置 GitHub
+认证（[了解更多](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)）
 
 ```kotlin
 repositories {
@@ -56,7 +60,7 @@ repositories {
         }
     }
 }
-        
+
 dependencies {
     implementation("net.legacy.library:模块名称:版本号")
 }
@@ -73,7 +77,8 @@ dependencies {
 - [Github Issues](https://github.com/LegacyLands/legacy-lands-library/issues)
 - [哔哩哔哩](https://space.bilibili.com/1253128469)（中文教程）
 
-我们将在 [哔哩哔哩](https://space.bilibili.com/1253128469) 频道发布更多关于此模块和 [Fairy Framework](https://github.com/FairyProject/fairy) 的开发教程与经验分享！
+我们将在 [哔哩哔哩](https://space.bilibili.com/1253128469)
+频道发布更多关于此模块和 [Fairy Framework](https://github.com/FairyProject/fairy) 的开发教程与经验分享！
 
 ## 赞助商
 
@@ -81,7 +86,8 @@ dependencies {
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-[Luminol](https://github.com/LuminolMC/Luminol) 是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API 支持。
+[Luminol](https://github.com/LuminolMC/Luminol) 是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API
+支持。
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 

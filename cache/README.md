@@ -1,7 +1,10 @@
 ### Cache Module
 
-This module provides a flexible caching solution, supporting both `Caffeine`'s `Cache` and `AsyncCache`, as well as an
-in-memory `Redis` database implementation. It offers functional programming support and automatic lock handling.
+This module provides a flexible caching solution that supports both `Caffeine`'s `Cache` and `AsyncCache`, along with an
+in-memory `Redis` database implementation.
+It offers functional programming support and automatic lock handling.
+Included is a generic, thread-safe resource management framework, which is not only suitable for caching operations but
+can also be used for any resource type requiring thread-safe access.
 
 ### Usage
 
