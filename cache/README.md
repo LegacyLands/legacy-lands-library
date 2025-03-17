@@ -28,8 +28,7 @@ public class CacheLauncher {
     public static void main(String[] args) {
         // Create an instance of the lockable resource (e.g., a database connection)
         DatabaseConnection dbConnection = new DatabaseConnection();
-        LockableInterface<DatabaseConnection> lockableDb = new AbstractLockable<>(dbConnection) {
-        };
+        LockableInterface<DatabaseConnection> lockableDb = AbstractLockable.of(dbConnection);
 
         // Execute operations under lock protection
         User user = lockableDb.execute(

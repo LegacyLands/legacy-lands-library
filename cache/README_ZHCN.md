@@ -23,8 +23,7 @@ public class CacheLauncher {
     public static void main(String[] args) {
         // 创建可锁定的资源实例（以数据库连接为例）
         DatabaseConnection dbConnection = new DatabaseConnection();
-        LockableInterface<DatabaseConnection> lockableDb = new AbstractLockable<>(dbConnection) {
-        };
+        LockableInterface<DatabaseConnection> lockableDb = AbstractLockable.of(dbConnection);
 
         // 在锁保护下执行操作
         User user = lockableDb.execute(
