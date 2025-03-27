@@ -9,14 +9,14 @@
 // Dependencies
 dependencies {
     // all others module
-    implementation("net.legacy.library:annotation:1.0-SNAPSHOT")
-    implementation("net.legacy.library:configuration:1.0-SNAPSHOT")
-    implementation("net.legacy.library:cache:1.0-SNAPSHOT")
-    implementation("net.legacy.library:commons:1.0-SNAPSHOT")
-    implementation("net.legacy.library:mongodb:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:annotation:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:configuration:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:cache:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:commons:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:mongodb:1.0-SNAPSHOT")
 
     // player module
-    implementation("net.legacy.library:player:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:player:1.0-SNAPSHOT")
 }
 ```
 

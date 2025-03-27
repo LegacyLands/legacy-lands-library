@@ -62,7 +62,7 @@ repositories {
 }
 
 dependencies {
-    implementation("net.legacy.library:模块名称:版本号")
+    compileOnly("net.legacy.library:模块名称:版本号")
 }
 ```
 

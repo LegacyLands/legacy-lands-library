@@ -70,7 +70,7 @@ repositories {
 }
 
 dependencies {
-    implementation("net.legacy.library:module-name:version")
+    compileOnly("net.legacy.library:module-name:version")
 }
 ```
 

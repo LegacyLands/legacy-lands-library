@@ -9,7 +9,7 @@
 // Dependencies
 dependencies {
     // script module
-    implementation("net.legacy.library:script:1.0-SNAPSHOT")
+    compileOnly("net.legacy.library:script:1.0-SNAPSHOT")
 }
 ```
 
