@@ -14,6 +14,7 @@ import org.redisson.api.StreamMessageId;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * An {@link RStreamAccepterInterface} implementation that updates player data by <b>player name</b>.
@@ -83,10 +84,9 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
         Map<String, String> dataMap = pairData.getRight();
 
         Player player = Bukkit.getPlayer(playerName);
+        UUID uuid = player != null ? player.getUniqueId() : Bukkit.getOfflinePlayer(playerName).getUniqueId();
 
-        if (player != null && player.isOnline()) {
-            legacyPlayerDataService.getLegacyPlayerData(player.getUniqueId()).addData(dataMap);
-            ack(rStream, streamMessageId);
-        }
+        legacyPlayerDataService.getLegacyPlayerData(uuid).addData(dataMap);
+        ack(rStream, streamMessageId);
     }
 }

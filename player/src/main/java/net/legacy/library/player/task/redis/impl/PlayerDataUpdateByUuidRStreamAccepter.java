@@ -7,8 +7,6 @@ import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.redis.RStreamAccepterInterface;
 import net.legacy.library.player.task.redis.RStreamTask;
 import org.apache.commons.lang3.tuple.Pair;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
@@ -96,11 +94,7 @@ public class PlayerDataUpdateByUuidRStreamAccepter implements RStreamAccepterInt
         UUID uuid = UUID.fromString(uuidString);
         Map<String, String> dataMap = pairData.getRight();
 
-        Player player = Bukkit.getPlayer(uuid);
-
-        if (player != null && player.isOnline()) {
-            legacyPlayerDataService.getLegacyPlayerData(player.getUniqueId()).addData(dataMap);
-            ack(rStream, streamMessageId);
-        }
+        legacyPlayerDataService.getLegacyPlayerData(uuid).addData(dataMap);
+        ack(rStream, streamMessageId);
     }
 }
