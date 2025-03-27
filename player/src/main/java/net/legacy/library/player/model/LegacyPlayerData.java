@@ -1,10 +1,14 @@
 package net.legacy.library.player.model;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import dev.morphia.annotations.Entity;
 import dev.morphia.annotations.Id;
+import dev.morphia.annotations.Transient;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import net.legacy.library.cache.factory.CacheServiceFactory;
+import net.legacy.library.cache.service.CacheServiceInterface;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
@@ -34,6 +38,13 @@ public class LegacyPlayerData {
     @Id
     @NonNull
     private final UUID uuid;
+
+    /**
+     * A single-player, in-memory cache that resides on the server and is not persisted to db.
+     */
+    @Transient
+    private transient final CacheServiceInterface<Cache<String, String>, String> rawCache =
+            CacheServiceFactory.createCaffeineCache();
 
     /**
      * A map containing the custom key-value pairs associated with the player.
