@@ -35,7 +35,7 @@ public class Example extends Plugin {
 
 我们建议使用 `SimplixSerializer` 进行序列化和反序列化，它可以在内部使用 `Gson` 实现。
 
-`SimplixSerializerSerializableAutoRegister` 注解将自动注册序列化器。
+`SimplixSerializerSerializableAutoRegister` 注解将自动注册序列化器，需要搭配 `annotation` 使用。
 
 ```java
 @SimplixSerializerSerializableAutoRegister

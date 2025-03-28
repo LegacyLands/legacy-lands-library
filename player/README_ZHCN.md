@@ -45,8 +45,10 @@ public class Example {
                 "player-data-service",
                 mongoConfig,
                 redisConfig,
-                basePackages, // 扫描的包列表，例如: List.of("com.example.player")
-                classLoaders  // 类加载器列表，例如: List.of(getClassLoader())
+                // 扫描的包列表, 必须含有 "net.legacy.library.player"
+                List.of("your.package", "net.legacy.library.player"),
+                // 类加载器列表, 必须含有 PlayerLauncher.class.getClassLoader()
+                List.of(PlayerLauncher.class.getClassLoader())
         );
     }
 }

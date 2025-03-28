@@ -37,10 +37,9 @@ public class Example extends Plugin {
 We recommend using `SimplixSerializer` for serialization and deserialization, which can be implemented internally using
 `Gson`.
 
-The `SimplixSerializerSerializableAutoRegister` annotation will automatically register the serializer.
+The `SimplixSerializerSerializableAutoRegister` annotation will automatically register the serializer, needs to be used with `annotation`.
 
 ```java
-
 @SimplixSerializerSerializableAutoRegister
 public class PlantSerializable implements SimplixSerializable<Plant> {
     @Override

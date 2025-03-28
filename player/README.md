@@ -46,8 +46,10 @@ public class Example {
                 "player-data-service",
                 mongoConfig,
                 redisConfig,
-                basePackages, // List of packages to scan, e.g., List.of("com.example.player")
-                classLoaders  // List of ClassLoaders, e.g., List.of(getClassLoader())
+                // List of packages to scan, must have "net.legacy.library.player"
+                List.of("your.package", "net.legacy.library.player"),
+                // List of ClassLoaders, must have PlayerLauncher.class.getClassLoader()
+                List.of(PlayerLauncher.class.getClassLoader())
         );
     }
 }
