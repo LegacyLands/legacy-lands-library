@@ -17,7 +17,10 @@ import org.redisson.api.RType;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Task for persisting entity data to the L2 cache and database.
@@ -36,9 +39,10 @@ import java.util.UUID;
 public class EntityDataPersistenceTask implements TaskInterface {
     private final LockSettings lockSettings;
     private final LegacyEntityDataService service;
-    private final UUID entityUuid;
+    private final Set<UUID> entityUuids;
     private final int limit;
-    
+    private CompletionCallback completionCallback;
+
     /**
      * Factory method to create a new {@link EntityDataPersistenceTask} for a specific entity.
      *
@@ -48,9 +52,22 @@ public class EntityDataPersistenceTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTask}
      */
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, UUID entityUuid) {
-        return new EntityDataPersistenceTask(lockSettings, service, entityUuid, 0);
+        return new EntityDataPersistenceTask(lockSettings, service,
+                entityUuid != null ? Collections.singleton(entityUuid) : null, 0);
     }
-    
+
+    /**
+     * Factory method to create a new {@link EntityDataPersistenceTask} for multiple specific entities.
+     *
+     * @param lockSettings the settings for lock acquisition
+     * @param service      the {@link LegacyEntityDataService} instance to use
+     * @param entityUuids  the set of UUIDs of entities whose data should be persisted
+     * @return a new instance of {@link EntityDataPersistenceTask}
+     */
+    public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, Set<UUID> entityUuids) {
+        return new EntityDataPersistenceTask(lockSettings, service, entityUuids, 0);
+    }
+
     /**
      * Factory method to create a new {@link EntityDataPersistenceTask} for bulk persistence.
      *
@@ -62,7 +79,7 @@ public class EntityDataPersistenceTask implements TaskInterface {
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, int limit) {
         return new EntityDataPersistenceTask(lockSettings, service, null, limit);
     }
-    
+
     /**
      * Factory method to create a new {@link EntityDataPersistenceTask} for bulk persistence with default limit.
      *
@@ -73,11 +90,22 @@ public class EntityDataPersistenceTask implements TaskInterface {
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service) {
         return new EntityDataPersistenceTask(lockSettings, service, null, 1000);
     }
-    
+
+    /**
+     * Sets a callback to be invoked when the task completes.
+     *
+     * @param callback the callback to invoke
+     * @return this task instance for method chaining
+     */
+    public EntityDataPersistenceTask setCompletionCallback(CompletionCallback callback) {
+        this.completionCallback = callback;
+        return this;
+    }
+
     /**
      * Executes the persistence task, transferring entity data from L1 cache to the L2 cache and database.
      *
-     * <p>If an entity UUID is provided, it persists only that specific entity.
+     * <p>If entity UUIDs are provided, it persists only those specific entities.
      * Otherwise, it performs a bulk persistence of all entity data in the L2 cache.
      *
      * @return a {@link ScheduledTask} representing the running task
@@ -85,49 +113,62 @@ public class EntityDataPersistenceTask implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
         return schedule(() -> {
-            // If a specific entity is provided, persist just that entity
-            if (entityUuid != null) {
-                persistSingleEntity();
-            } else {
-                // Otherwise, perform bulk persistence
-                persistAllEntities();
+            boolean success = false;
+            try {
+                // If specific entities are provided, persist just those entities
+                if (entityUuids != null && !entityUuids.isEmpty()) {
+                    persistSpecificEntities();
+                } else {
+                    // Otherwise, perform bulk persistence
+                    persistAllEntities();
+                }
+                success = true;
+            } catch (Exception exception) {
+                Log.error("Error during entity persistence", exception);
+            } finally {
+                // Notify completion if a callback is registered
+                if (completionCallback != null) {
+                    completionCallback.accept(success);
+                }
             }
         });
     }
-    
+
     /**
-     * Persists a single entity's data from L1 cache to L2 cache and database.
+     * Persists specific entities' data from L1 cache to L2 cache and database.
      */
-    private void persistSingleEntity() {
-        // Get entity from L1 cache
-        LegacyEntityData entityData = service.getFromL1Cache(entityUuid).orElse(null);
-        if (entityData == null) {
-            return;
+    private void persistSpecificEntities() {
+        for (UUID uuid : entityUuids) {
+            // Get entity from L1 cache
+            LegacyEntityData entityData = service.getFromL1Cache(uuid).orElse(null);
+            if (entityData == null) {
+                continue;
+            }
+
+            // Persist to L2 cache (Redis)
+            String entityKey = EntityRKeyUtil.getEntityKey(uuid, service);
+            String serializedData = SimplixSerializer.serialize(entityData).toString();
+
+            // Use getWithType with writeLock to store data in L2 cache
+            RedisCacheServiceInterface l2Cache = service.getL2Cache();
+            l2Cache.getWithType(
+                    client -> client.getReadWriteLock(EntityRKeyUtil.getEntityReadWriteLockKey(entityKey)).writeLock(),
+                    client -> null,
+                    () -> {
+                        // Store operation
+                        l2Cache.getResource().getBucket(entityKey).set(serializedData);
+                        return null;
+                    },
+                    null,
+                    false,
+                    lockSettings
+            );
+
+            // Persist to database
+            service.getMongoDBConnectionConfig().getDatastore().save(entityData);
         }
-        
-        // Persist to L2 cache (Redis)
-        String entityKey = EntityRKeyUtil.getEntityKey(entityUuid, service);
-        String serializedData = SimplixSerializer.serialize(entityData).toString();
-        
-        // Use getWithType with writeLock to store data in L2 cache
-        RedisCacheServiceInterface l2Cache = service.getL2Cache();
-        l2Cache.getWithType(
-            client -> client.getReadWriteLock(EntityRKeyUtil.getEntityReadWriteLockKey(entityKey)).writeLock(),
-            client -> null,
-            () -> {
-                // Store operation
-                l2Cache.getResource().getBucket(entityKey).set(serializedData);
-                return null;
-            },
-            null,
-            false,
-            lockSettings
-        );
-        
-        // Persist to database
-        service.getMongoDBConnectionConfig().getDatastore().save(entityData);
     }
-    
+
     /**
      * Persists all entity data from L2 cache to the database.
      */
@@ -181,5 +222,17 @@ public class EntityDataPersistenceTask implements TaskInterface {
         } catch (Exception exception) {
             Log.error(exception);
         }
+    }
+
+    /**
+     * Callback interface for notifying task completion.
+     */
+    public interface CompletionCallback extends Consumer<Boolean> {
+        /**
+         * Called when the task completes.
+         *
+         * @param success true if the task completed successfully, false otherwise
+         */
+        void accept(Boolean success);
     }
 } 

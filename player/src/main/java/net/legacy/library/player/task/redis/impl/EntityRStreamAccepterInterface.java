@@ -1,8 +1,8 @@
 package net.legacy.library.player.task.redis.impl;
 
+import net.legacy.library.player.service.LegacyEntityDataService;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
-import net.legacy.library.player.service.LegacyEntityDataService;
 
 /**
  * Interface for processing entity-related messages from Redis streams.
@@ -28,12 +28,12 @@ public interface EntityRStreamAccepterInterface {
     default String getTaskName() {
         return null;
     }
-    
+
     /**
      * Determines whether to limit task processing to prevent duplicates within a single server or connection.
      *
      * <p>If this method returns {@code true}, the task will be processed only once per
-     * connection on each server. After the {@link #accept(RStream, StreamMessageId, LegacyEntityDataService, String)} 
+     * connection on each server. After the {@link #accept(RStream, StreamMessageId, LegacyEntityDataService, String)}
      * method is executed, the task will not be executed again by the same instance unless explicitly deleted.
      *
      * <p>However, if another server or connection processes the task, it can still
@@ -46,20 +46,20 @@ public interface EntityRStreamAccepterInterface {
     default boolean isRecordLimit() {
         return false;
     }
-    
+
     /**
      * Processes a message received from a Redis stream.
      *
-     * @param stream   the Redis stream from which the message was received
-     * @param id       the ID of the message in the stream
-     * @param service  the entity data service to use for processing
-     * @param data     the data payload of the message
+     * @param stream  the Redis stream from which the message was received
+     * @param id      the ID of the message in the stream
+     * @param service the entity data service to use for processing
+     * @param data    the data payload of the message
      */
-    void accept(RStream<Object, Object> stream, 
-                StreamMessageId id, 
-                LegacyEntityDataService service, 
+    void accept(RStream<Object, Object> stream,
+                StreamMessageId id,
+                LegacyEntityDataService service,
                 String data);
-    
+
     /**
      * Acknowledges the task after it has been successfully processed.
      *

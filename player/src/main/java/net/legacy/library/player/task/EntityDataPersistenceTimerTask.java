@@ -39,7 +39,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
     public static EntityDataPersistenceTimerTask of(Duration delay, Duration period, LockSettings lockSettings, LegacyEntityDataService service) {
         return new EntityDataPersistenceTimerTask(delay, period, lockSettings, service, 1000);
     }
-    
+
     /**
      * Factory method to create a new {@link EntityDataPersistenceTimerTask} with a custom limit.
      *
@@ -64,7 +64,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
         return scheduleAtFixedRate(() -> {
             // First, sync L1 cache entities
             service.getL1Cache().getResource().asMap().forEach((uuid, data) -> EntityDataPersistenceTask.of(lockSettings, service, uuid).start());
-            
+
             // Then, perform bulk persistence operation for all entities in L2 cache
             EntityDataPersistenceTask.of(lockSettings, service, limit).start();
         }, delay, period);

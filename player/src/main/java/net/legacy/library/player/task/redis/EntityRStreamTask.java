@@ -24,12 +24,12 @@ public class EntityRStreamTask {
      * The name of the task, used for identifying the type of operation.
      */
     private final String taskName;
-    
+
     /**
      * The data payload for the task, typically serialized as JSON.
      */
     private final String data;
-    
+
     /**
      * The expiration time duration for the task.
      * After this duration expires, the task will be removed from the stream.
@@ -47,7 +47,7 @@ public class EntityRStreamTask {
     public static EntityRStreamTask of(String taskName, String data, Duration expirationTime) {
         return new EntityRStreamTask(taskName, data, expirationTime);
     }
-    
+
     /**
      * Creates a new {@link EntityRStreamTask} instance from a {@link Pair} of task name and data,
      * along with the specified expiration time.
@@ -59,10 +59,10 @@ public class EntityRStreamTask {
     public static EntityRStreamTask of(Pair<String, String> dataPair, Duration expirationTime) {
         return new EntityRStreamTask(dataPair.getLeft(), dataPair.getRight(), expirationTime);
     }
-    
+
     /**
      * Gets the expiration time value in milliseconds.
-     * 
+     *
      * @return the expiration time value in milliseconds, or 0 if no expiration is set
      */
     public long getExpirationTimeMillis() {

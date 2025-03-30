@@ -50,7 +50,7 @@ public class LegacyPlayerData {
      * A map containing the custom key-value pairs associated with the player.
      */
     private final Map<String, String> data = new ConcurrentHashMap<>();
-    
+
     /**
      * No-args constructor for Morphia serialization/deserialization.
      * This constructor should only be used by the ORM framework.

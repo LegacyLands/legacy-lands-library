@@ -105,7 +105,7 @@ public class LegacyPlayerDataService {
 
         // Auto save task
         this.playerDataPersistenceTimerTask =
-                PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(50, 50, TimeUnit.MILLISECONDS), this).start();
+                PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
 
         // Redis stream accept task
         this.redisStreamAcceptTask = RStreamAccepterInvokeTask.of(this, basePackages, classLoaders, redisStreamAcceptInterval).start();
@@ -220,7 +220,7 @@ public class LegacyPlayerDataService {
                 l2Cache.getWithType(
                         client -> client.getReadWriteLock(RKeyUtil.getRLPDSReadWriteLockKey(key)).readLock(),
                         client -> client.getBucket(key).get(),
-                        () -> null, null, false, LockSettings.of(5, 5, TimeUnit.MILLISECONDS)
+                        () -> null, null, false, LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
                 );
 
         if (string == null || string.isEmpty()) {
@@ -286,7 +286,7 @@ public class LegacyPlayerDataService {
      */
     public void shutdown() throws InterruptedException {
         // Wait for the player data persistence task to finish
-        PlayerDataPersistenceTask.of(LockSettings.of(5, 5, TimeUnit.MILLISECONDS), this).start().wait();
+        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start().wait();
 
         // Remove this LegacyPlayerDataService from the cache
         LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().remove(name);
@@ -305,12 +305,12 @@ public class LegacyPlayerDataService {
         if (legacyPlayerData == null) {
             return;
         }
-        
+
         UUID uuid = legacyPlayerData.getUuid();
 
         CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
         l1Cache.getResource().put(uuid, legacyPlayerData);
 
-        PlayerDataPersistenceTask.of(LockSettings.of(5, 5, TimeUnit.MILLISECONDS), this).start();
+        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
     }
 }

@@ -24,7 +24,7 @@ public class RKeyUtil {
     private static final String SUFFIX_RW_LOCK = ":rw-lock";
     private static final String COLON = ":";
     private static final String WILDCARD_SUFFIX = ":*";
-    
+
     /**
      * Generates the Redis stream name key for a given {@link LegacyPlayerDataService}.
      *
@@ -79,7 +79,7 @@ public class RKeyUtil {
                 .append(SUFFIX_DATA)
                 .append(COLON)
                 .append(uuid.toString());
-        
+
         if (strings != null && strings.length > 0) {
             for (String str : strings) {
                 keyBuilder.append(COLON).append(str);
@@ -99,7 +99,7 @@ public class RKeyUtil {
         StringBuilder keyBuilder = new StringBuilder(PREFIX_LEGACY)
                 .append(legacyPlayerDataService.getName())
                 .append(SUFFIX_DATA);
-        
+
         if (strings != null && strings.length > 0) {
             for (String str : strings) {
                 keyBuilder.append(COLON).append(str);
@@ -107,7 +107,7 @@ public class RKeyUtil {
         }
         return keyBuilder.toString();
     }
-    
+
     /**
      * Gets the pattern for player keys to match all player data keys.
      *

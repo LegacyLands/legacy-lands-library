@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Task responsible for publishing {@link EntityRStreamTask} instances to the Redis stream.
- * 
+ *
  * <p>This task serializes task data, sets expiration times, and adds the task
  * to the appropriate Redis stream for processing by registered accepters.
  *
@@ -30,7 +30,7 @@ public class EntityRStreamPubTask implements TaskInterface {
     /**
      * Factory method to create a new {@link EntityRStreamPubTask}.
      *
-     * @param service          the {@link LegacyEntityDataService} instance to use
+     * @param service           the {@link LegacyEntityDataService} instance to use
      * @param entityRStreamTask the {@link EntityRStreamTask} to be published
      * @return a new instance of {@link EntityRStreamPubTask}
      */
@@ -43,7 +43,7 @@ public class EntityRStreamPubTask implements TaskInterface {
      *
      * <p>This method creates a message map containing the task data and adds it to the Redis stream.
      * If an expiration time is set, it will also include an expiration timestamp in the message.
-     * 
+     *
      * @return a {@link ScheduledTask} instance tracking the execution status of the task
      */
     @Override
@@ -51,39 +51,39 @@ public class EntityRStreamPubTask implements TaskInterface {
         return schedule(() -> {
             // Get the stream key and client
             String streamKey = EntityRKeyUtil.getEntityStreamKey(service);
-            
+
             // Create map cache for storing data with expiration
             RMapCache<Object, Object> mapCache = service.getL2Cache().getResource().getMapCache(
                     EntityRKeyUtil.getTempRMapCacheKey(service)
             );
-            
+
             // Set task data
             mapCache.put("taskName", entityRStreamTask.getTaskName());
             mapCache.put("data", entityRStreamTask.getData());
-            
+
             // Add expiration time if timeout is set
             long timeoutMillis = entityRStreamTask.getExpirationTimeMillis();
             if (timeoutMillis > 0) {
                 long expirationTime = System.currentTimeMillis() + timeoutMillis;
                 mapCache.put(
-                        "timeout", 
+                        "timeout",
                         String.valueOf(expirationTime),
-                        timeoutMillis, 
+                        timeoutMillis,
                         TimeUnit.MILLISECONDS
                 );
-                
+
                 // Set expiration time for the cache
                 mapCache.put(
-                        "expiration-time", 
+                        "expiration-time",
                         String.valueOf(expirationTime),
-                        timeoutMillis + 200, 
+                        timeoutMillis + 200,
                         TimeUnit.MILLISECONDS
                 );
             }
-            
+
             // Add unique UUID to prevent duplicate processing
             mapCache.put("uuid", UUID.randomUUID().toString());
-            
+
             // Publish to Redis stream using StreamAddArgs
             service.getL2Cache().getWithType(
                     client -> null,
@@ -94,7 +94,7 @@ public class EntityRStreamPubTask implements TaskInterface {
                     () -> null,
                     null,
                     false,
-                    LockSettings.of(5, 5, TimeUnit.MILLISECONDS)
+                    LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
             );
         });
     }

@@ -40,31 +40,27 @@ public class LegacyEntityData {
     @Id
     @NonNull
     private final UUID uuid;
-
-    /**
-     * The type of this entity, used for classification and querying.
-     */
-    private String entityType;
-
     /**
      * A single-entity, in-memory cache that resides on the server and is not persisted to db.
      */
     @Transient
     private transient final CacheServiceInterface<Cache<String, String>, String> rawCache =
             CacheServiceFactory.createCaffeineCache();
-
     /**
      * A map containing the custom attributes associated with the entity.
      */
     private final Map<String, String> attributes = new ConcurrentHashMap<>();
-
     /**
      * A map of relationships this entity has with other entities.
      * Key: relationship type (e.g., "member", "owner")
      * Value: Set of entity UUIDs this entity has that relationship with
      */
     private final Map<String, Set<UUID>> relationships = new ConcurrentHashMap<>();
-    
+    /**
+     * The type of this entity, used for classification and querying.
+     */
+    private String entityType;
+
     /**
      * No-args constructor for Morphia serialization/deserialization.
      * This constructor should only be used by the ORM framework.
@@ -162,7 +158,7 @@ public class LegacyEntityData {
      */
     public LegacyEntityData addRelationship(String relationshipType, UUID targetEntityUuid) {
         relationships.computeIfAbsent(relationshipType, k -> ConcurrentHashMap.newKeySet())
-                    .add(targetEntityUuid);
+                .add(targetEntityUuid);
         return this;
     }
 
@@ -202,7 +198,7 @@ public class LegacyEntityData {
     public Set<UUID> getRelatedEntities(String relationshipType) {
         return relationships.getOrDefault(relationshipType, ConcurrentHashMap.newKeySet());
     }
-    
+
     /**
      * Counts the number of relationships of a specific type.
      *
@@ -213,7 +209,7 @@ public class LegacyEntityData {
         Set<UUID> relatedEntities = relationships.get(relationshipType);
         return relatedEntities != null ? relatedEntities.size() : 0;
     }
-    
+
     /**
      * Removes all relationships of a specific type.
      *

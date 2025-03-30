@@ -21,7 +21,7 @@ public class EntityRKeyUtil {
     private static final String ENTITY_LOCK_PREFIX = "legacy:entity:lock:";
     private static final String ENTITY_PATTERN_PREFIX = "legacy:entity:";
     private static final String ENTITY_TEMP_MAP_PREFIX = "legacy:entity:temp:";
-    
+
     /**
      * Generates a Redis key for storing entity data.
      *
@@ -32,7 +32,7 @@ public class EntityRKeyUtil {
     public static String getEntityKey(UUID uuid, LegacyEntityDataService service) {
         return ENTITY_KEY_PREFIX + service.getName() + ":" + uuid.toString();
     }
-    
+
     /**
      * Generates a Redis key for a read-write lock on entity data.
      *
@@ -42,7 +42,7 @@ public class EntityRKeyUtil {
     public static String getEntityReadWriteLockKey(String entityKey) {
         return ENTITY_RW_LOCK_PREFIX + entityKey;
     }
-    
+
     /**
      * Generates a Redis stream key for entity-related operations.
      *
@@ -52,7 +52,7 @@ public class EntityRKeyUtil {
     public static String getEntityStreamKey(LegacyEntityDataService service) {
         return ENTITY_STREAM_PREFIX + service.getName();
     }
-    
+
     /**
      * Generates a Redis group key for entity stream consumers.
      *
@@ -62,11 +62,11 @@ public class EntityRKeyUtil {
     public static String getEntityStreamGroupKey(LegacyEntityDataService service) {
         return "entity-service-group:" + service.getName();
     }
-    
+
     /**
      * Generates a Redis consumer key for entity stream consumers.
      *
-     * @param service the entity data service
+     * @param service    the entity data service
      * @param consumerId the unique identifier of the consumer
      * @return the generated Redis stream consumer key
      */

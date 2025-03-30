@@ -39,11 +39,11 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
     private final Duration period;
-    
+
     private final Set<Class<?>> annotatedClasses = Sets.newConcurrentHashSet();
     private final Set<EntityRStreamAccepterInterface> accepters = Sets.newConcurrentHashSet();
     private final Set<StreamMessageId> acceptedId = Sets.newConcurrentHashSet();
-    
+
     /**
      * Constructs a new {@link EntityRStreamAccepterInvokeTask}.
      *
@@ -52,17 +52,17 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
      * @param classLoaders the list of class loaders to use for scanning
      * @param period       the interval at which to invoke the task processing
      */
-    public EntityRStreamAccepterInvokeTask(LegacyEntityDataService service, 
-                                          List<String> basePackages, 
-                                          List<ClassLoader> classLoaders, 
-                                          Duration period) {
+    public EntityRStreamAccepterInvokeTask(LegacyEntityDataService service,
+                                           List<String> basePackages,
+                                           List<ClassLoader> classLoaders,
+                                           Duration period) {
         this.service = service;
         this.basePackages = basePackages;
         this.classLoaders = classLoaders;
         this.period = period;
         updateAccepter();
     }
-    
+
     /**
      * Factory method to create a new {@link EntityRStreamAccepterInvokeTask}.
      *
@@ -72,13 +72,13 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
      * @param period       the interval at which to invoke the task processing
      * @return a new instance of {@link EntityRStreamAccepterInvokeTask}
      */
-    public static EntityRStreamAccepterInvokeTask of(LegacyEntityDataService service, 
-                                                    List<String> basePackages, 
-                                                    List<ClassLoader> classLoaders, 
-                                                    Duration period) {
+    public static EntityRStreamAccepterInvokeTask of(LegacyEntityDataService service,
+                                                     List<String> basePackages,
+                                                     List<ClassLoader> classLoaders,
+                                                     Duration period) {
         return new EntityRStreamAccepterInvokeTask(service, basePackages, classLoaders, period);
     }
-    
+
     /**
      * Updates the list of base packages to scan for annotated accepters and refreshes the accepter instances.
      *
@@ -100,7 +100,7 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
         this.classLoaders.addAll(classLoaders);
         updateAccepter();
     }
-    
+
     /**
      * Scans for classes annotated with {@link EntityRStreamAccepterRegister}
      * and initializes the accepter set.
@@ -116,84 +116,84 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
         annotatedClasses.forEach(clazz -> {
             try {
                 accepters.add((EntityRStreamAccepterInterface) clazz.getDeclaredConstructor().newInstance());
-            } catch (Exception e) {
-                Log.error("Failed to add EntityRStreamAccepter", e);
+            } catch (Exception exception) {
+                Log.error("Failed to add EntityRStreamAccepter", exception);
             }
         });
     }
-    
+
     @Override
     public ScheduledTask<?> start() {
         Runnable runnable = () -> {
             RedisCacheServiceInterface redisCacheService = service.getL2Cache();
             RedissonClient redissonClient = redisCacheService.getResource();
-            
+
             // Each service has its own RStream communication channel
             RStream<Object, Object> rStream = redissonClient.getStream(EntityRKeyUtil.getEntityStreamKey(service));
-            
+
             StreamReadArgs args = StreamReadArgs.greaterThan(StreamMessageId.ALL);
             Map<StreamMessageId, Map<Object, Object>> messages = rStream.read(args);
-            
+
             // Process all messages
             for (Map.Entry<StreamMessageId, Map<Object, Object>> entry : messages.entrySet()) {
                 StreamMessageId streamMessageId = entry.getKey();
                 Map<Object, Object> value = entry.getValue();
-                
+
                 // Skip already processed messages
                 if (acceptedId.contains(streamMessageId)) {
                     continue;
                 }
-                
+
                 // Validate message
                 if (value.isEmpty()) {
                     Log.error("Entity RStream message is empty! StreamMessageId: " + streamMessageId);
                     continue;
                 }
-                
+
                 // Check expiration time
                 long expirationTime = Long.parseLong(value.getOrDefault("timeout", 0).toString());
                 if (expirationTime > 0 && System.currentTimeMillis() > expirationTime) {
                     rStream.remove(streamMessageId);
                     continue;
                 }
-                
+
                 // Process message entries
                 String taskName = (String) value.get("taskName");
                 String data = (String) value.get("data");
-                
+
                 if (taskName == null || data == null) {
                     Log.error("Entity RStream message has invalid format! StreamMessageId: " + streamMessageId);
                     continue;
                 }
-                
+
                 // Find and invoke matching accepters
                 for (EntityRStreamAccepterInterface accepter : accepters) {
                     String accepterTaskName = accepter.getTaskName();
-                    
+
                     // Skip non-matching accepters
                     if (accepterTaskName != null && !accepterTaskName.equals(taskName)) {
                         continue;
                     }
-                    
+
                     // Process asynchronously
                     ScheduledTask<?> acceptTask = schedule(() -> {
                         try {
                             accepter.accept(rStream, streamMessageId, service, data);
-                        } catch (Exception e) {
-                            Log.error("Error processing entity stream message", e);
+                        } catch (Exception exception) {
+                            Log.error("Error processing entity stream message", exception);
                         }
                     });
-                    
+
                     // Mark as processed if record limit is enabled
                     if (accepter.isRecordLimit()) {
-                        acceptTask.getFuture().whenComplete((result, throwable) -> 
-                            acceptedId.add(streamMessageId)
+                        acceptTask.getFuture().whenComplete((result, throwable) ->
+                                acceptedId.add(streamMessageId)
                         );
                     }
                 }
             }
         };
-        
+
         return scheduleAtFixedRate(runnable, period, period);
     }
 } 

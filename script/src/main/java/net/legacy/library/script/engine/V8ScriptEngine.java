@@ -54,8 +54,8 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
 
         try {
             return v8.executeScript(script);
-        } catch (V8ScriptExecutionException | V8ScriptCompilationException e) {
-            throw new ScriptException("Error executing script: " + e.getMessage(), e);
+        } catch (V8ScriptExecutionException | V8ScriptCompilationException exception) {
+            throw new ScriptException("Error executing script: " + exception.getMessage(), exception);
         }
     }
 
