@@ -122,3 +122,6 @@ run/
 
 # Cargo.lock
 Cargo.lock
+
+# Fairy server
+**/server/work

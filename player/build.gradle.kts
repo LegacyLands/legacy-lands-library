@@ -6,7 +6,7 @@ version = rootProperties("version")
 
 // Run server
 runServer {
-    version.set(rootProperties("spigot.version"))
+    version.set("1.20.1")
     javaVersion.set(JavaVersion.VERSION_21)
 }
 

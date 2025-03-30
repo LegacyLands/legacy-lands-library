@@ -50,6 +50,14 @@ public class LegacyPlayerData {
      * A map containing the custom key-value pairs associated with the player.
      */
     private final Map<String, String> data = new ConcurrentHashMap<>();
+    
+    /**
+     * No-args constructor for Morphia serialization/deserialization.
+     * This constructor should only be used by the ORM framework.
+     */
+    protected LegacyPlayerData() {
+        this.uuid = null; // Will be overwritten during deserialization
+    }
 
     /**
      * Creates a new {@link LegacyPlayerData} instance for the given player.
@@ -135,6 +143,7 @@ public class LegacyPlayerData {
      * @return the transformed value, or {@code null} if the key is not present
      */
     public <R> R getData(String key, Function<String, R> function) {
-        return function.apply(data.get(key));
+        String value = data.get(key);
+        return value != null ? function.apply(value) : null;
     }
 }

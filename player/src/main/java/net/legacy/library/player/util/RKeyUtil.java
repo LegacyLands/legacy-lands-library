@@ -15,6 +15,16 @@ import java.util.UUID;
  * @since 2025-01-03 19:37
  */
 public class RKeyUtil {
+    private static final String PREFIX_LEGACY = "legacy:player:";
+    private static final String SUFFIX_STREAM = ":stream";
+    private static final String SUFFIX_MAP = ":map";
+    private static final String SUFFIX_MAP_CACHE = ":map-cache";
+    private static final String SUFFIX_STREAM_GROUP = ":stream-group";
+    private static final String SUFFIX_DATA = ":data";
+    private static final String SUFFIX_RW_LOCK = ":rw-lock";
+    private static final String COLON = ":";
+    private static final String WILDCARD_SUFFIX = ":*";
+    
     /**
      * Generates the Redis stream name key for a given {@link LegacyPlayerDataService}.
      *
@@ -22,7 +32,7 @@ public class RKeyUtil {
      * @return the Redis stream name key as a {@link String}
      */
     public static String getRStreamNameKey(LegacyPlayerDataService legacyPlayerDataService) {
-        return legacyPlayerDataService.getName() + "-rstream";
+        return PREFIX_LEGACY + legacyPlayerDataService.getName() + SUFFIX_STREAM;
     }
 
     /**
@@ -32,7 +42,7 @@ public class RKeyUtil {
      * @return the Redis map key as a {@link String}
      */
     public static String getRMapKey(LegacyPlayerDataService legacyPlayerDataService) {
-        return legacyPlayerDataService.getName() + "-rmap";
+        return PREFIX_LEGACY + legacyPlayerDataService.getName() + SUFFIX_MAP;
     }
 
     /**
@@ -42,7 +52,7 @@ public class RKeyUtil {
      * @return the temporary Redis map cache key as a {@link String}
      */
     public static String getTempRMapCacheKey(LegacyPlayerDataService legacyPlayerDataService) {
-        return legacyPlayerDataService.getName() + "-rmapcache-" + UUID.randomUUID();
+        return PREFIX_LEGACY + legacyPlayerDataService.getName() + SUFFIX_MAP_CACHE + COLON + UUID.randomUUID();
     }
 
     /**
@@ -52,7 +62,7 @@ public class RKeyUtil {
      * @return the Redis stream group key as a {@link String}
      */
     public static String getRStreamGroupKey(LegacyPlayerDataService legacyPlayerDataService) {
-        return legacyPlayerDataService.getName() + "-rstreamgroup";
+        return PREFIX_LEGACY + legacyPlayerDataService.getName() + SUFFIX_STREAM_GROUP;
     }
 
     /**
@@ -64,8 +74,18 @@ public class RKeyUtil {
      * @return the generated key as a {@link String}
      */
     public static String getRLPDSKey(UUID uuid, LegacyPlayerDataService legacyPlayerDataService, String... strings) {
-        String additional = (strings != null && strings.length > 0) ? "-" + String.join("-", strings) : "";
-        return legacyPlayerDataService.getName() + "-rlpds-" + uuid.toString() + additional;
+        StringBuilder keyBuilder = new StringBuilder(PREFIX_LEGACY)
+                .append(legacyPlayerDataService.getName())
+                .append(SUFFIX_DATA)
+                .append(COLON)
+                .append(uuid.toString());
+        
+        if (strings != null && strings.length > 0) {
+            for (String str : strings) {
+                keyBuilder.append(COLON).append(str);
+            }
+        }
+        return keyBuilder.toString();
     }
 
     /**
@@ -76,8 +96,26 @@ public class RKeyUtil {
      * @return the generated key as a {@link String}
      */
     public static String getRLPDSKey(LegacyPlayerDataService legacyPlayerDataService, String... strings) {
-        String additional = (strings != null && strings.length > 0) ? "-" + String.join("-", strings) : "";
-        return legacyPlayerDataService.getName() + "-rlpds" + additional;
+        StringBuilder keyBuilder = new StringBuilder(PREFIX_LEGACY)
+                .append(legacyPlayerDataService.getName())
+                .append(SUFFIX_DATA);
+        
+        if (strings != null && strings.length > 0) {
+            for (String str : strings) {
+                keyBuilder.append(COLON).append(str);
+            }
+        }
+        return keyBuilder.toString();
+    }
+    
+    /**
+     * Gets the pattern for player keys to match all player data keys.
+     *
+     * @param legacyPlayerDataService the player data service
+     * @return the key pattern for all player data
+     */
+    public static String getPlayerKeyPattern(LegacyPlayerDataService legacyPlayerDataService) {
+        return PREFIX_LEGACY + legacyPlayerDataService.getName() + SUFFIX_DATA + WILDCARD_SUFFIX;
     }
 
     /**
@@ -87,6 +125,6 @@ public class RKeyUtil {
      * @return the read-write lock key as a {@link String}
      */
     public static String getRLPDSReadWriteLockKey(String bucketKey) {
-        return bucketKey + "-read-write-lock";
+        return bucketKey + SUFFIX_RW_LOCK;
     }
 }

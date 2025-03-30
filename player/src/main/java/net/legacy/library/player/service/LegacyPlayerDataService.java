@@ -295,4 +295,22 @@ public class LegacyPlayerDataService {
         RedisCacheServiceInterface redisCacheService = getL2Cache();
         redisCacheService.shutdown();
     }
+
+    /**
+     * 保存LegacyPlayerData到L1缓存并安排保存到L2缓存和数据库。
+     *
+     * @param legacyPlayerData 要保存的玩家数据
+     */
+    public void saveLegacyPlayerData(LegacyPlayerData legacyPlayerData) {
+        if (legacyPlayerData == null) {
+            return;
+        }
+        
+        UUID uuid = legacyPlayerData.getUuid();
+
+        CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
+        l1Cache.getResource().put(uuid, legacyPlayerData);
+
+        PlayerDataPersistenceTask.of(LockSettings.of(5, 5, TimeUnit.MILLISECONDS), this).start();
+    }
 }

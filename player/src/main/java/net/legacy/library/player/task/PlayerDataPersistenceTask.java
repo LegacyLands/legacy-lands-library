@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
-import net.legacy.library.player.PlayerLauncher;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
@@ -94,7 +93,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                     RKeys keys = redissonClient.getKeys();
                     KeysScanOptions keysScanOptions =
                             KeysScanOptions.defaults()
-                                    .pattern(RKeyUtil.getRLPDSKey(legacyPlayerDataService) + "*")
+                                    .pattern(RKeyUtil.getPlayerKeyPattern(legacyPlayerDataService))
                                     .limit(limit);
 
                     for (String string : keys.getKeys(keysScanOptions)) {
@@ -116,20 +115,10 @@ public class PlayerDataPersistenceTask implements TaskInterface {
                     lock.forceUnlock();
                 }
             } catch (InterruptedException exception) {
-                if (PlayerLauncher.DEBUG) {
-                    // noinspection CallToPrintStackTrace
-                    exception.printStackTrace();
-                }
-
+                Log.error(exception);
                 Thread.currentThread().interrupt();
-                throw new RuntimeException("Thread interrupted while trying to acquire lock.", exception);
             } catch (Exception exception) {
-                if (PlayerLauncher.DEBUG) {
-                    // noinspection CallToPrintStackTrace
-                    exception.printStackTrace();
-                }
-
-                throw new RuntimeException("Unexpected error during legacy player data migration.", exception);
+                Log.error(exception);
             }
         });
     }
