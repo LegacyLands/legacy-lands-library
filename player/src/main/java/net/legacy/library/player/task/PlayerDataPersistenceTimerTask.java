@@ -24,6 +24,7 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface {
     private final Duration interval;
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
+    private final Duration ttl;
 
     /**
      * Factory method to create a new {@link PlayerDataPersistenceTimerTask}.
@@ -35,7 +36,22 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface {
      * @return a new instance of {@link PlayerDataPersistenceTimerTask}
      */
     public static PlayerDataPersistenceTimerTask of(Duration delay, Duration interval, LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService) {
-        return new PlayerDataPersistenceTimerTask(delay, interval, lockSettings, legacyPlayerDataService);
+        return new PlayerDataPersistenceTimerTask(delay, interval, lockSettings, legacyPlayerDataService, null);
+    }
+
+    /**
+     * Factory method to create a new {@link PlayerDataPersistenceTimerTask} with custom TTL.
+     *
+     * @param delay                   the initial delay before the task starts
+     * @param interval                the interval between successive executions of the task
+     * @param lockSettings            the settings for lock acquisition during persistence
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @param ttl                     the custom TTL to apply to player data during persistence
+     * @return a new instance of {@link PlayerDataPersistenceTimerTask}
+     */
+    public static PlayerDataPersistenceTimerTask of(Duration delay, Duration interval, LockSettings lockSettings, 
+                                                 LegacyPlayerDataService legacyPlayerDataService, Duration ttl) {
+        return new PlayerDataPersistenceTimerTask(delay, interval, lockSettings, legacyPlayerDataService, ttl);
     }
 
     /**
@@ -45,6 +61,6 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface {
      */
     @Override
     public ScheduledTask<?> start() {
-        return scheduleAtFixedRate(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService).start(), delay, interval);
+        return scheduleAtFixedRate(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService, ttl).start(), delay, interval);
     }
 }

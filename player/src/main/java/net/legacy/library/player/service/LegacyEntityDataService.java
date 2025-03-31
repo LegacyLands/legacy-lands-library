@@ -24,6 +24,10 @@ import net.legacy.library.player.task.redis.EntityRStreamAccepterInvokeTask;
 import net.legacy.library.player.task.redis.EntityRStreamPubTask;
 import net.legacy.library.player.task.redis.EntityRStreamTask;
 import net.legacy.library.player.util.EntityRKeyUtil;
+import org.redisson.api.RBucket;
+import org.redisson.api.RKeys;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.options.KeysScanOptions;
 import org.redisson.config.Config;
 
 import java.time.Duration;
@@ -70,6 +74,11 @@ public class LegacyEntityDataService {
     public static final CacheServiceInterface<Cache<String, LegacyEntityDataService>, LegacyEntityDataService>
             LEGACY_ENTITY_DATA_SERVICES = CacheServiceFactory.createCaffeineCache();
 
+    /**
+     * Default TTL for entity data in Redis (30 minutes).
+     */
+    public static final Duration DEFAULT_TTL_DURATION = Duration.ofMinutes(30);
+
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
@@ -86,10 +95,11 @@ public class LegacyEntityDataService {
      * @param basePackages              the base packages to scan for accepter annotations
      * @param classLoaders              the class loaders to scan for accepter annotations
      * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
+     * @param ttl                       the custom TTL to apply to entity data in Redis
      */
     public LegacyEntityDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
                                    Config config, Duration autoSaveInterval, List<String> basePackages,
-                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval) {
+                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl) {
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
@@ -119,7 +129,7 @@ public class LegacyEntityDataService {
         // Auto save task
         this.entityDataPersistenceTimerTask =
                 EntityDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval,
-                        LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+                        LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this, ttl).start();
 
         // Redis stream accept task
         this.redisStreamAcceptTask =
@@ -127,38 +137,71 @@ public class LegacyEntityDataService {
     }
 
     /**
-     * Creates a new {@link LegacyEntityDataService} with default intervals.
+     * Creates a new {@link LegacyEntityDataService}.
+     *
+     * @param name                      the unique name of the service
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration
+     * @param autoSaveInterval          the interval between auto-save operations
+     * @param basePackages              the base packages to scan for accepter annotations
+     * @param classLoaders              the class loaders to scan for accepter annotations
+     * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
+     * @param ttl                       the custom TTL to apply to entity data in Redis
+     * @return a new instance of {@link LegacyEntityDataService}
+     */
+    public static LegacyEntityDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
+                                             Duration autoSaveInterval, List<String> basePackages,
+                                             List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl) {
+        return new LegacyEntityDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval, ttl);
+    }
+
+    /**
+     * Creates a new {@link LegacyEntityDataService} with default auto-save interval, Redis stream accept interval.
      *
      * @param name                    the unique name of the service
      * @param mongoDBConnectionConfig the MongoDB connection configuration
      * @param config                  the Redis configuration for initializing the Redis cache
      * @param basePackages            the base packages to scan for accepter annotations
      * @param classLoaders            the class loaders to scan for accepter annotations
+     * @param ttl                       the custom TTL to apply to entity data in Redis
      * @return the newly created {@link LegacyEntityDataService}
      */
     public static LegacyEntityDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
-                                             List<String> basePackages, List<ClassLoader> classLoaders) {
-        return new LegacyEntityDataService(name, mongoDBConnectionConfig, config,
-                Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2));
+                                             List<String> basePackages, List<ClassLoader> classLoaders, Duration ttl) {
+        return of(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2), ttl);
     }
 
     /**
-     * Creates a new {@link LegacyEntityDataService} with custom intervals.
+     * Creates a new {@link LegacyEntityDataService} with default auto-save interval, Redis stream accept interval.
+     *
+     * @param name                    the unique name of the service
+     * @param mongoDBConnectionConfig the MongoDB connection configuration
+     * @param config                  the Redis configuration
+     * @param basePackages            the base packages to scan for accepter annotations
+     * @param classLoaders            the class loaders to scan for accepter annotations
+     * @return a new instance of {@link LegacyEntityDataService}
+     */
+    public static LegacyEntityDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
+                                            Config config, List<String> basePackages, List<ClassLoader> classLoaders) {
+        return of(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2), DEFAULT_TTL_DURATION);
+    }
+
+    /**
+     * Creates a new {@link LegacyEntityDataService} with default TTL.
      *
      * @param name                      the unique name of the service
      * @param mongoDBConnectionConfig   the MongoDB connection configuration
-     * @param config                    the Redis configuration for initializing the Redis cache
-     * @param autoSaveInterval          the interval for auto-saving entity data to the database
+     * @param config                    the Redis configuration
+     * @param autoSaveInterval          the interval between auto-save operations
      * @param basePackages              the base packages to scan for accepter annotations
      * @param classLoaders              the class loaders to scan for accepter annotations
      * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
-     * @return the newly created {@link LegacyEntityDataService}
+     * @return a new instance of {@link LegacyEntityDataService}
      */
     public static LegacyEntityDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
                                              Duration autoSaveInterval, List<String> basePackages,
                                              List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval) {
-        return new LegacyEntityDataService(name, mongoDBConnectionConfig, config, autoSaveInterval,
-                basePackages, classLoaders, redisStreamAcceptInterval);
+        return of(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval, DEFAULT_TTL_DURATION);
     }
 
     /**
@@ -283,80 +326,53 @@ public class LegacyEntityDataService {
      */
     public LegacyEntityData createEntityIfNotExists(UUID uuid, String entityType) {
         LegacyEntityData entityData = getEntityData(uuid);
-
-        if (entityData == null) {
-            entityData = LegacyEntityData.of(uuid, entityType);
-            saveEntity(entityData);
-        }
-
-        return entityData;
+        return entityData == null ? LegacyEntityData.of(uuid, entityType) : entityData;
     }
 
     /**
-     * Saves an entity to all cache levels and schedules database persistence.
+     * Schedules persistence of entity data to L2 cache and database.
      *
-     * @param entityData the entity data to save
+     * <p>This method schedules an asynchronous task to:
+     * <ol>
+     *   <li>Save the data to L2 cache (Redis) with TTL</li>
+     *   <li>Persist the data to MongoDB</li>
+     * </ol>
+     *
+     * <p>Note: The data will be automatically loaded into L1 cache when accessed via getEntityData.
+     * This method focuses on ensuring data persistence across storage layers.
+     *
+     * @param entityData the entity data to persist
      */
     public void saveEntity(LegacyEntityData entityData) {
-        saveEntity(entityData, true);
-    }
-
-    /**
-     * Saves an entity with control over persistence scheduling.
-     *
-     * @param entityData          the entity data to save
-     * @param schedulePersistence whether to schedule persistence to L2 cache and database
-     */
-    public void saveEntity(LegacyEntityData entityData, boolean schedulePersistence) {
         if (entityData == null) {
             return;
         }
 
-        // Save to L1 cache
-        CacheServiceInterface<Cache<UUID, LegacyEntityData>, LegacyEntityData> l1Cache = getL1Cache();
-        Cache<UUID, LegacyEntityData> l1CacheImpl = l1Cache.getResource();
-        l1CacheImpl.put(entityData.getUuid(), entityData);
-
-        // Schedule persistence to L2 and DB if requested
-        if (schedulePersistence) {
-            EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this, entityData.getUuid()).start();
-        }
+        // Schedule persistence to L2 and DB
+        EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
     }
 
     /**
-     * Saves multiple entities to the L1 cache with control over persistence scheduling.
-     * This is more efficient than calling saveEntity multiple times when you need to
-     * save several related entities at once.
+     * Schedules persistence of multiple entities to L2 cache and database.
      *
-     * @param entities            the collection of entities to save
-     * @param schedulePersistence whether to schedule persistence to L2 cache and database
+     * <p>This method schedules an asynchronous task to:
+     * <ol>
+     *   <li>Save all entities to L2 cache (Redis) with TTL</li>
+     *   <li>Persist all entities to MongoDB</li>
+     * </ol>
+     *
+     * <p>Note: The data will be automatically loaded into L1 cache when accessed via getEntityData.
+     * This method focuses on ensuring data persistence across storage layers.
+     *
+     * @param entityDataList the list of entity data to persist
      */
-    public void saveEntities(Collection<LegacyEntityData> entities, boolean schedulePersistence) {
-        if (entities == null || entities.isEmpty()) {
+    public void saveEntities(List<LegacyEntityData> entityDataList) {
+        if (entityDataList == null || entityDataList.isEmpty()) {
             return;
         }
 
-        // Save all entities to L1 cache
-        CacheServiceInterface<Cache<UUID, LegacyEntityData>, LegacyEntityData> l1Cache = getL1Cache();
-        Cache<UUID, LegacyEntityData> l1CacheImpl = l1Cache.getResource();
-
-        for (LegacyEntityData entityData : entities) {
-            if (entityData != null) {
-                l1CacheImpl.put(entityData.getUuid(), entityData);
-            }
-        }
-
-        // Schedule persistence for all entities if requested
-        if (schedulePersistence) {
-            Set<UUID> entityUuids = entities.stream()
-                    .filter(Objects::nonNull)
-                    .map(LegacyEntityData::getUuid)
-                    .collect(Collectors.toSet());
-
-            if (!entityUuids.isEmpty()) {
-                EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this, entityUuids).start();
-            }
-        }
+        // Schedule persistence to L2 and DB
+        EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
     }
 
     /**
@@ -533,9 +549,6 @@ public class LegacyEntityDataService {
         entity1.addRelationship(relationshipType1, entity2Uuid);
         entity2.addRelationship(relationshipType2, entity1Uuid);
 
-        saveEntity(entity1);
-        saveEntity(entity2);
-
         return true;
     }
 
@@ -545,15 +558,13 @@ public class LegacyEntityDataService {
      * <p>This method creates relationships between multiple entities in a single operation.
      * The relationshipMap defines which entity should have what type of relationship to which other entities.
      *
-     * @param relationshipMap     a map where:
-     *                            - Key: UUID of the source entity
-     *                            - Value: Map of relationship types to sets of target entity UUIDs
-     * @param schedulePersistence whether to schedule persistence to L2 cache and database
+     * @param relationshipMap a map where:
+     *                        - Key: UUID of the source entity
+     *                        - Value: Map of relationship types to sets of target entity UUIDs
      * @return true if all relationships were successfully established, false if any entity was not found
      */
     public boolean createNDirectionalRelationships(
-            Map<UUID, Map<String, Set<UUID>>> relationshipMap,
-            boolean schedulePersistence) {
+            Map<UUID, Map<String, Set<UUID>>> relationshipMap) {
 
         if (relationshipMap == null || relationshipMap.isEmpty()) {
             return true;
@@ -592,7 +603,7 @@ public class LegacyEntityDataService {
         }
 
         // Save all modified entities
-        saveEntities(entities.values(), schedulePersistence);
+        saveEntities(new ArrayList<>(entities.values()));
 
         return true;
     }
@@ -633,13 +644,13 @@ public class LegacyEntityDataService {
             case AND_NOT:
                 if (criteria.size() == 1) {
                     // If only one criterion, just apply it
-                    RelationshipCriteria criterion = criteria.get(0);
+                    RelationshipCriteria criterion = criteria.getFirst();
                     return allEntities.stream()
                             .filter(entity -> matchesCriterion(entity, criterion))
                             .collect(Collectors.toList());
                 } else {
                     // First criterion must match, others must not match
-                    RelationshipCriteria firstCriterion = criteria.get(0);
+                    RelationshipCriteria firstCriterion = criteria.getFirst();
                     List<RelationshipCriteria> remainingCriteria = criteria.subList(1, criteria.size());
 
                     return allEntities.stream()
@@ -667,7 +678,7 @@ public class LegacyEntityDataService {
                 criterion.getTargetEntityUuid());
 
         // If criterion is negated, invert the result
-        return criterion.isNegated() ? !hasRelationship : hasRelationship;
+        return criterion.isNegated() != hasRelationship;
     }
 
     /**
@@ -677,13 +688,11 @@ public class LegacyEntityDataService {
      * logical unit. All entities modified during the transaction will be saved together
      * at the end of the transaction.
      *
-     * @param callback            the callback that executes the relationship operations
-     * @param schedulePersistence whether to schedule persistence to L2 cache and database
+     * @param callback the callback that executes the relationship operations
      * @return true if the transaction completed successfully, false if it failed
      */
     public boolean executeRelationshipTransaction(
-            RelationshipTransactionCallback callback,
-            boolean schedulePersistence) {
+            RelationshipTransactionCallback callback) {
 
         Map<UUID, LegacyEntityData> modifiedEntities = new HashMap<>();
 
@@ -729,7 +738,7 @@ public class LegacyEntityDataService {
 
             // Save all modified entities
             if (!modifiedEntities.isEmpty()) {
-                saveEntities(modifiedEntities.values(), schedulePersistence);
+                saveEntities(new ArrayList<>(modifiedEntities.values()));
             }
 
             return true;
@@ -820,11 +829,72 @@ public class LegacyEntityDataService {
     }
 
     /**
-     * Retrieves the name prefix used for Redis keys.
+     * Sets the TTL (Time-To-Live) for an entity in the L2 cache.
+     * If the entity doesn't exist in L2 cache, this method will have no effect.
      *
-     * @return the name prefix string
+     * @param uuid the UUID of the entity
+     * @param ttl  the duration after which the entity should expire
+     * @return true if the TTL was set successfully, false otherwise
      */
-    public String getNamePrefix() {
-        return name;
+    public boolean setEntityTTL(UUID uuid, Duration ttl) {
+        if (uuid == null) {
+            return false;
+        }
+
+        try {
+            String entityKey = EntityRKeyUtil.getEntityKey(uuid, this);
+            RedissonClient redissonClient = getL2Cache().getResource();
+
+            // Check if the key exists
+            boolean keyExists = redissonClient.getBucket(entityKey).isExists();
+            if (!keyExists) {
+                return false;
+            }
+
+            // Set TTL
+            return redissonClient.getBucket(entityKey).expire(ttl);
+        } catch (Exception exception) {
+            Log.error("Failed to set TTL for entity " + uuid, exception);
+            return false;
+        }
+    }
+
+    /**
+     * Sets the default TTL for an entity in the L2 cache.
+     * If the entity doesn't exist in L2 cache, this method will have no effect.
+     *
+     * @param uuid the UUID of the entity
+     * @return true if the TTL was set successfully, false otherwise
+     */
+    public boolean setEntityDefaultTTL(UUID uuid) {
+        return setEntityTTL(uuid, DEFAULT_TTL_DURATION);
+    }
+
+    /**
+     * Sets the default TTL for all entities in the L2 cache that don't already have a TTL.
+     * This can be used to fix legacy data that was stored without TTL.
+     *
+     * @return the number of entities that had their TTL set
+     */
+    public int setDefaultTTLForAllEntities() {
+        int count = 0;
+        try {
+            RedissonClient redissonClient = getL2Cache().getResource();
+            RKeys keys = redissonClient.getKeys();
+            String pattern = EntityRKeyUtil.getEntityKeyPattern(this);
+
+            KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(pattern);
+
+            for (String key : keys.getKeys(keysScanOptions)) {
+                // If key has no TTL (remainTimeToLive < 0)
+                RBucket<Object> bucket = redissonClient.getBucket(key);
+                if (bucket.remainTimeToLive() < 0 && bucket.expire(DEFAULT_TTL_DURATION)) {
+                    count++;
+                }
+            }
+        } catch (Exception exception) {
+            Log.error("Error setting default TTL for entities", exception);
+        }
+        return count;
     }
 } 

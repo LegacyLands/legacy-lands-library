@@ -17,6 +17,7 @@ import org.redisson.api.RType;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class EntityDataPersistenceTask implements TaskInterface {
     private final LegacyEntityDataService service;
     private final Set<UUID> entityUuids;
     private final int limit;
+    private final Duration ttl;
     private CompletionCallback completionCallback;
 
     /**
@@ -53,7 +55,21 @@ public class EntityDataPersistenceTask implements TaskInterface {
      */
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, UUID entityUuid) {
         return new EntityDataPersistenceTask(lockSettings, service,
-                entityUuid != null ? Collections.singleton(entityUuid) : null, 0);
+                entityUuid != null ? Collections.singleton(entityUuid) : null, 0, null);
+    }
+
+    /**
+     * Factory method to create a new {@link EntityDataPersistenceTask} for a specific entity with custom TTL.
+     *
+     * @param lockSettings the settings for lock acquisition
+     * @param service      the {@link LegacyEntityDataService} instance to use
+     * @param entityUuid   the UUID of the entity whose data should be persisted
+     * @param ttl          the custom Time-To-Live duration to set for entity data in Redis
+     * @return a new instance of {@link EntityDataPersistenceTask}
+     */
+    public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, UUID entityUuid, Duration ttl) {
+        return new EntityDataPersistenceTask(lockSettings, service,
+                entityUuid != null ? Collections.singleton(entityUuid) : null, 0, ttl);
     }
 
     /**
@@ -65,7 +81,20 @@ public class EntityDataPersistenceTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTask}
      */
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, Set<UUID> entityUuids) {
-        return new EntityDataPersistenceTask(lockSettings, service, entityUuids, 0);
+        return new EntityDataPersistenceTask(lockSettings, service, entityUuids, 0, null);
+    }
+
+    /**
+     * Factory method to create a new {@link EntityDataPersistenceTask} for multiple specific entities with custom TTL.
+     *
+     * @param lockSettings the settings for lock acquisition
+     * @param service      the {@link LegacyEntityDataService} instance to use
+     * @param entityUuids  the set of UUIDs of entities whose data should be persisted
+     * @param ttl          the custom Time-To-Live duration to set for entity data in Redis
+     * @return a new instance of {@link EntityDataPersistenceTask}
+     */
+    public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, Set<UUID> entityUuids, Duration ttl) {
+        return new EntityDataPersistenceTask(lockSettings, service, entityUuids, 0, ttl);
     }
 
     /**
@@ -77,7 +106,20 @@ public class EntityDataPersistenceTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTask}
      */
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, int limit) {
-        return new EntityDataPersistenceTask(lockSettings, service, null, limit);
+        return new EntityDataPersistenceTask(lockSettings, service, null, limit, null);
+    }
+
+    /**
+     * Factory method to create a new {@link EntityDataPersistenceTask} for bulk persistence with custom TTL.
+     *
+     * @param lockSettings the settings for lock acquisition
+     * @param service      the {@link LegacyEntityDataService} instance to use
+     * @param limit        the maximum number of entity data entries to process
+     * @param ttl          the custom Time-To-Live duration to set for entity data in Redis
+     * @return a new instance of {@link EntityDataPersistenceTask}
+     */
+    public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, int limit, Duration ttl) {
+        return new EntityDataPersistenceTask(lockSettings, service, null, limit, ttl);
     }
 
     /**
@@ -88,7 +130,19 @@ public class EntityDataPersistenceTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTask}
      */
     public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service) {
-        return new EntityDataPersistenceTask(lockSettings, service, null, 1000);
+        return new EntityDataPersistenceTask(lockSettings, service, null, 1000, null);
+    }
+
+    /**
+     * Factory method to create a new {@link EntityDataPersistenceTask} for bulk persistence with default limit and custom TTL.
+     *
+     * @param lockSettings the settings for lock acquisition
+     * @param service      the {@link LegacyEntityDataService} instance to use
+     * @param ttl          the custom Time-To-Live duration to set for entity data in Redis
+     * @return a new instance of {@link EntityDataPersistenceTask}
+     */
+    public static EntityDataPersistenceTask of(LockSettings lockSettings, LegacyEntityDataService service, Duration ttl) {
+        return new EntityDataPersistenceTask(lockSettings, service, null, 1000, ttl);
     }
 
     /**
@@ -156,7 +210,16 @@ public class EntityDataPersistenceTask implements TaskInterface {
                     client -> null,
                     () -> {
                         // Store operation
-                        l2Cache.getResource().getBucket(entityKey).set(serializedData);
+                        RedissonClient client = l2Cache.getResource();
+                        client.getBucket(entityKey).set(serializedData);
+
+                        // Set TTL based on custom TTL if provided, otherwise use default
+                        Duration ttlToApply = ttl != null ? ttl : LegacyEntityDataService.DEFAULT_TTL_DURATION;
+                        boolean expireSuccess = client.getBucket(entityKey).expire(ttlToApply);
+                        if (!expireSuccess) {
+                            Log.warn(String.format("Failed to set TTL for entity %s", uuid));
+                        }
+
                         return null;
                     },
                     null,
@@ -208,6 +271,24 @@ public class EntityDataPersistenceTask implements TaskInterface {
 
                     if (!entityDataString.isEmpty()) {
                         datastore.save(SimplixSerializer.deserialize(entityDataString, LegacyEntityData.class));
+
+                        // Set TTL for this entity based on provided custom TTL or current TTL status
+                        if (ttl != null) {
+                            // If custom TTL is provided, always apply it
+                            boolean expireSuccess = redissonClient.getBucket(key).expire(ttl);
+                            if (!expireSuccess) {
+                                Log.warn(String.format("Failed to set custom TTL for entity key: %s", key));
+                            }
+                        } else {
+                            // Check if key has no TTL and set default if needed
+                            long currentTtl = redissonClient.getBucket(key).remainTimeToLive();
+                            if (currentTtl < 0) {
+                                boolean expireSuccess = redissonClient.getBucket(key).expire(LegacyEntityDataService.DEFAULT_TTL_DURATION);
+                                if (!expireSuccess) {
+                                    Log.warn(String.format("Failed to set default TTL for entity key: %s", key));
+                                }
+                            }
+                        }
                     } else {
                         Log.error("The key value is not expected to be null, this should not happen!! key: " + key);
                     }

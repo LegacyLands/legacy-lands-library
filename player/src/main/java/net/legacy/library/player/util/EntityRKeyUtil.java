@@ -92,7 +92,7 @@ public class EntityRKeyUtil {
      * @return the key pattern for all entity data
      */
     public static String getEntityKeyPattern(LegacyEntityDataService service) {
-        return ENTITY_PATTERN_PREFIX + service.getName() + ":*";
+        return ENTITY_KEY_PREFIX + service.getName() + ":*";
     }
 
     /**

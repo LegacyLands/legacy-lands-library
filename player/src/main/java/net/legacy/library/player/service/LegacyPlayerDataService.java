@@ -21,6 +21,7 @@ import net.legacy.library.player.task.redis.RStreamAccepterInvokeTask;
 import net.legacy.library.player.task.redis.RStreamPubTask;
 import net.legacy.library.player.task.redis.RStreamTask;
 import net.legacy.library.player.util.RKeyUtil;
+import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 
 import java.time.Duration;
@@ -55,6 +56,11 @@ public class LegacyPlayerDataService {
     public static final CacheServiceInterface<Cache<String, LegacyPlayerDataService>, LegacyPlayerDataService>
             LEGACY_PLAYER_DATA_SERVICES = CacheServiceFactory.createCaffeineCache();
 
+    /**
+     * Default TTL for player data in Redis (1 DAY).
+     */
+    public static final Duration DEFAULT_TTL_DURATION = Duration.ofDays(1);
+
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
@@ -70,11 +76,12 @@ public class LegacyPlayerDataService {
      * @param autoSaveInterval          the interval for auto-saving player data to the database
      * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
      * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param ttl                       the custom TTL to apply to player data in Redis
      * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
      */
     public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
                                    Config config, Duration autoSaveInterval, List<String> basePackages,
-                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval
+                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl
 
     ) {
         this.name = name;
@@ -105,14 +112,33 @@ public class LegacyPlayerDataService {
 
         // Auto save task
         this.playerDataPersistenceTimerTask =
-                PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+                PlayerDataPersistenceTimerTask.of(autoSaveInterval, autoSaveInterval, LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this, ttl).start();
 
         // Redis stream accept task
         this.redisStreamAcceptTask = RStreamAccepterInvokeTask.of(this, basePackages, classLoaders, redisStreamAcceptInterval).start();
     }
 
     /**
-     * Creates a new {@link LegacyPlayerDataService} with default auto-save interval and Redis stream accept interval.
+     * Creates a new {@link LegacyPlayerDataService}.
+     *
+     * @param name                      the unique name of the service
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration
+     * @param autoSaveInterval          the interval between auto-save operations
+     * @param basePackages              the base packages to scan for accepter annotations
+     * @param classLoaders              the class loaders to scan for accepter annotations
+     * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
+     * @param ttl                       the custom TTL to apply to player data in Redis
+     * @return a new instance of {@link LegacyPlayerDataService}
+     */
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
+                                             Duration autoSaveInterval, List<String> basePackages,
+                                             List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval, ttl);
+    }
+
+    /**
+     * Creates a new {@link LegacyPlayerDataService} with default auto-save interval, Redis stream accept interval, TTL.
      *
      * @param name                    the unique name of the service
      * @param mongoDBConnectionConfig the MongoDB connection configuration
@@ -121,27 +147,28 @@ public class LegacyPlayerDataService {
      * @param classLoaders            the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
      * @return the newly created {@link LegacyPlayerDataService}
      */
-    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
-                                             List<String> basePackages, List<ClassLoader> classLoaders
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
+                                             Config config, List<String> basePackages, List<ClassLoader> classLoaders
     ) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2));
+        return of(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2), DEFAULT_TTL_DURATION);
     }
 
     /**
-     * Creates a new {@link LegacyPlayerDataService} with specified intervals.
+     * Creates a new {@link LegacyPlayerDataService} with default TTL.
      *
      * @param name                      the unique name of the service
      * @param mongoDBConnectionConfig   the MongoDB connection configuration
-     * @param config                    the Redis configuration for initializing the Redis cache
-     * @param autoSaveInterval          the interval for auto-saving player data to the database
-     * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
-     * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param config                    the Redis configuration
+     * @param autoSaveInterval          the interval between auto-save operations
+     * @param basePackages              the base packages to scan for accepter annotations
+     * @param classLoaders              the class loaders to scan for accepter annotations
      * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
-     * @return the newly created {@link LegacyPlayerDataService}
+     * @return a new instance of {@link LegacyPlayerDataService}
      */
-    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config, Duration autoSaveInterval,
-                                             List<String> basePackages, List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval) {
-        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval);
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
+                                             Duration autoSaveInterval, List<String> basePackages,
+                                             List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval) {
+        return of(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval, DEFAULT_TTL_DURATION);
     }
 
     /**
@@ -297,9 +324,18 @@ public class LegacyPlayerDataService {
     }
 
     /**
-     * 保存LegacyPlayerData到L1缓存并安排保存到L2缓存和数据库。
+     * Saves player data to L2 cache and schedules database persistence.
      *
-     * @param legacyPlayerData 要保存的玩家数据
+     * <p>This method performs the following operations:
+     * <ol>
+     *   <li>Save the data to L2 cache (Redis) with TTL</li>
+     *   <li>Schedule persistence to MongoDB</li>
+     * </ol>
+     *
+     * <p>Note: The data will be automatically loaded into L1 cache when accessed via getLegacyPlayerData.
+     * This method focuses on ensuring data persistence across storage layers.
+     *
+     * @param legacyPlayerData the player data to save
      */
     public void saveLegacyPlayerData(LegacyPlayerData legacyPlayerData) {
         if (legacyPlayerData == null) {
@@ -308,9 +344,92 @@ public class LegacyPlayerDataService {
 
         UUID uuid = legacyPlayerData.getUuid();
 
-        CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache = getL1Cache();
-        l1Cache.getResource().put(uuid, legacyPlayerData);
+        // Save to L2 cache with TTL
+        String key = RKeyUtil.getRLPDSKey(uuid, this);
+        String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
 
+        // Use getWithType with writeLock to store data in L2 cache with TTL
+        getL2Cache().getWithType(
+                client -> client.getReadWriteLock(RKeyUtil.getRLPDSReadWriteLockKey(key)).writeLock(),
+                client -> null,
+                () -> {
+                    // Store operation with TTL using the new Duration-based method
+                    RedissonClient client = getL2Cache().getResource();
+                    client.getBucket(key).set(serialized, DEFAULT_TTL_DURATION);
+                    return null;
+                },
+                null,
+                false,
+                LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
+        );
+
+        // Schedule database persistence
         PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+    }
+
+    /**
+     * Sets the TTL (Time-To-Live) for a player in the L2 cache.
+     * If the player doesn't exist in L2 cache, this method will have no effect.
+     *
+     * @param uuid the UUID of the player
+     * @param ttl  the duration after which the player data should expire
+     * @return true if the TTL was set successfully, false otherwise
+     */
+    public boolean setPlayerTTL(UUID uuid, Duration ttl) {
+        if (uuid == null) {
+            return false;
+        }
+
+        try {
+            String playerKey = RKeyUtil.getRLPDSKey(uuid, this);
+            org.redisson.api.RedissonClient redissonClient = getL2Cache().getResource();
+            if (redissonClient.getBucket(playerKey).isExists()) {
+                return redissonClient.getBucket(playerKey).expire(ttl);
+            }
+            return false;
+        } catch (Exception exception) {
+            io.fairyproject.log.Log.error("Failed to set TTL for player " + uuid, exception);
+            return false;
+        }
+    }
+
+    /**
+     * Sets the default TTL for a player in the L2 cache.
+     * If the player doesn't exist in L2 cache, this method will have no effect.
+     *
+     * @param uuid the UUID of the player
+     * @return true if the TTL was set successfully, false otherwise
+     */
+    public boolean setPlayerDefaultTTL(UUID uuid) {
+        return setPlayerTTL(uuid, DEFAULT_TTL_DURATION);
+    }
+
+    /**
+     * Sets the default TTL for all players in the L2 cache that don't already have a TTL.
+     * This can be used to fix legacy data that was stored without TTL.
+     *
+     * @return the number of players that had their TTL set
+     */
+    public int setDefaultTTLForAllPlayers() {
+        int count = 0;
+        try {
+            org.redisson.api.RedissonClient redissonClient = getL2Cache().getResource();
+            org.redisson.api.RKeys keys = redissonClient.getKeys();
+            String pattern = RKeyUtil.getPlayerKeyPattern(this);
+
+            org.redisson.api.options.KeysScanOptions keysScanOptions =
+                    org.redisson.api.options.KeysScanOptions.defaults().pattern(pattern);
+
+            for (String key : keys.getKeys(keysScanOptions)) {
+                // If key has no TTL (remainTimeToLive < 0)
+                org.redisson.api.RBucket<Object> bucket = redissonClient.getBucket(key);
+                if (bucket.remainTimeToLive() < 0 && bucket.expire(DEFAULT_TTL_DURATION)) {
+                    count++;
+                }
+            }
+        } catch (Exception exception) {
+            io.fairyproject.log.Log.error("Error setting default TTL for players", exception);
+        }
+        return count;
     }
 }

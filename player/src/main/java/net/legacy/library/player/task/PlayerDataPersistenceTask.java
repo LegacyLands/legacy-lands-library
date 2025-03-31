@@ -17,6 +17,8 @@ import org.redisson.api.RType;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
+import java.time.Duration;
+
 /**
  * Task responsible for persisting player data from the L2 cache (Redis) to the database.
  *
@@ -34,6 +36,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final int limit;
+    private final Duration ttl;
 
     /**
      * Factory method to create a new {@link PlayerDataPersistenceTask}.
@@ -43,7 +46,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
      * @return a new instance of {@link PlayerDataPersistenceTask}
      */
     public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService) {
-        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, 1000);
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, 1000, null);
     }
 
     /**
@@ -55,7 +58,32 @@ public class PlayerDataPersistenceTask implements TaskInterface {
      * @return a new instance of {@link PlayerDataPersistenceTask}
      */
     public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService, int limit) {
-        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, limit);
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, limit, null);
+    }
+
+    /**
+     * Factory method to create a new {@link PlayerDataPersistenceTask} with custom TTL.
+     *
+     * @param lockSettings            the settings for lock acquisition
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @param ttl                     the custom Time-To-Live duration to set for player data in Redis
+     * @return a new instance of {@link PlayerDataPersistenceTask}
+     */
+    public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService, Duration ttl) {
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, 1000, ttl);
+    }
+
+    /**
+     * Factory method to create a new {@link PlayerDataPersistenceTask} with custom TTL.
+     *
+     * @param lockSettings            the settings for lock acquisition
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to use
+     * @param limit                   the maximum number of player data entries to process
+     * @param ttl                     the custom Time-To-Live duration to set for player data in Redis
+     * @return a new instance of {@link PlayerDataPersistenceTask}
+     */
+    public static PlayerDataPersistenceTask of(LockSettings lockSettings, LegacyPlayerDataService legacyPlayerDataService, int limit, Duration ttl) {
+        return new PlayerDataPersistenceTask(lockSettings, legacyPlayerDataService, limit, ttl);
     }
 
     /**
@@ -106,6 +134,24 @@ public class PlayerDataPersistenceTask implements TaskInterface {
 
                         if (!legacyPlayerDataString.isEmpty()) {
                             datastore.save(SimplixSerializer.deserialize(legacyPlayerDataString, LegacyPlayerData.class));
+                            
+                            // Set TTL for this player data if custom TTL is provided 
+                            // or if it currently has no TTL
+                            if (ttl != null) {
+                                boolean expireSuccess = redissonClient.getBucket(string).expire(ttl);
+                                if (!expireSuccess) {
+                                    Log.warn(String.format("Failed to set custom TTL for player data key: %s", string));
+                                }
+                            } else {
+                                // Check if key has no TTL and set default if needed
+                                long currentTtl = redissonClient.getBucket(string).remainTimeToLive();
+                                if (currentTtl < 0) {
+                                    boolean expireSuccess = redissonClient.getBucket(string).expire(LegacyPlayerDataService.DEFAULT_TTL_DURATION);
+                                    if (!expireSuccess) {
+                                        Log.warn(String.format("Failed to set default TTL for player data key: %s", string));
+                                    }
+                                }
+                            }
                         } else {
                             Log.error("The key value is not expected to be null, this should not happen!! key: " + string);
                         }

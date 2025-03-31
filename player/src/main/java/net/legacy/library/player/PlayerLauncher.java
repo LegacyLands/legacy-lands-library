@@ -1,6 +1,7 @@
 package net.legacy.library.player;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.Autowired;
 import io.fairyproject.container.InjectableComponent;
@@ -20,6 +21,8 @@ import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.redis.RStreamTask;
 import net.legacy.library.player.task.redis.impl.L1ToL2PlayerDataSyncByNameRStreamAccepter;
 import net.legacy.library.player.task.redis.impl.PlayerDataUpdateByNameRStreamAccepter;
+import net.legacy.library.player.util.EntityRKeyUtil;
+import net.legacy.library.player.util.RKeyUtil;
 import org.bson.UuidRepresentation;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
@@ -33,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Player launcher.
@@ -251,7 +255,7 @@ public class PlayerLauncher extends Plugin {
 
                 // Test batch saving with saveEntities method
                 List<LegacyEntityData> entitiesToSave = List.of(teamEntity, member1, member2, member3);
-                entityDataService.saveEntities(entitiesToSave, true);
+                entityDataService.saveEntities(entitiesToSave);
                 Log.info("Batch save test: Successfully saved " + entitiesToSave.size() + " entities");
 
                 // Test N-directional relationships
@@ -277,7 +281,7 @@ public class PlayerLauncher extends Plugin {
                 relationshipMap.put(member3Id, member3Relationships);
 
                 // Create all relationships at once
-                boolean success = entityDataService.createNDirectionalRelationships(relationshipMap, true);
+                boolean success = entityDataService.createNDirectionalRelationships(relationshipMap);
                 Log.info("N-directional relationship test: " + (success ? "Successful" : "Failed"));
 
                 // Test multiple relationship criteria queries
@@ -312,7 +316,7 @@ public class PlayerLauncher extends Plugin {
                 LegacyEntityData member4 = LegacyEntityData.of(member4Id, "user");
                 member4.addAttribute("name", "Member 4");
                 member4.addAttribute("role", "moderator");
-                entityDataService.saveEntity(member4, true);
+                entityDataService.saveEntity(member4);
 
                 // Execute relationship transaction
                 boolean transactionSuccess = entityDataService.executeRelationshipTransaction(transaction -> {
@@ -320,7 +324,7 @@ public class PlayerLauncher extends Plugin {
                             .addRelationship(member4Id, "team", teamId)
                             .addRelationship(member4Id, "moderator-of", teamId)
                             .createBidirectionalRelationship(member1Id, "friend", member4Id, "friend");
-                }, true);
+                });
 
                 // Verify the transaction results
                 LegacyEntityData updatedTeam = entityDataService.getEntityData(teamId);
@@ -335,9 +339,109 @@ public class PlayerLauncher extends Plugin {
 
                 // Test saveEntity with schedulePersistence parameter
                 member4.addAttribute("status", "active");
-                entityDataService.saveEntity(member4, false);
-                entityDataService.saveEntity(member4, true);
+                entityDataService.saveEntity(member4);
+                entityDataService.saveEntity(member4);
                 Log.info("Persistence parameter test: Entity saved to L1 cache and scheduled for persistence");
+
+                // Test entity TTL functionality
+                Log.info("TTL test: Setting TTL for entities with no expiration");
+                int fixedEntities = entityDataService.setDefaultTTLForAllEntities();
+                Log.info("TTL test: Set TTL for " + fixedEntities + " entities that had no expiration");
+
+                // Check TTL on a specific entity
+                UUID randomTestId = UUID.randomUUID();
+                LegacyEntityData testTTLEntity = LegacyEntityData.of(randomTestId, "ttl-test");
+                testTTLEntity.addAttribute("name", "TTL Test Entity");
+
+                // Save and manually persist to L2 cache
+                Log.info("TTL test: Creating test entity with UUID: " + randomTestId);
+                entityDataService.saveEntity(testTTLEntity);
+                Thread.sleep(500); // Give a moment for persistence
+
+                // Check the entity key and pattern
+                String randomEntityKey = EntityRKeyUtil.getEntityKey(randomTestId, entityDataService);
+                String entityPattern = EntityRKeyUtil.getEntityKeyPattern(entityDataService);
+                Log.info("TTL test: Entity key is: " + randomEntityKey);
+                Log.info("TTL test: Entity pattern is: " + entityPattern);
+
+                // Direct check in Redis
+                RedissonClient client = entityDataService.getL2Cache().getResource();
+                RBucket<Object> bucket = client.getBucket(randomEntityKey);
+                boolean exists = bucket.isExists();
+                long initialTtl = bucket.remainTimeToLive();
+
+                Log.info("TTL test: Entity exists in Redis: " + exists + ", initial TTL: " + initialTtl + " ms");
+
+                // Try different approaches to set TTL
+                if (exists && initialTtl < 0) {
+                    // Try direct Redis command
+                    boolean expireSuccess = bucket.expire(Duration.ofMinutes(30));
+                    long afterDirectTtl = bucket.remainTimeToLive();
+                    Log.info("TTL test: Direct Redis expire result: " + expireSuccess + ", TTL after: " + afterDirectTtl + " ms");
+                }
+
+                // Also check using a Redis SET command with TTL parameter
+                Log.info("TTL test: Trying SET with expiration option");
+                String serialized = SimplixSerializer.serialize(testTTLEntity).toString();
+                bucket.set(serialized, 30, TimeUnit.MINUTES);
+                long afterSetTtl = bucket.remainTimeToLive();
+                Log.info("TTL test: After explicit SET with TTL, value is: " + afterSetTtl + " ms");
+
+                // Try another entity with different approach
+                UUID finalTestId = UUID.randomUUID();
+                LegacyEntityData finalTestEntity = LegacyEntityData.of(finalTestId, "final-ttl-test");
+                finalTestEntity.addAttribute("name", "Final TTL Test");
+
+                Log.info("TTL test: Checking manual persistence with direct TTL control");
+
+                // Save to L1 cache but don't schedule persistence
+                entityDataService.saveEntity(finalTestEntity);
+
+                // Manually write to Redis with TTL
+                String finalEntityKey = EntityRKeyUtil.getEntityKey(finalTestId, entityDataService);
+                String finalSerialized = SimplixSerializer.serialize(finalTestEntity).toString();
+
+                client.getBucket(finalEntityKey).set(finalSerialized, 30, TimeUnit.MINUTES);
+                long finalTtl = client.getBucket(finalEntityKey).remainTimeToLive();
+
+                Log.info("TTL test: Final entity TTL after direct set: " + finalTtl + " ms");
+
+                // Test LegacyPlayerDataService TTL functionality
+                Log.info("--- PlayerData TTL Test ---");
+                UUID playerTestId = UUID.randomUUID();
+                LegacyPlayerData testPlayerData = new LegacyPlayerData(playerTestId);
+                testPlayerData.addData("testKey", "testValue");
+                testPlayerData.addData("ttlTest", "true");
+
+                // Save the player data
+                legacyPlayerDataService1.saveLegacyPlayerData(testPlayerData);
+                Thread.sleep(500); // Give time for persistence
+
+                // Get the Redis key for player data
+                String playerKey = RKeyUtil.getRLPDSKey(playerTestId, legacyPlayerDataService1);
+                Log.info("PlayerData TTL test: Player key is: " + playerKey);
+
+                // Check if the key exists and its TTL
+                RBucket<Object> playerBucket = client.getBucket(playerKey);
+                boolean playerExists = playerBucket.isExists();
+                long playerInitialTtl = playerBucket.remainTimeToLive();
+                Log.info("PlayerData TTL test: Player data exists: " + playerExists + ", TTL: " + playerInitialTtl + " ms");
+
+                // Try to set TTL on player data
+                if (playerExists) {
+                    boolean playerTtlSuccess = legacyPlayerDataService1.setPlayerDefaultTTL(playerTestId);
+                    long playerTtlAfter = playerBucket.remainTimeToLive();
+                    Log.info("PlayerData TTL test: TTL set success: " + playerTtlSuccess + ", new TTL: " + playerTtlAfter + " ms");
+
+                    // Try manual TTL setting with a different duration (15 minutes)
+                    playerTtlSuccess = legacyPlayerDataService1.setPlayerTTL(playerTestId, Duration.ofMinutes(15));
+                    playerTtlAfter = playerBucket.remainTimeToLive();
+                    Log.info("PlayerData TTL test: Manual TTL set success: " + playerTtlSuccess + ", final TTL: " + playerTtlAfter + " ms");
+                }
+
+                // Test setting TTL for all players without TTL
+                int fixedPlayers = legacyPlayerDataService1.setDefaultTTLForAllPlayers();
+                Log.info("PlayerData TTL test: Set TTL for " + fixedPlayers + " player data that had no expiration");
 
                 // Give some time for persistence
                 Thread.sleep(1000);
