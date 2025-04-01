@@ -6,8 +6,8 @@ version = rootProperties("version")
 
 // Run server
 runServer {
-    version.set(rootProperties("spigot.version"))
     javaVersion.set(JavaVersion.VERSION_21)
+    version.set(rootProperties("run-server.version"))
 }
 
 // Fairy configuration

@@ -6,8 +6,8 @@ version = rootProperties("version")
 
 // Run server
 runServer {
-    version.set("1.20.1")
     javaVersion.set(JavaVersion.VERSION_21)
+    version.set(rootProperties("run-server.version"))
 }
 
 // Fairy configuration
