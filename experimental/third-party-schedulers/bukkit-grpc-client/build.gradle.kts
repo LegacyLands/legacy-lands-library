@@ -28,21 +28,6 @@ fairy {
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
 }
 
-// Shadow
-tasks.shadowJar {
-    dependencies {
-        exclude(dependency("com.google.code.gson:.*:.*"))
-    }
-
-    relocate("com.google.gson", "net.legacy.library.grpcclient.shaded.gson")
-    relocate("com.google.common", "net.legacy.library.grpcclient.shaded.guava")
-    relocate("com.google.protobuf", "net.legacy.library.grpcclient.shaded.protobuf")
-    relocate("org.slf4j", "net.legacy.library.grpcclient.shaded.slf4j")
-
-    archiveClassifier.set("")
-    mergeServiceFiles()
-}
-
 // Protobuf configuration
 protobuf {
     protoc {

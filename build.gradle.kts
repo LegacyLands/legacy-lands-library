@@ -1,6 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.*
 
 fun properties(key: String) = project.findProperty(key).toString()
 val isGitHubActions = project.hasProperty("isGitHubActions") && project.property("isGitHubActions") == "true"
@@ -87,6 +88,10 @@ subprojects {
 
     // Configure ShadowJar task
     tasks.withType(ShadowJar::class) {
+        dependencies {
+            exclude(dependency("com.google.code.gson:.*:.*"))
+        }
+
         // Relocate fairy to avoid plugin conflict
         relocate("io.fairyproject.bootstrap", "${properties("package")}.fairy.bootstrap")
         relocate("net.kyori", "io.fairyproject.libs.kyori")
@@ -96,6 +101,9 @@ subprojects {
         relocate("com.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
+        relocate("com.google.common", "net.legacy.library.grpcclient.shaded.guava")
+        relocate("com.google.protobuf", "net.legacy.library.grpcclient.shaded.protobuf")
+
         archiveClassifier.set("plugin")
         mergeServiceFiles()
         exclude("META-INF/maven/**")
@@ -136,7 +144,7 @@ publishing {
     if (isGitHubActions) {
         publications {
             modules.forEach { module ->
-                create<MavenPublication>("shadow-${module.capitalize()}") {
+                create<MavenPublication>("shadow-${module.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}") {
                     val shadowJarTask = project(":$module").tasks.named<ShadowJar>("shadowJar")
                     artifact(shadowJarTask.get().archiveFile.get())
 
