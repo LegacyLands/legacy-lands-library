@@ -120,6 +120,9 @@ run/
 # Rust artifacts
 **/build/
 
+## Rust target
+**/target/
+
 # Cargo.lock
 Cargo.lock
 

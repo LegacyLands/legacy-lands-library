@@ -10,4 +10,4 @@ proc-macro = true
 quote = "1.0"
 syn = { version = "2.0", features = ["full"] }
 proc-macro2 = "1.0"
-ctor = "0.2" 
+ctor = "0.4.1"

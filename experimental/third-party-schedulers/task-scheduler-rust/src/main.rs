@@ -3,10 +3,13 @@ use task_scheduler::server::service::TaskSchedulerService;
 use task_scheduler::tasks::taskscheduler::task_scheduler_server::TaskSchedulerServer;
 use tonic::transport::Server;
 
+#[allow(unused_imports)]
+use task_scheduler::tasks::builtin;
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value = "[::1]:50051")]
+    #[arg(short, long, default_value = "127.0.0.1:50051")]
     addr: String,
 }
 

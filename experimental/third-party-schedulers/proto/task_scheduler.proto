@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package taskscheduler;
+
+service TaskScheduler {
+  // Submit task (supports async/blocking mode)
+  rpc SubmitTask(TaskRequest) returns (TaskResponse);
+
+  // Query task result
+  rpc GetResult(ResultRequest) returns (ResultResponse);
+}
+
+// Task request
+message TaskRequest {
+  // Task id
+  string task_id = 1;
+
+  // Method name
+  string method = 2;
+
+  // Parameters
+  repeated google.protobuf.Any args = 3;
+
+  // Dependent task IDs
+  repeated string deps = 4;
+
+  // Whether to execute asynchronously
+  bool is_async = 5;
+}
+
+// Task response
+message TaskResponse {
+  string task_id = 1;
+  enum Status {
+    PENDING = 0;
+    SUCCESS = 1;
+    FAILED = 2;
+  }
+  Status status = 2;
+  string result = 3;
+}
+
+// Result query request
+message ResultRequest {
+  string task_id = 1;
+}
+
+// Result query response
+message ResultResponse {
+  TaskResponse.Status status = 1;
+  string result = 2;
+}
+
+// Custom message to represent a list of values
+message ListValue {
+  repeated google.protobuf.Any values = 1;
+}
+
+// Custom message to represent a map (string keys, any values)
+message MapValue {
+  map<string, google.protobuf.Any> fields = 1;
+} 

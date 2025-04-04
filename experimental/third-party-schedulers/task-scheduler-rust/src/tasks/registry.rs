@@ -1,9 +1,10 @@
 use crate::models::wrappers::{
     DoubleValue, FloatValue, Int32Value, Int64Value, UInt32Value, UInt64Value,
+    BoolValue, StringValue, BytesValue,
 };
 use crate::models::ArgValue;
 use crate::models::TaskResult;
-use crate::tasks::taskscheduler;
+use crate::tasks::taskscheduler::{self, ListValue, MapValue};
 use dashmap::DashMap;
 use lru::LruCache;
 use once_cell::sync::Lazy;
@@ -90,37 +91,36 @@ impl TaskRegistry {
                         .map_err(|e| format!("Failed to decode double: {}", e))
                 }
                 "type.googleapis.com/google.protobuf.BoolValue" => {
-                    crate::models::wrappers::BoolValue::decode(any.value.as_slice())
+                    BoolValue::decode(any.value.as_slice())
                         .map(|w| ArgValue::Bool(w.value))
                         .map_err(|e| format!("Failed to decode bool: {}", e))
                 }
                 "type.googleapis.com/google.protobuf.StringValue" => {
-                    crate::models::wrappers::StringValue::decode(any.value.as_slice())
+                    StringValue::decode(any.value.as_slice())
                         .map(|w| ArgValue::String(w.value))
                         .map_err(|e| format!("Failed to decode string: {}", e))
                 }
                 "type.googleapis.com/google.protobuf.BytesValue" => {
-                    crate::models::wrappers::BytesValue::decode(any.value.as_slice())
+                    BytesValue::decode(any.value.as_slice())
                         .map(|w| ArgValue::Bytes(w.value))
                         .map_err(|e| format!("Failed to decode bytes: {}", e))
                 }
-                "type.googleapis.com/google.protobuf.ArrayValue" => {
-                    let array_val =
-                        crate::models::wrappers::ArrayValue::decode(any.value.as_slice())
-                            .map_err(|e| format!("Failed to decode array: {}", e))?;
-                    let vals = Self::convert_args(&array_val.values)?;
+                "type.googleapis.com/taskscheduler.ListValue" => {
+                    let list_val = ListValue::decode(any.value.as_slice())
+                        .map_err(|e| format!("Failed to decode ListValue: {}", e))?;
+                    let vals = Self::convert_args(&list_val.values)?;
                     Ok(ArgValue::Array(vals))
                 }
-                "type.googleapis.com/google.protobuf.MapValue" => {
-                    let map_val = crate::models::wrappers::MapValue::decode(any.value.as_slice())
-                        .map_err(|e| format!("Failed to decode map: {}", e))?;
+                "type.googleapis.com/taskscheduler.MapValue" => {
+                    let map_val = MapValue::decode(any.value.as_slice())
+                        .map_err(|e| format!("Failed to decode MapValue: {}", e))?;
                     let mut map = std::collections::HashMap::new();
-                    for (k, any_val) in map_val.values {
+                    for (k, any_val) in map_val.fields {
                         let vals = Self::convert_args(std::slice::from_ref(&any_val))?;
                         if let Some(arg) = vals.into_iter().next() {
                             map.insert(k, arg);
                         } else {
-                            return Err("Empty value in map".to_string());
+                            return Err(format!("Empty converted value for key '{}' in MapValue", k));
                         }
                     }
                     Ok(ArgValue::Map(map))

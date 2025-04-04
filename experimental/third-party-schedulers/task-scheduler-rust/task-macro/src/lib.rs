@@ -1,43 +1,50 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{parse_macro_input, ItemFn};
 
 #[proc_macro_attribute]
 pub fn task(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
     let fn_name = &input.sig.ident;
-    let is_async = input.sig.asyncness.is_some();
-    let register_fn_name = quote::format_ident!("register_{}", fn_name);
+    let fn_name_str = fn_name.to_string();
+    let vis = &input.vis;
+    let block = &input.block;
+    let inputs = &input.sig.inputs;
 
-    let register_code = if is_async {
+    let is_async = input.sig.asyncness.is_some();
+    let register_fn = if is_async {
+        format_ident!("register_async_task")
+    } else {
+        format_ident!("register_sync_task")
+    };
+
+    let register_fn_name = format_ident!("__register_task_{}", fn_name);
+
+    let expanded = if is_async {
         quote! {
-            #input
+            #vis fn #fn_name(#inputs) -> impl std::future::Future<Output = String> + Send {
+                async move { #block }
+            }
 
             #[ctor::ctor]
             fn #register_fn_name() {
                 use crate::tasks::REGISTRY;
-                use std::pin::Pin;
-                use std::future::Future;
-                let key = format!("{}::{}", module_path!(), stringify!(#fn_name));
-                let func = |args| {
-                    let fut = #fn_name(args);
-                    Box::pin(fut) as Pin<Box<dyn Future<Output = String> + Send>>
-                };
-                REGISTRY.register_async_task(&key, func);
+                REGISTRY.#register_fn(#fn_name_str, |args| Box::pin(#fn_name(args)));
+                println!("Auto-registered async task: {}", #fn_name_str);
             }
         }
     } else {
         quote! {
-            #input
+            #vis fn #fn_name(#inputs) -> String #block
 
             #[ctor::ctor]
             fn #register_fn_name() {
                 use crate::tasks::REGISTRY;
-                let key = format!("{}::{}", module_path!(), stringify!(#fn_name));
-                REGISTRY.register_sync_task(&key, #fn_name);
+                REGISTRY.#register_fn(#fn_name_str, #fn_name);
+                println!("Auto-registered sync task: {}", #fn_name_str);
             }
         }
     };
 
-    register_code.into()
+    TokenStream::from(expanded)
 }

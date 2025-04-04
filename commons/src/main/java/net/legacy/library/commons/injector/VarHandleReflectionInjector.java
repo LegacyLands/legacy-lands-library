@@ -61,7 +61,7 @@ public class VarHandleReflectionInjector implements StaticInjectorInterface {
      *
      * <p>If a static method is specified in the annotation, it will be called to retrieve the {@link VarHandle}
      * for the field. The class containing the static method must be loadable by the current thread's context
-     * {@link ClassLoader}.</p>
+     * {@link ClassLoader}.
      *
      * @param clazz the class into which {@link VarHandle} instances will be injected into its static fields
      * @throws IllegalStateException if the injection fails due to reflection issues or invalid annotations

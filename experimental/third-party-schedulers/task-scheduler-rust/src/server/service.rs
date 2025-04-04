@@ -14,7 +14,7 @@ impl TaskScheduler for TaskSchedulerService {
         request: Request<TaskRequest>,
     ) -> Result<Response<TaskResponse>, Status> {
         let task = request.into_inner();
-        println!("Received task: {}.", task.task_id);
+        println!("Received task: {} with method: {}, async: {}", task.task_id, task.method, task.is_async);
 
         let start = Instant::now();
         let result = REGISTRY.execute_task(&task).await;
@@ -25,8 +25,8 @@ impl TaskScheduler for TaskSchedulerService {
             .await;
 
         println!(
-            "Completed task: {} with status {} (took {}ms).",
-            task.task_id, result.status, duration
+            "Completed task: {} with status {} (took {}ms). Result: {}",
+            task.task_id, result.status, duration, result.value
         );
 
         Ok(Response::new(TaskResponse {
@@ -41,14 +41,14 @@ impl TaskScheduler for TaskSchedulerService {
         request: Request<ResultRequest>,
     ) -> Result<Response<ResultResponse>, Status> {
         let req = request.into_inner();
-        if let Some(result) = REGISTRY.get_task_result(&req.task_id).await {
+        if let Some(cached_result) = REGISTRY.get_task_result(&req.task_id).await {
             Ok(Response::new(ResultResponse {
-                is_ready: true,
-                result: result.value,
+                status: cached_result.status,
+                result: cached_result.value,
             }))
         } else {
             Ok(Response::new(ResultResponse {
-                is_ready: false,
+                status: crate::tasks::taskscheduler::task_response::Status::Pending as i32,
                 result: String::new(),
             }))
         }

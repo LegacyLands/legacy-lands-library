@@ -2,62 +2,85 @@ mod common;
 
 use prost::Message;
 use prost_types::Any;
-use task_scheduler::models::wrappers::{BoolValue, BytesValue, Int32Value, StringValue};
+use std::collections::HashMap;
+use task_scheduler::models::wrappers::{
+    BoolValue, BytesValue, Int32Value, StringValue,
+};
 use task_scheduler::tasks::taskscheduler::{
-    task_scheduler_client::TaskSchedulerClient, ResultRequest, TaskRequest,
+    task_scheduler_client::TaskSchedulerClient, ListValue, MapValue, ResultRequest, TaskRequest,
 };
 use tonic::transport::Channel;
+use tonic::Request;
+
+// Helper functions to create Any messages for different types
 
 /// Convert i32 to an Any message
 fn any_i32(val: i32) -> Any {
-    let msg = Int32Value { value: val };
-    let mut buf = Vec::new();
-    msg.encode(&mut buf).unwrap();
     Any {
         type_url: "type.googleapis.com/google.protobuf.Int32Value".to_string(),
-        value: buf,
+        value: Int32Value { value: val }.encode_to_vec(),
     }
 }
 
 /// Convert bool to an Any message
 fn any_bool(val: bool) -> Any {
-    let msg = BoolValue { value: val };
-    let mut buf = Vec::new();
-    msg.encode(&mut buf).unwrap();
     Any {
         type_url: "type.googleapis.com/google.protobuf.BoolValue".to_string(),
-        value: buf,
+        value: BoolValue { value: val }.encode_to_vec(),
     }
 }
 
-/// Convert a string to an Any message
+/// Convert String to an Any message
 fn any_string(val: &str) -> Any {
-    let msg = StringValue {
-        value: val.to_string(),
-    };
-    let mut buf = Vec::new();
-    msg.encode(&mut buf).unwrap();
     Any {
         type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-        value: buf,
+        value: StringValue {
+            value: val.to_string(),
+        }
+        .encode_to_vec(),
     }
 }
 
-/// Convert a byte array to an Any message
+/// Convert byte slice to an Any message
 fn any_bytes(val: &[u8]) -> Any {
-    let msg = BytesValue {
-        value: val.to_vec(),
-    };
-    let mut buf = Vec::new();
-    msg.encode(&mut buf).unwrap();
     Any {
         type_url: "type.googleapis.com/google.protobuf.BytesValue".to_string(),
+        value: BytesValue {
+            value: val.to_vec(),
+        }
+        .encode_to_vec(),
+    }
+}
+
+// Renamed from any_array to any_list, uses generated taskscheduler::ListValue
+fn any_list(items: Vec<Any>) -> Any {
+    // Use the generated ListValue message
+    let list_val = ListValue { values: items };
+    let mut buf = Vec::new();
+    list_val.encode(&mut buf).unwrap();
+    Any {
+        // Update the type URL to match the new ListValue definition
+        type_url: "type.googleapis.com/taskscheduler.ListValue".to_string(),
         value: buf,
     }
 }
 
-async fn connect_to_server() -> TaskSchedulerClient<Channel> {
-    let channel = tonic::transport::Channel::from_static("http://[::1]:50051")
+// Updated to use generated taskscheduler::MapValue
+fn any_map(map: HashMap<String, Any>) -> Any {
+    // Use the generated MapValue message (note the 'fields' field name)
+    let map_val = MapValue { fields: map };
+    let mut buf = Vec::new();
+    map_val.encode(&mut buf).unwrap();
+    Any {
+        // Update the type URL to match the new MapValue definition
+        type_url: "type.googleapis.com/taskscheduler.MapValue".to_string(),
+        value: buf,
+    }
+}
+
+async fn connect_to_server(server_address: &str) -> TaskSchedulerClient<Channel> {
+    let channel = tonic::transport::Channel::from_shared(server_address.to_string())
+        .expect("Failed to create shared endpoint")
         .connect()
         .await
         .expect("Failed to create channel");
@@ -66,32 +89,14 @@ async fn connect_to_server() -> TaskSchedulerClient<Channel> {
 }
 
 #[tokio::test]
-async fn run_all_tests() {
-    let _server = common::setup().await;
-    run_test(test_basic_operations()).await;
-    run_test(test_async_operations()).await;
-    run_test(test_dependencies()).await;
-    run_test(test_error_handling()).await;
-    run_test(test_collection_conversion()).await;
-    run_test(test_bool_conversion()).await;
-    run_test(test_string_conversion()).await;
-    run_test(test_bytes_conversion()).await;
-}
-
-async fn run_test<F>(future: F) -> F::Output
-where
-    F: std::future::Future,
-{
-    future.await
-}
-
 async fn test_basic_operations() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     // Test addition
     let add_task = TaskRequest {
         task_id: "add_1".to_string(),
-        method: "task_scheduler::tasks::builtin::add".to_string(),
+        method: "add".to_string(),
         args: vec![any_i32(1), any_i32(2), any_i32(3)],
         deps: vec![],
         is_async: false,
@@ -106,7 +111,7 @@ async fn test_basic_operations() {
     // Test subtraction
     let remove_task = TaskRequest {
         task_id: "remove_1".to_string(),
-        method: "task_scheduler::tasks::builtin::remove".to_string(),
+        method: "remove".to_string(),
         args: vec![any_i32(10), any_i32(3), any_i32(2)],
         deps: vec![],
         is_async: false,
@@ -119,12 +124,14 @@ async fn test_basic_operations() {
     assert_eq!(result.result, "5");
 }
 
+#[tokio::test]
 async fn test_async_operations() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     let delete_task = TaskRequest {
         task_id: "delete_1".to_string(),
-        method: "task_scheduler::tasks::builtin::delete".to_string(),
+        method: "delete".to_string(),
         args: vec![any_i32(1), any_i32(2), any_i32(3)],
         deps: vec![],
         is_async: true,
@@ -137,27 +144,29 @@ async fn test_async_operations() {
     assert_eq!(result.result, "Deleted 3 items");
 }
 
+#[tokio::test]
 async fn test_dependencies() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     let tasks = vec![
         TaskRequest {
             task_id: "add_dep".to_string(),
-            method: "task_scheduler::tasks::builtin::add".to_string(),
+            method: "add".to_string(),
             args: vec![any_i32(1), any_i32(2), any_i32(3)],
             deps: vec![],
             is_async: false,
         },
         TaskRequest {
             task_id: "remove_dep".to_string(),
-            method: "task_scheduler::tasks::builtin::remove".to_string(),
+            method: "remove".to_string(),
             args: vec![any_i32(10), any_i32(3)],
             deps: vec!["add_dep".to_string()],
             is_async: false,
         },
         TaskRequest {
             task_id: "delete_dep".to_string(),
-            method: "task_scheduler::tasks::builtin::delete".to_string(),
+            method: "delete".to_string(),
             args: vec![any_i32(1), any_i32(2)],
             deps: vec!["add_dep".to_string(), "remove_dep".to_string()],
             is_async: true,
@@ -187,8 +196,10 @@ async fn test_dependencies() {
     assert_eq!(result.result, "Deleted 2 items", "Unexpected result");
 }
 
+#[tokio::test]
 async fn test_error_handling() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     // Test non-existent method
     let task = TaskRequest {
@@ -209,7 +220,7 @@ async fn test_error_handling() {
     // Test insufficient parameters
     let task = TaskRequest {
         task_id: "invalid_args".to_string(),
-        method: "task_scheduler::tasks::builtin::remove".to_string(),
+        method: "remove".to_string(),
         args: vec![any_i32(1)],
         deps: vec![],
         is_async: false,
@@ -222,56 +233,21 @@ async fn test_error_handling() {
     assert_eq!(result.result, "Error: Need at least 2 arguments");
 }
 
+#[tokio::test]
 async fn test_collection_conversion() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
-    use prost::Message;
-    use prost_types::Any;
-    use std::collections::HashMap;
-    use task_scheduler::models::wrappers::{ArrayValue, Int32Value, MapValue};
-
-    fn any_i32(val: i32) -> Any {
-        let msg = Int32Value { value: val };
-        let mut buf = Vec::new();
-        msg.encode(&mut buf).unwrap();
-        Any {
-            type_url: "type.googleapis.com/google.protobuf.Int32Value".to_string(),
-            value: buf,
-        }
-    }
-
-    fn any_array(items: Vec<Any>) -> Any {
-        let array_val = ArrayValue { values: items };
-        let mut buf = Vec::new();
-        array_val.encode(&mut buf).unwrap();
-        Any {
-            type_url: "type.googleapis.com/google.protobuf.ArrayValue".to_string(),
-            value: buf,
-        }
-    }
-
-    fn any_map(map: HashMap<String, Any>) -> Any {
-        let map_val = MapValue { values: map };
-        let mut buf = Vec::new();
-        map_val.encode(&mut buf).unwrap();
-        Any {
-            type_url: "type.googleapis.com/google.protobuf.MapValue".to_string(),
-            value: buf,
-        }
-    }
-
-    // Create array parameter: [10, 20]
-    let array_arg = any_array(vec![any_i32(10), any_i32(20)]);
-
-    // Create map parameter: {"key": 42}
+    // Use the updated any_list helper
+    let list_arg = any_list(vec![any_i32(10), any_i32(20)]);
     let mut map_input = HashMap::new();
     map_input.insert("key".to_string(), any_i32(42));
     let map_arg = any_map(map_input);
 
     let task = task_scheduler::tasks::taskscheduler::TaskRequest {
         task_id: "collection_test".to_string(),
-        method: "task_scheduler::tasks::builtin::process_collection".to_string(),
-        args: vec![array_arg, map_arg],
+        method: "process_collection".to_string(),
+        args: vec![list_arg, map_arg], // Pass the new list/map Any values
         deps: vec![],
         is_async: false,
     };
@@ -287,12 +263,14 @@ async fn test_collection_conversion() {
     );
 }
 
+#[tokio::test]
 async fn test_bool_conversion() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     let task = task_scheduler::tasks::taskscheduler::TaskRequest {
         task_id: "bool_test".to_string(),
-        method: "task_scheduler::tasks::builtin::echo_bool".to_string(),
+        method: "echo_bool".to_string(),
         args: vec![any_bool(true), any_bool(false)],
         deps: vec![],
         is_async: false,
@@ -303,15 +281,17 @@ async fn test_bool_conversion() {
         .await
         .expect("Failed to submit bool test task");
     let result = response.into_inner();
-    assert_eq!(result.result, "true,false", "Unexpected bool echo output");
+    assert_eq!(result.result, "true,false", "Unexpected boolean result");
 }
 
+#[tokio::test]
 async fn test_string_conversion() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     let task = task_scheduler::tasks::taskscheduler::TaskRequest {
         task_id: "string_test".to_string(),
-        method: "task_scheduler::tasks::builtin::echo_string".to_string(),
+        method: "echo_string".to_string(),
         args: vec![any_string("hello"), any_string("world")],
         deps: vec![],
         is_async: false,
@@ -322,18 +302,17 @@ async fn test_string_conversion() {
         .await
         .expect("Failed to submit string test task");
     let result = response.into_inner();
-    assert_eq!(
-        result.result, "hello,world",
-        "Unexpected string echo output"
-    );
+    assert_eq!(result.result, "hello,world", "Unexpected string result");
 }
 
+#[tokio::test]
 async fn test_bytes_conversion() {
-    let mut client = connect_to_server().await;
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
 
     let task = task_scheduler::tasks::taskscheduler::TaskRequest {
         task_id: "bytes_test".to_string(),
-        method: "task_scheduler::tasks::builtin::echo_bytes".to_string(),
+        method: "echo_bytes".to_string(),
         args: vec![any_bytes(b"abc"), any_bytes(b"123")],
         deps: vec![],
         is_async: false,
@@ -344,5 +323,148 @@ async fn test_bytes_conversion() {
         .await
         .expect("Failed to submit bytes test task");
     let result = response.into_inner();
-    assert_eq!(result.result, "abc,123", "Unexpected bytes echo output");
+    assert_eq!(result.result, "abc,123", "Unexpected bytes result");
+}
+
+#[tokio::test]
+async fn test_echo_boolean() {
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
+
+    let bool_arg = Any {
+        type_url: "type.googleapis.com/google.protobuf.BoolValue".to_string(),
+        value: BoolValue { value: true }.encode_to_vec(),
+    };
+
+    let request = Request::new(TaskRequest {
+        task_id: "test-bool-1".to_string(),
+        method: "echo_bool".to_string(),
+        args: vec![bool_arg],
+        deps: vec![],
+        is_async: false,
+    });
+
+    let response = client.submit_task(request).await.unwrap().into_inner();
+    assert_eq!(response.task_id, "test-bool-1");
+    assert_eq!(response.status, 1); // SUCCESS
+    assert_eq!(response.result, "true", "Unexpected boolean echo result");
+}
+
+#[tokio::test]
+async fn test_echo_bytes() {
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
+
+    let bytes_arg = Any {
+        type_url: "type.googleapis.com/google.protobuf.BytesValue".to_string(),
+        value: BytesValue {
+            value: b"hello bytes".to_vec(),
+        }
+        .encode_to_vec(),
+    };
+
+    let request = Request::new(TaskRequest {
+        task_id: "test-bytes-1".to_string(),
+        method: "echo_bytes".to_string(),
+        args: vec![bytes_arg],
+        deps: vec![],
+        is_async: false,
+    });
+
+    let response = client.submit_task(request).await.unwrap().into_inner();
+    assert_eq!(response.task_id, "test-bytes-1");
+    assert_eq!(response.status, 1); // SUCCESS
+    assert_eq!(response.result, "hello bytes", "Unexpected bytes echo result");
+}
+
+#[tokio::test]
+async fn test_process_nested_list() {
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
+
+    // Construct nested list using the updated any_list helper
+    let nested_list_any = any_list(vec![
+        any_list(vec![any_string("a"), any_string("b")]),
+        any_list(vec![any_string("c"), any_string("d")]),
+    ]);
+
+    let request = Request::new(TaskRequest {
+        task_id: "test-nested-list-1".to_string(),
+        method: "process_nested_list".to_string(),
+        args: vec![nested_list_any], // Pass the new list Any value
+        deps: vec![],
+        is_async: false,
+    });
+
+    let response = client.submit_task(request).await.unwrap().into_inner();
+    assert_eq!(response.task_id, "test-nested-list-1");
+    assert_eq!(response.status, 1);
+    assert_eq!(
+        response.result.trim(),
+        "Received nested list with 2 inner lists: [List 0 (2 items): a, b] [List 1 (2 items): c, d]",
+        "Unexpected nested list result"
+    );
+}
+
+#[tokio::test]
+async fn test_process_complex_map() {
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
+
+    // Construct complex map using the updated any_map and any_list helpers
+    let mut complex_map_input = HashMap::new();
+    complex_map_input.insert("key1".to_string(), any_string("value1"));
+    complex_map_input.insert("key2".to_string(), any_list(vec![any_i32(1), any_i32(2), any_i32(3)]));
+    let mut nested_map = HashMap::new();
+    nested_map.insert("nested_key".to_string(), any_string("nested_value"));
+    complex_map_input.insert("key3".to_string(), any_map(nested_map));
+
+    let complex_map_any = any_map(complex_map_input);
+
+    let request = Request::new(TaskRequest {
+        task_id: "test-complex-map-1".to_string(),
+        method: "process_complex_map".to_string(),
+        args: vec![complex_map_any], // Pass the new map Any value
+        deps: vec![],
+        is_async: false,
+    });
+
+    let response = client.submit_task(request).await.unwrap().into_inner();
+    assert_eq!(response.task_id, "test-complex-map-1");
+    assert_eq!(response.status, 1);
+    assert_eq!(
+        response.result.trim(),
+        "Received complex map:",
+        "Unexpected complex map result"
+    );
+}
+
+#[tokio::test]
+async fn test_process_person_map() {
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
+
+    // Construct person map using the updated any_map helper
+    let mut person_map_input = HashMap::new();
+    person_map_input.insert("name".to_string(), any_string("Alice"));
+    person_map_input.insert("age".to_string(), any_i32(30));
+    person_map_input.insert("city".to_string(), any_string("New York"));
+    let person_map_any = any_map(person_map_input);
+
+    let request = Request::new(TaskRequest {
+        task_id: "test-person-map-1".to_string(),
+        method: "process_person_map".to_string(),
+        args: vec![person_map_any], // Pass the new map Any value
+        deps: vec![],
+        is_async: false,
+    });
+
+    let response = client.submit_task(request).await.unwrap().into_inner();
+    assert_eq!(response.task_id, "test-person-map-1");
+    assert_eq!(response.status, 1);
+    assert_eq!(
+        response.result.trim(),
+        "Processing person: Name=Alice, Age=30",
+        "Unexpected person map result"
+    );
 }
