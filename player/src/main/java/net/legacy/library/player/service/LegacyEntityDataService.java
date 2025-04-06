@@ -163,7 +163,7 @@ public class LegacyEntityDataService {
      * @param config                  the Redis configuration for initializing the Redis cache
      * @param basePackages            the base packages to scan for accepter annotations
      * @param classLoaders            the class loaders to scan for accepter annotations
-     * @param ttl                       the custom TTL to apply to entity data in Redis
+     * @param ttl                     the custom TTL to apply to entity data in Redis
      * @return the newly created {@link LegacyEntityDataService}
      */
     public static LegacyEntityDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
@@ -182,7 +182,7 @@ public class LegacyEntityDataService {
      * @return a new instance of {@link LegacyEntityDataService}
      */
     public static LegacyEntityDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
-                                            Config config, List<String> basePackages, List<ClassLoader> classLoaders) {
+                                             Config config, List<String> basePackages, List<ClassLoader> classLoaders) {
         return of(name, mongoDBConnectionConfig, config, Duration.ofHours(2), basePackages, classLoaders, Duration.ofSeconds(2), DEFAULT_TTL_DURATION);
     }
 

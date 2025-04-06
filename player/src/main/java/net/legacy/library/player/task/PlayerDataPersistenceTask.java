@@ -134,7 +134,7 @@ public class PlayerDataPersistenceTask implements TaskInterface {
 
                         if (!legacyPlayerDataString.isEmpty()) {
                             datastore.save(SimplixSerializer.deserialize(legacyPlayerDataString, LegacyPlayerData.class));
-                            
+
                             // Set TTL for this player data if custom TTL is provided 
                             // or if it currently has no TTL
                             if (ttl != null) {

@@ -49,8 +49,8 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface {
      * @param ttl                     the custom TTL to apply to player data during persistence
      * @return a new instance of {@link PlayerDataPersistenceTimerTask}
      */
-    public static PlayerDataPersistenceTimerTask of(Duration delay, Duration interval, LockSettings lockSettings, 
-                                                 LegacyPlayerDataService legacyPlayerDataService, Duration ttl) {
+    public static PlayerDataPersistenceTimerTask of(Duration delay, Duration interval, LockSettings lockSettings,
+                                                    LegacyPlayerDataService legacyPlayerDataService, Duration ttl) {
         return new PlayerDataPersistenceTimerTask(delay, interval, lockSettings, legacyPlayerDataService, ttl);
     }
 

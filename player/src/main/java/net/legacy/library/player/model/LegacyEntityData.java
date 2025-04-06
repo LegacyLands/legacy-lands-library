@@ -3,6 +3,7 @@ package net.legacy.library.player.model;
 import com.github.benmanes.caffeine.cache.Cache;
 import dev.morphia.annotations.Entity;
 import dev.morphia.annotations.Id;
+import dev.morphia.annotations.Indexed;
 import dev.morphia.annotations.Transient;
 import lombok.Getter;
 import lombok.NonNull;
@@ -40,25 +41,30 @@ public class LegacyEntityData {
     @Id
     @NonNull
     private final UUID uuid;
+
     /**
      * A single-entity, in-memory cache that resides on the server and is not persisted to db.
      */
     @Transient
     private transient final CacheServiceInterface<Cache<String, String>, String> rawCache =
             CacheServiceFactory.createCaffeineCache();
+
     /**
      * A map containing the custom attributes associated with the entity.
      */
     private final Map<String, String> attributes = new ConcurrentHashMap<>();
+
     /**
      * A map of relationships this entity has with other entities.
      * Key: relationship type (e.g., "member", "owner")
      * Value: Set of entity UUIDs this entity has that relationship with
      */
     private final Map<String, Set<UUID>> relationships = new ConcurrentHashMap<>();
+
     /**
      * The type of this entity, used for classification and querying.
      */
+    @Indexed
     private String entityType;
 
     /**

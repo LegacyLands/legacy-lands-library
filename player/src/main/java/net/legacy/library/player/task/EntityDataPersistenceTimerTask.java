@@ -39,7 +39,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTimerTask}
      */
     public static EntityDataPersistenceTimerTask of(Duration delay, Duration period, LockSettings lockSettings,
-                                                   LegacyEntityDataService service, int limit) {
+                                                    LegacyEntityDataService service, int limit) {
         return new EntityDataPersistenceTimerTask(delay, period, lockSettings, service, limit, null);
     }
 
@@ -55,7 +55,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTimerTask}
      */
     public static EntityDataPersistenceTimerTask of(Duration delay, Duration period, LockSettings lockSettings,
-                                                   LegacyEntityDataService service, int limit, Duration ttl) {
+                                                    LegacyEntityDataService service, int limit, Duration ttl) {
         return new EntityDataPersistenceTimerTask(delay, period, lockSettings, service, limit, ttl);
     }
 
@@ -69,7 +69,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTimerTask}
      */
     public static EntityDataPersistenceTimerTask of(Duration delay, Duration period, LockSettings lockSettings,
-                                                   LegacyEntityDataService service) {
+                                                    LegacyEntityDataService service) {
         return new EntityDataPersistenceTimerTask(delay, period, lockSettings, service, 1000, null);
     }
 
@@ -84,7 +84,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
      * @return a new instance of {@link EntityDataPersistenceTimerTask}
      */
     public static EntityDataPersistenceTimerTask of(Duration delay, Duration period, LockSettings lockSettings,
-                                                   LegacyEntityDataService service, Duration ttl) {
+                                                    LegacyEntityDataService service, Duration ttl) {
         return new EntityDataPersistenceTimerTask(delay, period, lockSettings, service, 1000, ttl);
     }
 
@@ -97,8 +97,8 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
     public ScheduledTask<?> start() {
         return scheduleAtFixedRate(() -> {
             // First, sync L1 cache entities
-            service.getL1Cache().getResource().asMap().forEach((uuid, data) -> 
-                EntityDataPersistenceTask.of(lockSettings, service, uuid, ttl).start());
+            service.getL1Cache().getResource().asMap().forEach((uuid, data) ->
+                    EntityDataPersistenceTask.of(lockSettings, service, uuid, ttl).start());
 
             // Then, perform bulk persistence operation for all entities in L2 cache
             EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start();
