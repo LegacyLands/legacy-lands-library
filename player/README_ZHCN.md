@@ -5,6 +5,7 @@
 支持跨服务器数据同步和分布式锁，适用于大规模多服务器环境下的复杂数据管理需求，能够 **无缝处理数千实体间** 的关系网络与状态同步。
 
 ### 用法
+
 ```kotlin
 // Dependencies
 dependencies {
@@ -24,17 +25,21 @@ dependencies {
 
 Player 模块采用三层缓存架构以优化性能和可扩展性：
 
-- **L1缓存 (Caffeine)**：本地内存缓存，存储所有在线玩家的数据。提供纳秒级的读写性能，支持自动过期和基于大小的淘汰策略。每个服务器实例维护自己的 L1 缓存。
-- **L2 缓存 (Redis)**：分布式缓存，存储热数据和共享数据。支持毫秒级的读写性能，提供跨服务器的数据共享，实现分布式锁和 Redis Stream 消息队列。
+- **L1缓存 (Caffeine)**：本地内存缓存，存储所有在线玩家的数据。提供纳秒级的读写性能，支持自动过期和基于大小的淘汰策略。每个服务器实例维护自己的
+  L1 缓存。
+- **L2 缓存 (Redis)**：分布式缓存，存储热数据和共享数据。支持毫秒级的读写性能，提供跨服务器的数据共享，实现分布式锁和 Redis
+  Stream 消息队列。
 - **持久层 (MongoDB)**：提供可靠的持久化存储。支持复杂查询和索引，处理大规模数据集，适用于非频繁访问的历史数据。
 
 ### 读取路径
+
 1. 首先尝试从L1缓存读取数据（Caffeine）
 2. 如果 L1 缓存未命中，尝试从L2缓存读取（Redis）
 3. 如果 L2 缓存未命中，从数据库读取（MongoDB）
 4. 数据加载后，自动填充L1和L2缓存
 
 ### 写入路径
+
 1. 数据首先写入L1缓存（Caffeine）
 2. 通过 Redis Stream 同步到 L2 缓存（Redis）
 3. 定时任务或显式调用将数据持久化到数据库（MongoDB）
@@ -73,6 +78,45 @@ public class ServiceInitExample {
 }
 ```
 
+### 数据库索引管理 (可选但推荐)
+
+为了优化查询性能，特别是对于 `findEntitiesByType`、`findEntitiesByAttribute` 和 `findEntitiesByRelationship` 的查询，在
+MongoDB 中创建适当的索引至关重要。`LegacyIndexManager` 类可以帮助管理这些索引。
+
+建议在应用程序启动过程中，初始化 `MongoDBConnectionConfig` 和相关服务之后，调用所需的 `ensure...` 方法。
+
+```java
+public class IndexInitializationExample {
+    public void initializeIndexes(MongoDBConnectionConfig mongoConfig) {
+        try {
+            // 创建索引管理器
+            LegacyIndexManager indexManager = LegacyIndexManager.of(mongoConfig);
+
+            // === 确保 LegacyEntityData 的索引 ===
+
+            // 按 entityType 查询的索引 (强烈推荐)
+            indexManager.ensureEntityTypeIndex();
+
+            // 示例：为常用查询的属性（例如 "status"）创建索引。对可选属性使用 sparse=true
+            indexManager.ensureAttributeIndex("status", true);
+
+            // 示例：为常用查询的关系类型（例如 "member"）创建索引
+            indexManager.ensureRelationshipIndex("member");
+            indexManager.ensureRelationshipIndex("owner"); // 根据需要为其他类型添加
+
+            // === 确保 LegacyPlayerData 的索引 ===
+
+            // 示例：为常用查询的玩家数据字段（例如 "guildId"）创建索引
+            indexManager.ensurePlayerDataIndex("guildId", true);
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+    }
+}
+```
+
+**注意:** `ensure...` 方法是幂等的。在启动时重复调用它们是安全的，并且可以确保索引存在，即使索引已经存在也不会导致错误。
+
 ### 高级服务配置
 
 ```java
@@ -99,18 +143,18 @@ public class PlayerDataExample {
     public void basicOperations(LegacyPlayerDataService service, UUID playerUuid) {
         // 1. 获取玩家数据
         LegacyPlayerData playerData = service.getLegacyPlayerData(playerUuid);
-        
+
         // 2. 读取单个属性
         String coins = playerData.getData("coins");  // 如果不存在返回 null
-        
+
         // 3. 带类型转换的读取
-        Integer coinsValue = playerData.getData("coins", Integer::parseInt); 
+        Integer coinsValue = playerData.getData("coins", Integer::parseInt);
         Long lastLoginTime = playerData.getData("lastLogin", Long::parseLong);
         Boolean isPremium = playerData.getData("premium", Boolean::parseBoolean);
-        
+
         // 4. 添加/更新单个属性
         playerData.addData("level", "5");  // 所有值都以字符串形式存储
-        
+
         // 5. 添加/更新多个属性
         Map<String, String> playerStats = new HashMap<>();
         playerStats.put("strength", "10");
@@ -118,10 +162,10 @@ public class PlayerDataExample {
         playerStats.put("intelligence", "20");
         playerStats.put("lastUpdated", String.valueOf(System.currentTimeMillis()));
         playerData.addData(playerStats);  // 批量更新
-        
+
         // 6. 删除属性
         playerData.removeData("temporaryBuff");  // 移除单个属性
-        
+
         // 7. 使用临时缓存（不持久化到数据库）
         playerData.getRawCache().getResource().put("combatCooldown", "1000");
         String cooldown = playerData.getRawCache().getResource().getIfPresent("combatCooldown");
@@ -136,19 +180,19 @@ public class PlayerDataHandlingExample {
     public void handleNonexistentData(LegacyPlayerDataService service, UUID playerUuid) {
         // 获取玩家数据 - 即使数据库中不存在也会返回一个新的空对象
         LegacyPlayerData playerData = service.getLegacyPlayerData(playerUuid);
-        
+
         // 检查特定属性是否存在
         String rank = playerData.getData("rank");
         if (rank == null) {
             // 属性不存在，设置默认值
             playerData.addData("rank", "DEFAULT");
         }
-        
+
         // 安全地读取数值并提供默认值
         int coins = Optional.ofNullable(playerData.getData("coins"))
                 .map(Integer::parseInt)
                 .orElse(0);  // 如果 coins 属性不存在或解析失败，返回 0
-                
+
         // 也可以使用 Java 8 Stream 处理批量数据
         boolean hasAllRequiredFields = Stream.of("name", "rank", "level")
                 .allMatch(field -> playerData.getData(field) != null);
@@ -172,7 +216,7 @@ public class CrossServerUpdateExample {
         updates.put("lastLogin", String.valueOf(System.currentTimeMillis()));
         updates.put("status", "ONLINE");
         updates.put("currentServer", "lobby-1");
-        
+
         // 2. 创建并发布更新任务
         // 这将向 Redis Stream 发送消息，所有订阅的服务器都会收到并处理
         service.pubRStreamTask(
@@ -195,7 +239,7 @@ public class CrossServerUpdateByUuidExample {
         Map<String, String> updates = new HashMap<>();
         updates.put("lastSeen", String.valueOf(System.currentTimeMillis()));
         updates.put("status", "OFFLINE");
-        
+
         // 创建并发布 UUID 更新任务
         service.pubRStreamTask(
                 PlayerDataUpdateByUuidRStreamAccepter.createRStreamTask(
@@ -213,47 +257,49 @@ public class CrossServerUpdateByUuidExample {
 您可以创建自定义的 Redis Stream 处理器来处理特定的数据同步需求：
 
 ```java
+
 @RStreamAccepterRegister  // 这个注解使系统自动发现并注册此接收器
 public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface {
     // 可以选择使用 commons 中的 GsonUtil
     private static final Gson GSON = new Gson();
-    
+
     // 定义此接收器的名称
     @Override
     public String getActionName() {
         return "player-achievement-update";
     }
-    
+
     // 同一任务是否要在单个服务器上被处理多次
     @Override
     public boolean isRecodeLimit() {
         return true;
     }
-    
+
     // 处理接收到的数据
     @Override
-    public void accept(RStream<Object, Object> stream, 
-                      StreamMessageId id,
-                      LegacyPlayerDataService service, 
-                      String data) {
+    public void accept(RStream<Object, Object> stream,
+                       StreamMessageId id,
+                       LegacyPlayerDataService service,
+                       String data) {
         try {
             // 解析任务数据
             AchievementData achievementData = GSON.fromJson(
-                data, new TypeToken<AchievementData>(){}.getType()
+                    data, new TypeToken<AchievementData>() {
+                    }.getType()
             );
-            
+
             // 获取玩家数据
             UUID playerUuid = UUID.fromString(achievementData.getPlayerId());
             LegacyPlayerData playerData = service.getLegacyPlayerData(playerUuid);
-            
+
             // 更新成就数据
             String existingAchievements = playerData.getData("achievements");
             // 处理成就逻辑...
-            
+
             // 更新玩家数据
             playerData.addData("achievements", updatedAchievements);
             playerData.addData("lastAchievementTime", String.valueOf(System.currentTimeMillis()));
-            
+
             // 成功处理后确认任务完成（删除消息）
             ack(stream, id);
         } catch (Exception exception) {
@@ -261,29 +307,34 @@ public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface
             log.error("Failed to process achievement update", exception);
         }
     }
-    
+
     // 创建成就更新任务
     public static RStreamTask createTask(UUID playerId, String achievementId, Duration expiry) {
         AchievementData data = new AchievementData(playerId.toString(), achievementId);
         return RStreamTask.of(
-            "player-achievement-update", 
-            GSON.toJson(data), 
-            expiry
+                "player-achievement-update",
+                GSON.toJson(data),
+                expiry
         );
     }
-    
+
     // 内部数据类
     private static class AchievementData {
         private final String playerId;
         private final String achievementId;
-        
+
         public AchievementData(String playerId, String achievementId) {
             this.playerId = playerId;
             this.achievementId = achievementId;
         }
-        
-        public String getPlayerId() { return playerId; }
-        public String getAchievementId() { return achievementId; }
+
+        public String getPlayerId() {
+            return playerId;
+        }
+
+        public String getAchievementId() {
+            return achievementId;
+        }
     }
 }
 ```
@@ -317,46 +368,46 @@ public class EntityManagementExample {
         // 1. 创建公会实体
         UUID guildId = UUID.randomUUID();
         LegacyEntityData guild = LegacyEntityData.of(guildId, "guild");
-        
+
         // 2. 设置实体属性
         guild.addAttribute("name", "Shadow Warriors");
         guild.addAttribute("level", "5");
         guild.addAttribute("founded", String.valueOf(System.currentTimeMillis()));
         guild.addAttribute("description", "Elite PvP guild for hardcore players");
-        
+
         // 3. 批量添加属性
         Map<String, String> guildStats = new HashMap<>();
         guildStats.put("members", "15");
         guildStats.put("maxMembers", "20");
         guildStats.put("reputation", "850");
         guild.addAttributes(guildStats);
-        
+
         // 4. 建立实体关系
         UUID leaderId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
         UUID viceLeaderId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
-        
+
         // 添加成员关系
         guild.addRelationship("leader", leaderId);
         guild.addRelationship("officer", viceLeaderId);
-        
+
         // 添加多个普通成员
         for (UUID memberId : memberIds) {
             guild.addRelationship("member", memberId);
         }
-        
+
         // 6. 检查关系
         boolean isLeader = guild.hasRelationship("leader", leaderId);  // true
         int memberCount = guild.countRelationships("member");  // 返回成员数量
-        
+
         // 7. 获取所有特定关系的实体ID
         Set<UUID> allMembers = guild.getRelatedEntities("member");
-        
+
         // 8. 删除关系
         guild.removeRelationship("member", leavingMemberId);
-        
+
         // 9. 修改属性
         guild.addAttribute("reputation", "900");  // 更新声望值
-        
+
         // 10. 保存实体到 Redis 与数据库（该方法只有需要持久化时才调用）
         entityService.saveEntity(guild);
     }
@@ -371,18 +422,18 @@ public class EntityQueryExample {
         // 1. 按ID查询单个实体
         UUID entityId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
         LegacyEntityData entity = entityService.getEntityData(entityId);
-        
+
         // 2. 按类型查询所有实体
         List<LegacyEntityData> allGuilds = entityService.findEntitiesByType("guild");
-        
+
         // 3. 按属性查询实体
         List<LegacyEntityData> level5Guilds = entityService.findEntitiesByAttribute("level", "5");
-        
+
         // 4. 按关系查询实体
         // 例如：查找某玩家作为成员所属的所有公会
         UUID playerId = UUID.fromString("550e8400-e29b-41d4-a716-446655440005");
         List<LegacyEntityData> playerGuilds = entityService.findEntitiesByRelationship("member", playerId);
-        
+
         // 5. 组合查询（需自行实现）
         // 例如：查找某玩家是领导者且等级大于3的公会
         List<LegacyEntityData> leaderGuilds = entityService.findEntitiesByRelationship("leader", playerId);
@@ -400,27 +451,27 @@ public class EntityQueryExample {
 
 ```java
 public class EntityRelationshipExamples {
-    
+
     // 示例：创建游戏公会系统
     public void createGuildSystem(LegacyEntityDataService entityService) {
         // 创建公会
         LegacyEntityData guild = LegacyEntityData.of(UUID.randomUUID(), "guild");
         guild.addAttribute("name", "Dragon Knights");
-        
+
         // 创建公会大厅
         LegacyEntityData guildHall = LegacyEntityData.of(UUID.randomUUID(), "building");
         guildHall.addAttribute("name", "Dragon's Lair");
         guildHall.addAttribute("type", "guild_hall");
-        
+
         // 建立双向关系
         guild.addRelationship("owns", guildHall.getUuid());
         guildHall.addRelationship("owned_by", guild.getUuid());
-        
+
         // 保存两个实体
         entityService.saveEntity(guild);
         entityService.saveEntity(guildHall);
     }
-    
+
     // 示例：创建物品库存系统
     public void createInventorySystem(LegacyEntityDataService entityService, UUID playerId) {
         // 玩家实体（可能已经存在）
@@ -429,21 +480,21 @@ public class EntityRelationshipExamples {
             playerEntity = LegacyEntityData.of(playerId, "player");
             playerEntity.addAttribute("name", "GameMaster");
         }
-        
+
         // 创建背包实体
         LegacyEntityData backpack = LegacyEntityData.of(UUID.randomUUID(), "container");
         backpack.addAttribute("type", "backpack");
         backpack.addAttribute("slots", "20");
-        
+
         // 创建物品
         LegacyEntityData sword = LegacyEntityData.of(UUID.randomUUID(), "item");
         sword.addAttribute("name", "Excalibur");
         sword.addAttribute("damage", "50");
-        
+
         // 建立关系链
         playerEntity.addRelationship("owns", backpack.getUuid());
         backpack.addRelationship("contains", sword.getUuid());
-        
+
         // 保存所有实体
         entityService.saveEntity(playerEntity);
         entityService.saveEntity(backpack);
@@ -459,28 +510,28 @@ public class CacheSyncExample {
     public void syncCaches(LegacyPlayerDataService service) {
         // 1. 同步单个玩家的缓存（直接方法）
         UUID playerUuid = player.getUniqueId();
-        
+
         // 直接在当前服务器同步特定玩家
         L1ToL2PlayerDataSyncTask.of(playerUuid, service).start();
-        
+
         // 2. 通过 Redis Stream 同步（跨服务器）
-        
+
         // 按玩家名称同步
         service.pubRStreamTask(
-            L1ToL2PlayerDataSyncByNameRStreamAccepter.createRStreamTask(
-                "PlayerName",  // 玩家名称
-                Duration.ofSeconds(10)  // 任务过期时间
-            )
+                L1ToL2PlayerDataSyncByNameRStreamAccepter.createRStreamTask(
+                        "PlayerName",  // 玩家名称
+                        Duration.ofSeconds(10)  // 任务过期时间
+                )
         );
-        
+
         // 按 UUID 同步
         service.pubRStreamTask(
-            L1ToL2PlayerDataSyncByUuidRStreamAccepter.createRStreamTask(
-                playerUuid,  // 玩家 UUID
-                Duration.ofSeconds(10)  // 任务过期时间
-            )
+                L1ToL2PlayerDataSyncByUuidRStreamAccepter.createRStreamTask(
+                        playerUuid,  // 玩家 UUID
+                        Duration.ofSeconds(10)  // 任务过期时间
+                )
         );
-        
+
         // 3. 批量同步所有在线玩家
         service.getL1Cache().getResource().asMap().forEach((uuid, data) -> {
             L1ToL2PlayerDataSyncTask.of(uuid, service).start();
@@ -493,32 +544,32 @@ public class CacheSyncExample {
 
 ```java
 public class PersistenceExample {
-    public void persistData(LegacyPlayerDataService playerService, 
-                           LegacyEntityDataService entityService) {
+    public void persistData(LegacyPlayerDataService playerService,
+                            LegacyEntityDataService entityService) {
         // 1. 创建锁设置
         LockSettings lockSettings = LockSettings.of(
-            100,  // 等待锁的最大时间
-            200,  // 持有锁的最大时间
-            TimeUnit.MILLISECONDS
+                100,  // 等待锁的最大时间
+                200,  // 持有锁的最大时间
+                TimeUnit.MILLISECONDS
         );
-        
+
         // 2. 触发玩家数据持久化
         PlayerDataPersistenceTask.of(
-            lockSettings,
-            playerService
+                lockSettings,
+                playerService
         ).start();
-        
+
         // 3. 限制单次持久化的最大数据量
         PlayerDataPersistenceTask.of(
-            lockSettings,
-            playerService,
-            500  // 最多处理 500 条数据
+                lockSettings,
+                playerService,
+                500  // 最多处理 500 条数据
         ).start();
-        
+
         // 4. 触发实体数据持久化
         EntityDataPersistenceTask.of(
-            lockSettings,
-            entityService
+                lockSettings,
+                entityService
         ).start();
     }
 }
@@ -533,25 +584,25 @@ public class TTLManagementExample {
     public void manageTTL(LegacyEntityDataService entityService, LegacyPlayerDataService playerService) {
         // 1. 实体数据 TTL 管理
         UUID entityId = UUID.randomUUID();
-        
+
         // 为单个实体设置默认 TTL (30分钟)
         boolean success = entityService.setEntityDefaultTTL(entityId);
-        
+
         // 为单个实体设置自定义 TTL
         boolean customSuccess = entityService.setEntityTTL(entityId, Duration.ofHours(2));
-        
+
         // 为所有没有 TTL 的实体设置默认 TTL
         int entitiesUpdated = entityService.setDefaultTTLForAllEntities();
-        
+
         // 2. 玩家数据 TTL 管理
         UUID playerId = UUID.randomUUID();
-        
+
         // 为单个玩家设置默认 TTL (1 天)
         boolean playerSuccess = playerService.setPlayerDefaultTTL(playerId);
-        
+
         // 为单个玩家设置自定义 TTL
         boolean playerCustomSuccess = playerService.setPlayerTTL(playerId, Duration.ofHours(1));
-        
+
         // 为所有没有 TTL 的玩家设置默认 TTL
         int playersUpdated = playerService.setDefaultTTLForAllPlayers();
     }
@@ -565,19 +616,19 @@ public class BatchEntityOperationsExample {
     public void batchSaveEntities(LegacyEntityDataService entityService) {
         // 创建多个实体
         List<LegacyEntityData> entities = new ArrayList<>();
-        
+
         // 创建第一个实体
         LegacyEntityData entity1 = LegacyEntityData.of(UUID.randomUUID(), "item");
         entity1.addAttribute("name", "龙之刃");
         entity1.addAttribute("rarity", "legendary");
         entities.add(entity1);
-        
+
         // 创建第二个实体
         LegacyEntityData entity2 = LegacyEntityData.of(UUID.randomUUID(), "item");
         entity2.addAttribute("name", "暗影披风");
         entity2.addAttribute("rarity", "epic");
         entities.add(entity2);
-        
+
         // 批量保存所有实体（提高性能）
         entityService.saveEntities(entities);
     }
@@ -593,34 +644,34 @@ public class NDirectionalRelationshipExample {
         UUID teamId = UUID.randomUUID();
         LegacyEntityData team = LegacyEntityData.of(teamId, "team");
         team.addAttribute("name", "精英战队");
-        
+
         // 创建多个成员
         UUID leaderId = UUID.randomUUID();
         UUID memberId1 = UUID.randomUUID();
         UUID memberId2 = UUID.randomUUID();
-        
+
         // 创建关系映射，一次性建立多向关系
         Map<UUID, Map<String, Set<UUID>>> relationshipMap = new HashMap<>();
-        
+
         // 团队与成员的关系
         Map<String, Set<UUID>> teamRelations = new HashMap<>();
         teamRelations.put("leader", Set.of(leaderId));
         teamRelations.put("member", Set.of(memberId1, memberId2));
         relationshipMap.put(teamId, teamRelations);
-        
+
         // 成员与团队的关系
         Map<String, Set<UUID>> leaderRelations = new HashMap<>();
         leaderRelations.put("leads", Set.of(teamId));
         relationshipMap.put(leaderId, leaderRelations);
-        
+
         Map<String, Set<UUID>> member1Relations = new HashMap<>();
         member1Relations.put("belongs_to", Set.of(teamId));
         relationshipMap.put(memberId1, member1Relations);
-        
+
         Map<String, Set<UUID>> member2Relations = new HashMap<>();
         member2Relations.put("belongs_to", Set.of(teamId));
         relationshipMap.put(memberId2, member2Relations);
-        
+
         // 一次性创建 N 向关系网络，该方法不需要手动 save
         entityService.createNDirectionalRelationships(relationshipMap);
     }
@@ -635,24 +686,24 @@ public class BidirectionalRelationshipExample {
         // 创建两个实体
         UUID entity1Id = UUID.randomUUID();
         UUID entity2Id = UUID.randomUUID();
-        
+
         // 创建双向关系（例如：朋友关系）
         boolean success = entityService.createBidirectionalRelationship(
-            entity1Id,          // 第一个实体 ID
-            entity2Id,          // 第二个实体 ID 
-            "friend_with",      // 第一个实体到第二个实体的关系
-            "friend_with"       // 第二个实体到第一个实体的关系（可以相同或不同）
+                entity1Id,          // 第一个实体 ID
+                entity2Id,          // 第二个实体 ID 
+                "friend_with",      // 第一个实体到第二个实体的关系
+                "friend_with"       // 第二个实体到第一个实体的关系（可以相同或不同）
         );
-        
+
         // 另一个例子：创建父子关系
         UUID parentId = UUID.randomUUID();
         UUID childId = UUID.randomUUID();
-        
+
         boolean familySuccess = entityService.createBidirectionalRelationship(
-            parentId,          // 父实体 ID
-            childId,           // 子实体 ID
-            "child",           // 父->子：这是我的孩子
-            "parent"           // 子->父：这是我的父母
+                parentId,          // 父实体 ID
+                childId,           // 子实体 ID
+                "child",           // 父->子：这是我的孩子
+                "parent"           // 子->父：这是我的父母
         );
     }
 }
@@ -665,30 +716,30 @@ public class ComplexRelationshipQueryExample {
     public void performComplexQueries(LegacyEntityDataService entityService) {
         // 创建查询条件
         List<RelationshipCriteria> criteria = new ArrayList<>();
-        
+
         // 创建第一个条件：实体是团队成员
         RelationshipCriteria memberCriterion = RelationshipCriteria.of("member", UUID.fromString("team-uuid-here"));
-        
+
         // 创建第二个条件：实体不是管理员
         RelationshipCriteria notAdminCriterion = RelationshipCriteria.ofNegated("admin", UUID.fromString("team-uuid-here"));
-        
+
         // 添加条件到列表
         criteria.add(memberCriterion);
         criteria.add(notAdminCriterion);
-        
+
         // 执行 AND 查询：找出是团队成员但不是管理员的实体
         List<LegacyEntityData> regularMembers = entityService.findEntitiesByMultipleRelationships(
-            criteria, 
-            RelationshipQueryType.AND
+                criteria,
+                RelationshipQueryType.AND
         );
-        
+
         // 执行 OR 查询：找出是团队成员或是管理员的实体
         List<LegacyEntityData> allTeamUsers = entityService.findEntitiesByMultipleRelationships(
-            List.of(
-                RelationshipCriteria.of("member", UUID.fromString("team-uuid-here")),
-                RelationshipCriteria.of("admin", UUID.fromString("team-uuid-here"))
-            ), 
-            RelationshipQueryType.OR
+                List.of(
+                        RelationshipCriteria.of("member", UUID.fromString("team-uuid-here")),
+                        RelationshipCriteria.of("admin", UUID.fromString("team-uuid-here"))
+                ),
+                RelationshipQueryType.OR
         );
     }
 }
@@ -707,17 +758,17 @@ public class RelationshipTransactionExample {
             UUID teamId = UUID.fromString("team-uuid-here");
             UUID memberId = UUID.fromString("member-uuid-here");
             UUID oldTeamId = UUID.fromString("old-team-uuid-here");
-            
+
             // 在一个事务中执行多个关系操作
             transaction
-                // 从旧团队移除成员
-                .removeRelationship(oldTeamId, "member", memberId)
-                // 将成员添加到新团队
-                .addRelationship(teamId, "member", memberId)
-                // 更新成员所属团队
-                .removeRelationship(memberId, "belongs_to", oldTeamId)
-                .addRelationship(memberId, "belongs_to", teamId);
-                
+                    // 从旧团队移除成员
+                    .removeRelationship(oldTeamId, "member", memberId)
+                    // 将成员添加到新团队
+                    .addRelationship(teamId, "member", memberId)
+                    // 更新成员所属团队
+                    .removeRelationship(memberId, "belongs_to", oldTeamId)
+                    .addRelationship(memberId, "belongs_to", teamId);
+
         }); // 完成后自动调度持久化
     }
 }
@@ -730,24 +781,24 @@ public class RelationshipTransactionExample {
 ```java
 public class PersistenceStrategyExample {
     public void demonstratePersistenceStrategies(
-            LegacyPlayerDataService playerService, 
+            LegacyPlayerDataService playerService,
             LegacyEntityDataService entityService) {
-        
+
         // 1. 玩家数据保存
         UUID playerId = UUID.randomUUID();
         LegacyPlayerData playerData = playerService.getLegacyPlayerData(playerId);
         playerData.addData("lastAction", String.valueOf(System.currentTimeMillis()));
-        
+
         // 调用此方法会：
         // - 将数据保存到 L2 缓存并设置 TTL（1 天）
         // - 安排数据库持久化任务
         playerService.saveLegacyPlayerData(playerData);
-        
+
         // 2. 实体数据保存
         UUID entityId = UUID.randomUUID();
         LegacyEntityData entityData = entityService.getEntityData(entityId);
         entityData.addAttribute("lastModified", String.valueOf(System.currentTimeMillis()));
-        
+
         // 调用 saveEntity 方法会自动调度持久化任务
         // 实体会被保存到 L2 缓存并最终持久化到数据库
         entityService.saveEntity(entityData);
