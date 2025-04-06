@@ -141,13 +141,13 @@ subprojects {
 publishing {
     if (isGitHubActions) {
         publications {
-            modules.forEach { module ->
-                create<MavenPublication>("shadow-${module.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}") {
-                    val shadowJarTask = project(":$module").tasks.named<ShadowJar>("shadowJar")
+            rootProject.subprojects.forEach { subproject ->
+                create<MavenPublication>("shadow-${subproject.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}") {
+                    val shadowJarTask = subproject.tasks.named<ShadowJar>("shadowJar")
                     artifact(shadowJarTask.get().archiveFile.get())
 
                     groupId = group.toString()
-                    artifactId = module
+                    artifactId = subproject.name
                     version = "${properties("version")}-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yy-hhmmss"))}"
                     description = ""
                     pom {
