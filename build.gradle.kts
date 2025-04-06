@@ -18,7 +18,7 @@ plugins {
     id("io.fairyproject") version "1.3.1b2" apply false
 
     // Dependency management plugin
-    id("io.spring.dependency-management") version "1.1.0"
+    id("io.spring.dependency-management") version "1.1.7"
 
     // Kotlin plugin
     id("org.jetbrains.kotlin.jvm") version "1.9.23" apply false
