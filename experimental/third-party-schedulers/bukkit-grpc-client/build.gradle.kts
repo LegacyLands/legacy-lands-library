@@ -6,7 +6,7 @@ version = rootProperties("version")
 
 // Enable protobuf and shadow plugins
 plugins {
-    id("com.google.protobuf") version "0.9.4"
+    id("com.google.protobuf") version "0.9.5"
 }
 
 // Run server
