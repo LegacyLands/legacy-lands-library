@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Gradle
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "daily"
+
+  # Cargo
+  - package-ecosystem: "cargo"
+    directory: "/experimental/third-party-schedulers/task-scheduler-rust"
+    schedule:
+      interval: "daily"
