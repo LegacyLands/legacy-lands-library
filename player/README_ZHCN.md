@@ -408,7 +408,12 @@ public class EntityManagementExample {
         // 9. 修改属性
         guild.addAttribute("reputation", "900");  // 更新声望值
 
-        // 10. 保存实体到 Redis 与数据库（该方法只有需要持久化时才调用）
+        /* 
+          10. 保存实体：将实体数据立即存入 L1 缓存（本机内存），并调度一个异步任务将其持久化到 L2 缓存 (Redis) 和数据库 (MongoDB)。
+            - 调用此方法的意义：确保数据最终被保存，能在服务重启后恢复，并可供其他服务通过 Redis 或数据库访问。
+            - 如果不调用：对实体的修改（如添加/修改属性、添加/删除关系）仅存在于当前服务的内存 (L1) 中，一旦服务关闭或实体从 L1 缓存中移除，未保存的更改将丢失。
+            - 注意：此方法调用后立即返回，不会等待持久化完成。
+        */
         entityService.saveEntity(guild);
     }
 }
@@ -629,7 +634,11 @@ public class BatchEntityOperationsExample {
         entity2.addAttribute("rarity", "epic");
         entities.add(entity2);
 
-        // 批量保存所有实体（提高性能）
+        /* 
+          批量保存实体：将列表中的所有实体立即存入 L1 缓存，并调度一个后台任务将它们统一持久化到 L2 (Redis) 和数据库。
+            - 这样做比对每个实体单独调用 saveEntity 更高效，因为它合并了持久化操作。
+            - 调用的意义和不调用的后果同单个 saveEntity。
+        */
         entityService.saveEntities(entities);
     }
 }
@@ -799,8 +808,15 @@ public class PersistenceStrategyExample {
         LegacyEntityData entityData = entityService.getEntityData(entityId);
         entityData.addAttribute("lastModified", String.valueOf(System.currentTimeMillis()));
 
-        // 调用 saveEntity 方法会自动调度持久化任务
-        // 实体会被保存到 L2 缓存并最终持久化到数据库
+        /* 
+          调用 saveEntity 方法的作用与效果：
+            1. 立即更新 L1 缓存：将实体数据放入当前服务的内存缓存，使得后续在本服务内的 getEntityData 调用能立刻获取到最新状态。
+            2. 调度后台持久化：启动一个异步任务，负责将数据写入 L2 (Redis) 并最终保存到数据库 (MongoDB)。
+             
+          意义：保证数据的最终持久性，防止服务关闭或缓存淘汰导致数据丢失，并使数据对其他服务可见（通过 L2 或 DB）。
+            - 如果不调用 saveEntity：对实体属性或关系的修改仅停留在 L1 缓存，不会被保存到 Redis 或数据库。
+            - 注意：此方法不保证数据何时完成持久化，仅保证任务已被安排。
+        */
         entityService.saveEntity(entityData);
     }
 }

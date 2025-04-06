@@ -425,7 +425,16 @@ public class EntityManagementExample {
         // 9. Modify attribute
         guild.addAttribute("reputation", "900");  // Update reputation value
 
-        // 10. Save entity to Redis and database (only call this when persistence is needed)
+        /* 
+          10. Save Entity: Immediately puts the entity data into the L1 cache (local memory) and schedules an asynchronous task
+              to persist it to the L2 cache (Redis) and the database (MongoDB).
+            - Why call this? To ensure data is eventually saved, can be recovered after a server restart, and is accessible
+              to other services via Redis or the database.
+            - What if not called? Changes made to the entity (like adding/modifying attributes, adding/removing relationships)
+              exist only in the current server's memory (L1). If the service shuts down or the entity is evicted from L1,
+              unsaved changes will be lost.
+            - Note: This method returns immediately and does not wait for persistence to complete.
+        */
         entityService.saveEntity(guild);
     }
 }
@@ -647,7 +656,12 @@ public class BatchEntityOperationsExample {
         entity2.addAttribute("rarity", "epic");
         entities.add(entity2);
 
-        // Batch save all entities (improves performance)
+        /* 
+          Batch Save Entities: Immediately puts all entities in the list into the L1 cache and schedules a single background task
+              to persist them collectively to L2 (Redis) and the database.
+            - This is more efficient than calling saveEntity individually for each entity as it batches the persistence operation.
+            - The rationale for calling and the consequences of not calling are the same as for the single saveEntity method.
+        */
         entityService.saveEntities(entities);
     }
 }
@@ -817,8 +831,19 @@ public class PersistenceStrategyExample {
         LegacyEntityData entityData = entityService.getEntityData(entityId);
         entityData.addAttribute("lastModified", String.valueOf(System.currentTimeMillis()));
 
-        // Calling saveEntity method automatically schedules persistence task
-        // Entity will be saved to L2 cache and eventually persisted to database
+        /* 
+          Effect of calling the saveEntity method:
+            1. Immediate L1 Cache Update: Puts the entity data into the current service's memory cache, making the latest state
+               immediately available for subsequent getEntityData calls within this service.
+            2. Schedules Background Persistence: Starts an asynchronous task responsible for writing the data to L2 (Redis)
+               and eventually saving it to the database (MongoDB).
+             
+          Significance: Ensures the eventual persistence of data, preventing data loss due to service shutdown or cache eviction,
+               and makes the data visible to other services (via L2 or DB).
+            - If saveEntity is not called: Modifications to entity attributes or relationships remain only in the L1 cache and
+               will not be saved to Redis or the database.
+            - Note: This method does not guarantee when persistence will complete, only that the task has been scheduled.
+        */
         entityService.saveEntity(entityData);
     }
 }

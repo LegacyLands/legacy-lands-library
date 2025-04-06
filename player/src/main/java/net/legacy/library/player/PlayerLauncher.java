@@ -12,6 +12,7 @@ import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.configuration.ConfigurationLauncher;
 import net.legacy.library.mongodb.factory.MongoDBConnectionConfigFactory;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
+import net.legacy.library.player.index.LegacyIndexManager;
 import net.legacy.library.player.model.LegacyEntityData;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.model.RelationshipCriteria;
@@ -89,6 +90,23 @@ public class PlayerLauncher extends Plugin {
                     "entity-data-service", mongoConfig, config,
                     basePackages, classLoader
             );
+
+            // Test Index Management
+            try {
+                Log.info("Testing database index management...");
+                LegacyIndexManager indexManager = LegacyIndexManager.of(mongoConfig);
+
+                // Ensure common indexes
+                indexManager.ensureEntityTypeIndex(); // For LegacyEntityData
+                indexManager.ensureAttributeIndex("name", false); // For LegacyEntityData
+                indexManager.ensureRelationshipIndex("member"); // For LegacyEntityData
+                indexManager.ensureRelationshipIndex("team"); // For LegacyEntityData
+                indexManager.ensurePlayerDataIndex("lastLogin", true); // For LegacyPlayerData
+
+                Log.info("Index ensuring process completed.");
+            } catch (Exception exception) {
+                Log.error("Error during index management test.", exception);
+            }
 
             // Create test entities
             UUID testEntityId = UUID.randomUUID();

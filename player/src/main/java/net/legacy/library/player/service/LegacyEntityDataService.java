@@ -330,46 +330,64 @@ public class LegacyEntityDataService {
     }
 
     /**
-     * Schedules persistence of entity data to L2 cache and database.
+     * Saves entity data to the L1 cache and schedules asynchronous persistence to L2 cache and database.
      *
-     * <p>This method schedules an asynchronous task to:
+     * <p>This method performs the following steps:
      * <ol>
-     *   <li>Save the data to L2 cache (Redis) with TTL</li>
-     *   <li>Persist the data to MongoDB</li>
+     *   <li>Immediately puts the provided {@link LegacyEntityData} into the L1 cache (Caffeine).
+     *       This makes the data instantly available for subsequent reads via {@link #getEntityData(UUID)}
+     *       within the same service instance.</li>
+     *   <li>Schedules an asynchronous task ({@link EntityDataPersistenceTask}) to persist the data
+     *       to the L2 cache (Redis) with the configured TTL and to the underlying database (MongoDB).</li>
      * </ol>
      *
-     * <p>Note: The data will be automatically loaded into L1 cache when accessed via getEntityData.
-     * This method focuses on ensuring data persistence across storage layers.
+     * <p><b>Important:</b> This method returns immediately after scheduling the persistence task.
+     * It does <em>not</em> wait for the data to be written to Redis or MongoDB. Persistence is eventual.
+     * Use this method when immediate persistence guarantees are not strictly required.
      *
-     * @param entityData the entity data to persist
+     * @param entityData the entity data to save and schedule for persistence
      */
     public void saveEntity(LegacyEntityData entityData) {
         if (entityData == null) {
             return;
         }
 
+        // Put in L1 cache immediately to make it available for the async task
+        getL1Cache().getResource().put(entityData.getUuid(), entityData);
+
         // Schedule persistence to L2 and DB
         EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
     }
 
     /**
-     * Schedules persistence of multiple entities to L2 cache and database.
+     * Saves multiple entities to the L1 cache and schedules asynchronous persistence to L2 cache and database.
      *
-     * <p>This method schedules an asynchronous task to:
+     * <p>This method performs the following steps for each entity in the list:
      * <ol>
-     *   <li>Save all entities to L2 cache (Redis) with TTL</li>
-     *   <li>Persist all entities to MongoDB</li>
+     *   <li>Immediately puts the {@link LegacyEntityData} into the L1 cache (Caffeine).
+     *       This makes the data instantly available for subsequent reads via {@link #getEntityData(UUID)}
+     *       within the same service instance.</li>
+     *   <li>Schedules a single asynchronous task ({@link EntityDataPersistenceTask}) to persist all
+     *       provided entities to the L2 cache (Redis) with the configured TTL and to the underlying database (MongoDB).</li>
      * </ol>
      *
-     * <p>Note: The data will be automatically loaded into L1 cache when accessed via getEntityData.
-     * This method focuses on ensuring data persistence across storage layers.
+     * <p><b>Important:</b> This method returns immediately after scheduling the persistence task.
+     * It does <em>not</em> wait for the data to be written to Redis or MongoDB. Persistence is eventual.
+     * This is more efficient than calling {@link #saveEntity(LegacyEntityData)} multiple times as it batches the persistence task.
      *
-     * @param entityDataList the list of entity data to persist
+     * @param entityDataList the list of entity data to save and schedule for persistence
      */
     public void saveEntities(List<LegacyEntityData> entityDataList) {
         if (entityDataList == null || entityDataList.isEmpty()) {
             return;
         }
+
+        // Put all entities in L1 cache immediately
+        entityDataList.forEach(entityData -> {
+            if (entityData != null) {
+                getL1Cache().getResource().put(entityData.getUuid(), entityData);
+            }
+        });
 
         // Schedule persistence to L2 and DB
         EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();

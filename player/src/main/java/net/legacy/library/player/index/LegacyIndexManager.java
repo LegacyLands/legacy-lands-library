@@ -45,6 +45,18 @@ public class LegacyIndexManager {
     }
 
     /**
+     * Creates an instance of {@link MongoDBConnectionConfig}.
+     *
+     * @param connectionConfig the {@link MongoDBConnectionConfig} object which provides access
+     *                         to the {@link Datastore} and ultimately the {@link MongoDatabase}.
+     * @return a {@link MongoDBConnectionConfig} instance
+     * @throws IllegalStateException if the {@link MongoDatabase} cannot be retrieved from the config's {@link Datastore}.
+     */
+    public static LegacyIndexManager of(MongoDBConnectionConfig connectionConfig) {
+        return new LegacyIndexManager(connectionConfig);
+    }
+
+    /**
      * Ensures an index exists on the {@code entityType} field for the {@code legacy-entity-data} collection.
      *
      * <p>This index is useful for efficiently querying {@code LegacyEntityData} based on its type.

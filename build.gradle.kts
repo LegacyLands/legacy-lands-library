@@ -101,8 +101,6 @@ subprojects {
         relocate("com.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
-        relocate("com.google.common", "net.legacy.library.grpcclient.shaded.guava")
-        relocate("com.google.protobuf", "net.legacy.library.grpcclient.shaded.protobuf")
 
         archiveClassifier.set("plugin")
         mergeServiceFiles()
