@@ -76,3 +76,8 @@ jobs:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -script
           path: |
             script/build/libs/*.jar
+      - uses: actions/upload-artifact@v4.5.0
+        with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -bukkit-grpc-client
+          path: |
+            experimental/third-party-schedulers/bukkit-grpc-client/build/libs/*.jar
