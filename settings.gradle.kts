@@ -7,6 +7,7 @@ pluginManagement {
 }
 
 rootProject.name = "legacy-lands-library"
+
 include("configuration")
 include("annotation")
 include("commons")
@@ -14,4 +15,6 @@ include("mongodb")
 include("cache")
 include("player")
 include("script")
-include("experimental:third-party-schedulers:bukkit-grpc-client")
+include("bukkit-grpc-client")
+
+project(":bukkit-grpc-client").projectDir = file("experimental/third-party-schedulers/bukkit-grpc-client")
