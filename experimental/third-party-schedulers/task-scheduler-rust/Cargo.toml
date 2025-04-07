@@ -9,7 +9,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "task-scheduler"
-path = "src/main.rs"
+path = "src/bin/task-scheduler.rs"
 
 [dependencies]
 tonic = { version = "0.13.0", features = [
@@ -35,6 +35,15 @@ ctor = "0.4.1"
 clap = { version = "4.5", features = ["derive"] }
 tokio-rustls = "0.26.2"
 rustls-pemfile = "2.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "env-filter",
+    "time",
+] }
+tracing-appender = "0.2"
+time = { version = "0.3", features = ["macros", "local-offset", "formatting"] }
+lazy_static = "1.4.0"
 
 [build-dependencies]
 tonic-build = { version = "0.13.0", features = ["transport", "prost"] }

@@ -128,3 +128,6 @@ Cargo.lock
 
 # Fairy server
 **/server/work
+
+# Log files
+logs/

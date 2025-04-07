@@ -1,3 +1,4 @@
+use crate::info_log;
 use crate::tasks::taskscheduler::task_scheduler_server::TaskScheduler;
 use crate::tasks::taskscheduler::{ResultRequest, ResultResponse, TaskRequest, TaskResponse};
 use crate::tasks::REGISTRY;
@@ -14,7 +15,12 @@ impl TaskScheduler for TaskSchedulerService {
         request: Request<TaskRequest>,
     ) -> Result<Response<TaskResponse>, Status> {
         let task = request.into_inner();
-        println!("Received task: {} with method: {}, async: {}", task.task_id, task.method, task.is_async);
+        info_log!(
+            "Received task: {} with method: {}, async: {}",
+            task.task_id,
+            task.method,
+            task.is_async
+        );
 
         let start = Instant::now();
         let result = REGISTRY.execute_task(&task).await;
@@ -24,9 +30,12 @@ impl TaskScheduler for TaskSchedulerService {
             .cache_task_result(task.task_id.clone(), result.clone())
             .await;
 
-        println!(
+        info_log!(
             "Completed task: {} with status {} (took {}ms). Result: {}",
-            task.task_id, result.status, duration, result.value
+            task.task_id,
+            result.status,
+            duration,
+            result.value
         );
 
         Ok(Response::new(TaskResponse {

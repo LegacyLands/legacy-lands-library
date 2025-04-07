@@ -15,4 +15,4 @@ pub enum TaskError {
     ExecutionError(String),
 }
 
-pub type Result<T> = std::result::Result<T, TaskError>; 
+pub type Result<T> = std::result::Result<T, TaskError>;

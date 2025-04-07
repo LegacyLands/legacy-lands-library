@@ -1,6 +1,6 @@
 use crate::models::wrappers::{
-    DoubleValue, FloatValue, Int32Value, Int64Value, UInt32Value, UInt64Value,
-    BoolValue, StringValue, BytesValue,
+    BoolValue, BytesValue, DoubleValue, FloatValue, Int32Value, Int64Value, StringValue,
+    UInt32Value, UInt64Value,
 };
 use crate::models::ArgValue;
 use crate::models::TaskResult;
@@ -120,7 +120,10 @@ impl TaskRegistry {
                         if let Some(arg) = vals.into_iter().next() {
                             map.insert(k, arg);
                         } else {
-                            return Err(format!("Empty converted value for key '{}' in MapValue", k));
+                            return Err(format!(
+                                "Empty converted value for key '{}' in MapValue",
+                                k
+                            ));
                         }
                     }
                     Ok(ArgValue::Map(map))
@@ -165,19 +168,17 @@ impl TaskRegistry {
                 }
                 return task_result;
             }
-        } else {
-            if let Some(func) = self.sync_tasks.get(&task.method).map(|f| *f.value()) {
-                let result = func(args_converted.clone());
-                let task_result = TaskResult {
-                    status: 1,
-                    value: result,
-                };
-                if !task.deps.is_empty() {
-                    let mut cache = self.get_cache_shard(&task.task_id).lock();
-                    cache.put(task.task_id.clone(), task_result.clone());
-                }
-                return task_result;
+        } else if let Some(func) = self.sync_tasks.get(&task.method).map(|f| *f.value()) {
+            let result = func(args_converted.clone());
+            let task_result = TaskResult {
+                status: 1,
+                value: result,
+            };
+            if !task.deps.is_empty() {
+                let mut cache = self.get_cache_shard(&task.task_id).lock();
+                cache.put(task.task_id.clone(), task_result.clone());
             }
+            return task_result;
         }
 
         TaskResult {

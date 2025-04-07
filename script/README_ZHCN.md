@@ -15,7 +15,7 @@ dependencies {
 
 ### 脚本引擎
 
-该模块提供了两种强大的 `JavaScript` 引擎实现：
+该模块提供了多种强大的 `JavaScript` 引擎实现：
 
 - **Rhino 引擎**：Mozilla 的 `JavaScript` 实现，兼容性好，适合大多数场景。
 - **Nashorn 引擎**：一种常用且高效的 `JavaScript` 引擎，提供更好的 ES6 支持。

@@ -17,7 +17,7 @@ dependencies {
 
 ### Script Engines
 
-This module provides two powerful `JavaScript` engine implementations:
+This module provides a variety of powerful `JavaScript` engine implementations:
 
 - **Rhino engine**: Mozilla's `JavaScript` implementation, with good compatibility and suitable for most scenarios.
 - **Nashorn engine**: A commonly used and efficient `JavaScript` engine that provides better ES6 support.

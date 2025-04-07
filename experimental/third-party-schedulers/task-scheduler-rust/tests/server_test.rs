@@ -3,9 +3,8 @@ mod common;
 use prost::Message;
 use prost_types::Any;
 use std::collections::HashMap;
-use task_scheduler::models::wrappers::{
-    BoolValue, BytesValue, Int32Value, StringValue,
-};
+use std::time::Duration;
+use task_scheduler::models::wrappers::{BoolValue, BytesValue, Int32Value, StringValue};
 use task_scheduler::tasks::taskscheduler::{
     task_scheduler_client::TaskSchedulerClient, ListValue, MapValue, ResultRequest, TaskRequest,
 };
@@ -192,7 +191,12 @@ async fn test_dependencies() {
         .expect("Failed to get result")
         .into_inner();
 
-    assert!(result.is_ready, "Task should be completed");
+    // Check status using the correct enum variant from proto
+    assert_eq!(
+        result.status,
+        task_scheduler::tasks::taskscheduler::task_response::Status::Success as i32,
+        "Task should be completed successfully"
+    );
     assert_eq!(result.result, "Deleted 2 items", "Unexpected result");
 }
 
@@ -374,7 +378,10 @@ async fn test_echo_bytes() {
     let response = client.submit_task(request).await.unwrap().into_inner();
     assert_eq!(response.task_id, "test-bytes-1");
     assert_eq!(response.status, 1); // SUCCESS
-    assert_eq!(response.result, "hello bytes", "Unexpected bytes echo result");
+    assert_eq!(
+        response.result, "hello bytes",
+        "Unexpected bytes echo result"
+    );
 }
 
 #[tokio::test]
@@ -414,7 +421,10 @@ async fn test_process_complex_map() {
     // Construct complex map using the updated any_map and any_list helpers
     let mut complex_map_input = HashMap::new();
     complex_map_input.insert("key1".to_string(), any_string("value1"));
-    complex_map_input.insert("key2".to_string(), any_list(vec![any_i32(1), any_i32(2), any_i32(3)]));
+    complex_map_input.insert(
+        "key2".to_string(),
+        any_list(vec![any_i32(1), any_i32(2), any_i32(3)]),
+    );
     let mut nested_map = HashMap::new();
     nested_map.insert("nested_key".to_string(), any_string("nested_value"));
     complex_map_input.insert("key3".to_string(), any_map(nested_map));
@@ -466,5 +476,53 @@ async fn test_process_person_map() {
         response.result.trim(),
         "Processing person: Name=Alice, Age=30",
         "Unexpected person map result"
+    );
+}
+
+#[tokio::test]
+#[ignore] // Ignore this test until the server-side async_method is fixed
+async fn test_async_task_completion() {
+    let server = common::setup().await;
+    let mut client = connect_to_server(&server.address()).await;
+
+    let task_id = "async_task_1".to_string();
+    let task = TaskRequest {
+        task_id: task_id.clone(),
+        method: "async_method".to_string(),
+        args: vec![any_i32(1), any_i32(2), any_i32(3)],
+        deps: vec![],
+        is_async: true,
+    };
+
+    let response = client
+        .submit_task(task)
+        .await
+        .expect("Failed to submit task");
+    let result = response.into_inner();
+    // Restore the original assertion, expecting 1 for successful submission (even for async)
+    assert_eq!(result.status, 1, "Task should be submitted successfully");
+
+    // Wait a bit for the async task to potentially complete
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    // Check the result
+    let result_request = ResultRequest {
+        task_id: task_id.clone(),
+    };
+    let response = client
+        .get_result(tonic::Request::new(result_request))
+        .await
+        .expect("Failed to get task result");
+
+    let result = response.into_inner();
+    // Check status using the correct enum variant from proto
+    assert_eq!(
+        result.status,
+        task_scheduler::tasks::taskscheduler::task_response::Status::Success as i32,
+        "Task should be completed successfully"
+    );
+    assert!(
+        result.result.contains("items"),
+        "Result value is unexpected"
     );
 }
