@@ -8,21 +8,32 @@ import io.fairyproject.scheduler.response.TaskResponse;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The {@code TaskInterface} provides a high-level abstraction for scheduling and running tasks
- * using the {@link MCScheduler} (usually provided by {@link MCSchedulers}).
+ * using the {@link MCScheduler} (usually provided by {@link MCSchedulers}). It also offers
+ * methods for executing tasks using Java's virtual threads via {@link ExecutorService} and
+ * {@link ScheduledExecutorService}.
  *
  * <p>This interface simplifies task scheduling by providing convenient methods with consistent
- * naming and parameter orders.
+ * naming and parameter orders, both for traditional {@link MCScheduler} tasks and for tasks
+ * utilizing virtual threads.
  *
  * <p>By default, the scheduler returned from {@link #getMCScheduler()} is the asynchronous scheduler
  * ({@link MCSchedulers#getAsyncScheduler()}); however, implementations can override this method
- * to return other schedulers if needed.
+ * to return other schedulers if needed. Methods related to virtual threads leverage
+ * {@link Executors#newVirtualThreadPerTaskExecutor()}.
  *
  * <p>This interface is intended for classes that encapsulate their own internal scheduling logic.
  * For instance, a class implementing this interface might define how and when tasks start by
- * overriding the {@link #start()} method.
+ * overriding the {@link #start()} method, potentially using either the {@link MCScheduler} or
+ * virtual thread execution methods.
  *
  * @author qwq-dev
  * @see MCSchedulers
@@ -52,6 +63,130 @@ public interface TaskInterface {
      */
     default MCScheduler getMCScheduler() {
         return MCSchedulers.getAsyncScheduler();
+    }
+
+    /**
+     * Provides an {@link ExecutorService} that uses a virtual thread per task execution model.
+     *
+     * <p>This method returns a new {@link ExecutorService} instance where each submitted task is
+     * executed in its own virtual thread. Virtual threads are lightweight and allow for high concurrency,
+     * making them suitable for tasks that are I/O-bound or involve waiting.
+     *
+     * <p>The returned executor is intended for scenarios where task isolation and concurrency are
+     * important, without the overhead associated with traditional threads.
+     *
+     * @return a virtual thread-per-task {@link ExecutorService} instance
+     */
+    default ExecutorService getVirtualThreadPerTaskExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    /**
+     * Submits a task for execution in a virtual thread.
+     *
+     * @param task the task to be executed in a virtual thread
+     */
+    default void executeWithVirtualThread(Runnable task) {
+        getVirtualThreadPerTaskExecutor().execute(task);
+    }
+
+    /**
+     * Submits a task for execution in a virtual thread and returns a {@link Future} result.
+     *
+     * @param task the task to be executed in a virtual thread
+     * @return a {@link Future} that can be used to retrieve the result of the task
+     */
+    default <T> Future<T> submitWithVirtualThread(Callable<T> task) {
+        return getVirtualThreadPerTaskExecutor().submit(task);
+    }
+
+    /**
+     * Submits a task for execution in a virtual thread and returns a {@link Future} with a preset result.
+     *
+     * @param task   the task to be executed in a virtual thread
+     * @param result the result to be returned upon the task's completion
+     * @param <T>    the type of the result
+     * @return a {@link Future} representing the task with the preset result
+     */
+    default <T> Future<T> submitWithVirtualThread(Runnable task, T result) {
+        return getVirtualThreadPerTaskExecutor().submit(task, result);
+    }
+
+    /**
+     * Submits a {@link Runnable} task for execution in a virtual thread and returns a {@link Future} result.
+     *
+     * @param runnable the {@link Runnable} task to be executed in a virtual thread
+     * @return a {@link Future} representing the pending completion of the task
+     */
+    default Future<?> submitWithVirtualThread(Runnable runnable) {
+        return getVirtualThreadPerTaskExecutor().submit(runnable);
+    }
+
+    /**
+     * Schedules a one-time {@link Runnable} task to be executed in a virtual thread after a specified delay,
+     * using ScheduledExecutorService for scheduling and virtual threads for execution.
+     *
+     * @param task  the task to be executed
+     * @param delay the delay before execution
+     * @param unit  the time unit of the delay parameter
+     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     */
+    default ScheduledFuture<?> scheduleWithVirtualThread(Runnable task, long delay, TimeUnit unit) {
+        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
+            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+            return scheduler.schedule(() -> virtualThreadExecutor.execute(task), delay, unit);
+        }
+    }
+
+    /**
+     * Schedules a one-time {@link Callable} task to be executed in a virtual thread after a specified delay,
+     * using ScheduledExecutorService for scheduling and virtual threads for execution.
+     *
+     * @param task  the task to be executed
+     * @param delay the delay before execution
+     * @param unit  the time unit of the delay parameter
+     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     */
+    default <V> ScheduledFuture<V> scheduleWithVirtualThread(Callable<V> task, long delay, TimeUnit unit) {
+        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
+            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+            return scheduler.schedule(() -> virtualThreadExecutor.submit(task).get(), delay, unit);
+        }
+    }
+
+    /**
+     * Schedules a recurring {@link Runnable} task to be executed in a virtual thread with a fixed rate,
+     * using ScheduledExecutorService for scheduling and virtual threads for execution.
+     *
+     * @param task         the task to be executed
+     * @param initialDelay the delay before the first execution
+     * @param period       the period between successive executions
+     * @param unit         the time unit for initialDelay and period
+     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     */
+    default ScheduledFuture<?> scheduleAtFixedRateWithVirtualThread(Runnable task, long initialDelay, long period, TimeUnit unit) {
+        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
+            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+            return scheduler.scheduleAtFixedRate(() -> virtualThreadExecutor.execute(task), initialDelay, period, unit);
+        }
+    }
+
+    /**
+     * Schedules a recurring {@link Runnable} task to be executed in a virtual thread with
+     * a fixed delay between the end of the execution of one task and the start of the next,
+     * using ScheduledExecutorService for scheduling and virtual threads for execution.
+     *
+     * @param task         the task to be executed
+     * @param initialDelay the delay before the first execution
+     * @param delay        the delay between the end of one execution and the start of the next
+     * @param unit         the time unit for initialDelay and delay
+     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     */
+    default ScheduledFuture<?> scheduleWithFixedDelayWithVirtualThread(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
+            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+            return scheduler.scheduleWithFixedDelay(() -> virtualThreadExecutor.execute(task), initialDelay, delay, unit);
+        }
     }
 
     /**
