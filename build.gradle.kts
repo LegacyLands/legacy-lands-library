@@ -27,7 +27,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1" apply true
 
     // Lombok
-    id("io.freefair.lombok") version "8.11" apply false
+    id("io.freefair.lombok") version "8.13.1" apply false
 
     // Maven publish
     id("maven-publish")
