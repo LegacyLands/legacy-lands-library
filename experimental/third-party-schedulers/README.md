@@ -18,3 +18,7 @@ IO-bound tasks can be delegated to specialized servers or languages that excel i
 ## Implemented
 
 - [**Rust**](task-scheduler-rust/README.md) - A high-performance task scheduler written in Rust
+
+## Client API
+
+- [**bukkit-grpc-client**](bukkit-grpc-client/README.md) - Off-the-shelf APIs with direct gRPC backend communication.
