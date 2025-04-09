@@ -42,7 +42,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -82,8 +84,8 @@ public class LegacyEntityDataService {
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
-    private final ScheduledTask<?> entityDataPersistenceTimerTask;
-    private final ScheduledTask<?> redisStreamAcceptTask;
+    private final ScheduledFuture<?> entityDataPersistenceTimerTask;
+    private final ScheduledFuture<?> redisStreamAcceptTask;
 
     /**
      * Constructs a new {@link LegacyEntityDataService}.
@@ -222,9 +224,9 @@ public class LegacyEntityDataService {
      * additional logic should be implemented in the corresponding accepter.
      *
      * @param entityRStreamTask the task to be published to the Redis stream
-     * @return a {@link ScheduledTask} instance tracking the execution status of the task
+     * @return a {@link CompletableFuture} instance tracking the execution status of the task
      */
-    public ScheduledTask<?> pubEntityRStreamTask(EntityRStreamTask entityRStreamTask) {
+    public CompletableFuture<?> pubEntityRStreamTask(EntityRStreamTask entityRStreamTask) {
         return EntityRStreamPubTask.of(this, entityRStreamTask).start();
     }
 

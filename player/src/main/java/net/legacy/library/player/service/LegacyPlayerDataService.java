@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -64,8 +66,8 @@ public class LegacyPlayerDataService {
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
-    private final ScheduledTask<?> playerDataPersistenceTimerTask;
-    private final ScheduledTask<?> redisStreamAcceptTask;
+    private final ScheduledFuture<?> playerDataPersistenceTimerTask;
+    private final ScheduledFuture<?> redisStreamAcceptTask;
 
     /**
      * Constructs a new {@link LegacyPlayerDataService}.
@@ -189,9 +191,9 @@ public class LegacyPlayerDataService {
      * additional logic should be implemented in the corresponding {@link net.legacy.library.player.task.redis.RStreamAccepterInterface}.
      *
      * @param rStreamTask the task to be published to the Redis stream
-     * @return a {@link ScheduledTask} instance tracking the execution status of the task
+     * @return a {@link CompletableFuture} instance tracking the execution status of the task
      */
-    public ScheduledTask<?> pubRStreamTask(RStreamTask rStreamTask) {
+    public CompletableFuture<?> pubRStreamTask(RStreamTask rStreamTask) {
         return RStreamPubTask.of(this, rStreamTask).start();
     }
 

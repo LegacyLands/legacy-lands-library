@@ -82,7 +82,6 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
                        LegacyPlayerDataService legacyPlayerDataService, String data) {
         L1ToL2PlayerDataSyncTask.of(UUID.fromString(data), legacyPlayerDataService)
                 .start()
-                .getFuture()
                 .whenComplete((aVoid, throwable) -> {
                     if (throwable != null) {
                         Log.error("Error while syncing player data (L1ToL2PlayerDataSyncByUuidRStreamAccepter)", throwable);
