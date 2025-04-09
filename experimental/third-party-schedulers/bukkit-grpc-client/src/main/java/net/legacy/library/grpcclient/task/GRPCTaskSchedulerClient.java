@@ -12,6 +12,7 @@ import lombok.Getter;
 import net.legacy.library.grpcclient.event.TaskResultEvent;
 import org.apache.commons.lang3.Validate;
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.PluginManager;
 import taskscheduler.TaskSchedulerGrpc;
 import taskscheduler.TaskSchedulerOuterClass.ResultRequest;
 import taskscheduler.TaskSchedulerOuterClass.ResultResponse;
@@ -306,6 +307,8 @@ public class GRPCTaskSchedulerClient {
                 .submitTask(request));
 
         String result = response.getResult();
+        PluginManager pluginManager = Bukkit.getServer().getPluginManager();
+
         final boolean success = response.getStatus() == TaskResponse.Status.SUCCESS;
 
         if (response.getStatus() == TaskResponse.Status.FAILED) {
@@ -315,12 +318,12 @@ public class GRPCTaskSchedulerClient {
                     new TaskSchedulerException("Task execution failed on server: " + result);
 
             if (!isAsync) {
-                Bukkit.getServer().getPluginManager().callEvent(new TaskResultEvent(taskId, method, taskSchedulerException));
+                pluginManager.callEvent(new TaskResultEvent(taskId, method, taskSchedulerException));
             }
 
             throw taskSchedulerException;
         } else if (success && !isAsync) {
-            Bukkit.getServer().getPluginManager().callEvent(new TaskResultEvent(taskId, method, result));
+            pluginManager.callEvent(new TaskResultEvent(taskId, method, result));
         }
 
         return result;
@@ -358,7 +361,6 @@ public class GRPCTaskSchedulerClient {
                             Log.warn("Task {} still PENDING after {} polling attempts, stopping polling.", taskId, maxRetries);
                             throw new TaskSchedulerException("Task still PENDING after max retries: " + taskId);
                         }
-                        Log.debug("Task {} is PENDING, polling attempt {}/{}. Waiting {}ms...", taskId, pollingAttempts, maxRetries, backoffMillis);
                         try {
                             TimeUnit.MILLISECONDS.sleep(backoffMillis);
                         } catch (InterruptedException exception) {
