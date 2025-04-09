@@ -191,7 +191,7 @@ public interface TaskInterface<R> {
      * @param unit  the time unit of the delay parameter
      * @return a {@link ScheduledFuture} representing the pending completion of the task
      */
-    default <V> ScheduledFuture<V> scheduleWithVirtualThread(Callable<V> task, long delay, TimeUnit unit) {
+    default <T> ScheduledFuture<T> scheduleWithVirtualThread(Callable<T> task, long delay, TimeUnit unit) {
         try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
             ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
             return scheduler.schedule(() -> virtualThreadExecutor.submit(task).get(), delay, unit);
@@ -280,10 +280,10 @@ public interface TaskInterface<R> {
      *
      * @param task       the callable task to be executed
      * @param delayTicks the delay in ticks before the task is executed
-     * @param <R>        the return type of the callable
+     * @param <T>        the return type of the callable
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> schedule(Callable<R> task, long delayTicks) {
+    default <T> ScheduledTask<T> schedule(Callable<T> task, long delayTicks) {
         return getMCScheduler().schedule(task, delayTicks);
     }
 
@@ -296,10 +296,10 @@ public interface TaskInterface<R> {
      * @param task          the callable task to be executed
      * @param delayTicks    the initial delay in ticks before the first execution
      * @param intervalTicks the interval in ticks between consecutive executions
-     * @param <R>           the return type wrapped by {@link TaskResponse}
+     * @param <T>           the return type wrapped by {@link TaskResponse}
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> scheduleAtFixedRate(Callable<TaskResponse<R>> task, long delayTicks, long intervalTicks) {
+    default <T> ScheduledTask<T> scheduleAtFixedRate(Callable<TaskResponse<T>> task, long delayTicks, long intervalTicks) {
         return getMCScheduler().scheduleAtFixedRate(task, delayTicks, intervalTicks);
     }
 
@@ -313,10 +313,10 @@ public interface TaskInterface<R> {
      * @param delayTicks    the initial delay in ticks before the first execution
      * @param intervalTicks the interval in ticks between consecutive executions
      * @param predicate     the {@link RepeatPredicate} to control repetition
-     * @param <R>           the return type wrapped by {@link TaskResponse}
+     * @param <T>           the return type wrapped by {@link TaskResponse}
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> scheduleAtFixedRate(Callable<TaskResponse<R>> task, long delayTicks, long intervalTicks, RepeatPredicate<R> predicate) {
+    default <T> ScheduledTask<T> scheduleAtFixedRate(Callable<TaskResponse<T>> task, long delayTicks, long intervalTicks, RepeatPredicate<T> predicate) {
         return getMCScheduler().scheduleAtFixedRate(task, delayTicks, intervalTicks, predicate);
     }
 
@@ -371,10 +371,10 @@ public interface TaskInterface<R> {
      * Schedule a one-time {@link Callable} task with no initial delay.
      *
      * @param task the callable task to be executed
-     * @param <R>  the return type of the callable
+     * @param <T>  the return type of the callable
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> schedule(Callable<R> task) {
+    default <T> ScheduledTask<T> schedule(Callable<T> task) {
         return getMCScheduler().schedule(task);
     }
 
@@ -383,10 +383,10 @@ public interface TaskInterface<R> {
      *
      * @param task  the callable task to be executed
      * @param delay the duration before the task is executed
-     * @param <R>   the return type of the callable
+     * @param <T>   the return type of the callable
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> schedule(Callable<R> task, Duration delay) {
+    default <T> ScheduledTask<T> schedule(Callable<T> task, Duration delay) {
         return getMCScheduler().schedule(task, delay);
     }
 
@@ -398,10 +398,10 @@ public interface TaskInterface<R> {
      * @param task     the callable task to be executed
      * @param delay    the initial delay before the first execution
      * @param interval the interval between consecutive executions
-     * @param <R>      the return type wrapped by {@link TaskResponse}
+     * @param <T>      the return type wrapped by {@link TaskResponse}
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> scheduleAtFixedRate(Callable<TaskResponse<R>> task, Duration delay, Duration interval) {
+    default <T> ScheduledTask<T> scheduleAtFixedRate(Callable<TaskResponse<T>> task, Duration delay, Duration interval) {
         return getMCScheduler().scheduleAtFixedRate(task, delay, interval);
     }
 
@@ -413,10 +413,10 @@ public interface TaskInterface<R> {
      * @param delay     the initial delay before the first execution
      * @param interval  the interval between consecutive executions
      * @param predicate the {@link RepeatPredicate} to control repetition
-     * @param <R>       the return type wrapped by {@link TaskResponse}
+     * @param <T>       the return type wrapped by {@link TaskResponse}
      * @return a {@link ScheduledTask} representing the scheduled task
      */
-    default <R> ScheduledTask<R> scheduleAtFixedRate(Callable<TaskResponse<R>> task, Duration delay, Duration interval, RepeatPredicate<R> predicate) {
+    default <T> ScheduledTask<T> scheduleAtFixedRate(Callable<TaskResponse<T>> task, Duration delay, Duration interval, RepeatPredicate<T> predicate) {
         return getMCScheduler().scheduleAtFixedRate(task, delay, interval, predicate);
     }
 
