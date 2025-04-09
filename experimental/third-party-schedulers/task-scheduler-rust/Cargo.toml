@@ -19,7 +19,12 @@ tonic = { version = "0.13.0", features = [
     "tls-ring",
     "tls-webpki-roots",
 ] }
-tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.0", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "fs",
+] }
 prost = "0.13.5"
 prost-types = "0.13.5"
 parking_lot = "0.12"

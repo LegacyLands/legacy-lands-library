@@ -1,9 +1,11 @@
 use clap::Parser;
+use std::path::PathBuf;
 use task_scheduler::logger;
 use task_scheduler::server::service::TaskSchedulerService;
 use task_scheduler::tasks::log_pending_registrations;
 use task_scheduler::tasks::taskscheduler::task_scheduler_server::TaskSchedulerServer;
-use tonic::transport::Server;
+use tokio::fs;
+use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 
 #[macro_use]
 extern crate task_scheduler;
@@ -17,14 +19,31 @@ struct Args {
     #[arg(short, long, default_value = "127.0.0.1:50051")]
     addr: String,
 
+    /// Path to the TLS server certificate file (PEM format). Required for TLS.
+    #[arg(long, requires = "tls_key")]
+    tls_cert: Option<PathBuf>,
+
+    /// Path to the TLS server private key file (PEM format). Required for TLS.
+    #[arg(long, requires = "tls_cert")]
+    tls_key: Option<PathBuf>,
+
+    /// Path to the optional client CA certificate file (PEM format) for mTLS.
     #[arg(long)]
-    tls: bool,
+    tls_ca_cert: Option<PathBuf>,
+}
 
-    #[arg(long, requires = "tls")]
-    cert_path: Option<String>,
+async fn load_identity(
+    cert_path: &PathBuf,
+    key_path: &PathBuf,
+) -> Result<Identity, Box<dyn std::error::Error>> {
+    let cert_pem = fs::read(cert_path).await?;
+    let key_pem = fs::read(key_path).await?;
+    Ok(Identity::from_pem(cert_pem, key_pem))
+}
 
-    #[arg(long, requires = "tls")]
-    key_path: Option<String>,
+async fn load_ca_cert(ca_path: &PathBuf) -> Result<Certificate, Box<dyn std::error::Error>> {
+    let ca_pem = fs::read(ca_path).await?;
+    Ok(Certificate::from_pem(ca_pem))
 }
 
 #[tokio::main]
@@ -36,22 +55,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let addr = args.addr.parse()?;
     let service = TaskSchedulerService::default();
-    
-    info_log!("Starting server with auto-registered tasks");
 
     let mut server_builder = Server::builder();
+    let mut tls_enabled = false;
 
-    if args.tls {
-        info_log!("TLS is enabled (logic temporarily commented out).");
+    if let (Some(cert_path), Some(key_path)) = (&args.tls_cert, &args.tls_key) {
+        let server_identity = load_identity(cert_path, key_path).await?;
+        let mut tls_config = ServerTlsConfig::new().identity(server_identity);
+
+        if let Some(ca_path) = &args.tls_ca_cert {
+            let client_ca_cert = load_ca_cert(ca_path).await?;
+            tls_config = tls_config.client_ca_root(client_ca_cert);
+            info_log!(
+                "TLS enabled with mTLS (client certificate required). CA: {}",
+                ca_path.display()
+            );
+        } else {
+            info_log!(
+                "TLS enabled (no client certificate required). Cert: {}, Key: {}",
+                cert_path.display(),
+                key_path.display()
+            );
+        }
+
+        server_builder = server_builder.tls_config(tls_config)?;
+        tls_enabled = true;
     } else {
-        info_log!("TLS is disabled. Running in insecure mode.");
+        warn_log!("Starting server without TLS.");
     }
 
-    info_log!("Task scheduler server listening on {}.", addr);
+    info_log!(
+        "Task scheduler server listening on {}{}.",
+        addr,
+        if tls_enabled { " (TLS)" } else { "" }
+    );
+
     server_builder
         .add_service(TaskSchedulerServer::new(service))
         .serve(addr)
         .await?;
 
     Ok(())
-} 
+}

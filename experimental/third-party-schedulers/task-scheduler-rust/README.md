@@ -11,7 +11,7 @@ Task Scheduler provides a gRPC service for executing registered tasks. It suppor
 ### Core Modules
 
 *   **`task-macro`:** A procedural macro crate defining `#[sync_task]` and `#[async_task]` attributes. These macros automatically register the annotated functions into a global registry upon application startup using the `ctor` crate.
-*   **`src/main.rs`:** The main binary entry point. Parses command-line arguments (e.g., server address), initializes logging (`src/logger.rs`), starts the `tonic` gRPC server (`src/server/service.rs`), and ensures built-in tasks (`src/tasks/builtin.rs`) are linked.
+*   **`src/bin/task-scheduler.rs`:** The main binary entry point. Parses command-line arguments (including server address and TLS options), initializes logging (`src/logger.rs`), starts the `tonic` gRPC server (`src/server/service.rs`), configures TLS if requested, and ensures built-in tasks (`src/tasks/builtin.rs`) are linked.
 *   **`src/logger.rs`:** Configures application logging using `tracing` to output to both console and timestamped files in the `logs/` directory. Provides convenient logging macros.
 *   **`src/models/mod.rs` & `src/models/wrappers.rs`:** Defines internal data structures, including the crucial `ArgValue` enum which represents decoded task arguments, and helper structs for Protobuf message decoding.
 *   **`src/tasks/mod.rs`, `src/tasks/registry.rs`, `src/tasks/builtin.rs`:** Manages task registration, storage, and execution logic. Contains the global `TaskRegistry` and example task implementations.
@@ -38,14 +38,17 @@ Task Scheduler provides a gRPC service for executing registered tasks. It suppor
 
 ### gRPC Interface and Proto Integration
 
-- **Protobuf Definition (`proto/task_scheduler.proto`):**
+- **Protobuf Definition (`task_scheduler.proto`):**
   The service interface is defined using Protocol Buffers. Key elements include:
-    - `TaskScheduler` service with `SubmitTask` and `GetResult` RPC methods.
-    - `TaskRequest`: Contains `task_id`, `method` name, `args` (as `repeated google.protobuf.Any`), `deps` (list of dependency task IDs), and `is_async` flag.
-    - `TaskResponse`: Contains `task_id`, `status` (e.g., SUCCESS, FAILED), and `result` (string).
-    - `ResultRequest`: Contains `task_id`.
-    - `ResultResponse`: Contains `status` and `result` (string).
-    - Helper message types (`ListValue`, `MapValue`) for structured arguments within `Any`.
+    - **Service (`TaskScheduler`):**
+      - `SubmitTask`: Submits a task for execution, supporting sync/async modes and dependency definition.
+      - `GetResult`: Queries the execution result and status of a specified task.
+    - **Main Messages:**
+      - `TaskRequest`: The request body used when submitting a task, containing task ID, method name, arguments, dependencies, and execution mode.
+      - `TaskResponse`: The response body for `SubmitTask`, containing task ID, status, and initial result.
+      - `ResultRequest`: The request body used when querying a result, containing the task ID.
+      - `ResultResponse`: The response body for `GetResult`, containing task status and the final result.
+    - Utilizes `google.protobuf.Any` to flexibly handle different types of arguments and results.
 
 - **Communication Flow:**
   Clients encode task arguments into appropriate Protobuf messages (e.g., `google.protobuf.Int32Value`, `StringValue`, custom `ListValue`, `MapValue`) and wrap them in `google.protobuf.Any`. The server decodes these `Any` messages back into the internal `ArgValue` enum before executing the task.
@@ -76,6 +79,15 @@ Task Scheduler provides a gRPC service for executing registered tasks. It suppor
 4.  **Efficient Serialization:**
     `prost` is used for Protobuf message handling, providing fast serialization and deserialization.
 
+### TLS Configuration
+
+The server supports enabling Transport Layer Security (TLS) for encrypted communication (gRPCs). This requires providing server certificate and key files via command-line arguments.
+
+- **Server Authentication:** Provide `--tls-cert` (certificate chain in PEM format) and `--tls-key` (private key in PEM format) arguments to enable TLS. The server will present this certificate to connecting clients.
+- **Mutual TLS (mTLS):** To additionally require clients to present a valid certificate for authentication, provide the `--tls-ca-cert` argument with the path to the CA certificate (PEM format) that signed the allowed client certificates. If this argument is provided, only clients with certificates signed by this CA will be able to connect.
+
+If TLS arguments are not provided, the server will run without encryption.
+
 ## Usage
 
 ### Registering Tasks
@@ -103,54 +115,6 @@ pub async fn long_running_task(args: Vec<ArgValue>) -> String {
     format!("Processed async task with {} args", args.len())
 }
 
-// Make sure to import the module containing tasks in main.rs or lib.rs
+// Make sure to import the module containing tasks in src/bin/task-scheduler.rs or lib.rs
 // e.g., use task_scheduler::tasks::builtin;
 ```
-
-### gRPC Endpoints
-
-The backend exposes two primary gRPC endpoints defined in `proto/task_scheduler.proto`:
-
-- **`SubmitTask(TaskRequest) returns (TaskResponse)`:**
-  Submits a task for execution. Requires a unique `task_id`, the registered `method` name (e.g., `"add"`), arguments encoded as `google.protobuf.Any`, a list of dependency `task_id`s, and the `is_async` flag. Returns the final status and result string.
-
-- **`GetResult(ResultRequest) returns (ResultResponse)`:**
-  Retrieves the cached outcome of a previously submitted task using its `task_id`. Returns the status and result string if found in the cache.
-
-## CLI and gRPC Usage
-
-### Starting the Server
-
-Build and run the server using `cargo`:
-
-```bash
-cargo build --release
-./target/release/task-scheduler --addr "0.0.0.0:50051"
-# Or using cargo run:
-# cargo run --release -- --addr "0.0.0.0:50051"
-```
-
-- Use the `--addr` (or `-a`) option to specify the host and port. Defaults to `127.0.0.1:50051`.
-
-### gRPC Interaction Example (Conceptual)
-
-Clients need to use a gRPC library compatible with Protobuf.
-
-1.  **Define Arguments:** Create Protobuf messages for your arguments (e.g., `google.protobuf.Int32Value`, `StringValue`).
-2.  **Wrap in `Any`:** Encode each argument message into a `google.protobuf.Any` message, setting the `type_url` correctly (e.g., `"type.googleapis.com/google.protobuf.Int32Value"`) and the `value` as the serialized bytes of the argument message.
-3.  **Create `TaskRequest`:** Construct the `TaskRequest` including the `task_id`, `method` name (e.g., `"add"`), the list of `Any` arguments, dependencies, and `is_async`.
-4.  **Call `SubmitTask`:** Send the `TaskRequest` to the server. The `TaskResponse` will contain the result once execution finishes.
-5.  **Call `GetResult` (Optional):** If needed, call `GetResult` with the `task_id` to retrieve the cached result later.
-
-**Example `Any` structure for an `Int32Value` of 5:**
-
-```protobuf
-// Conceptually:
-Any {
-  type_url: "type.googleapis.com/google.protobuf.Int32Value";
-  // 'value' contains the serialized bytes of Int32Value { value: 5 }
-  value: bytes { ... };
-}
-```
-
-Refer to the `proto/task_scheduler.proto` file for the exact message definitions.

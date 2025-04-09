@@ -480,15 +480,14 @@ async fn test_process_person_map() {
 }
 
 #[tokio::test]
-#[ignore] // Ignore this test until the server-side async_method is fixed
 async fn test_async_task_completion() {
     let server = common::setup().await;
     let mut client = connect_to_server(&server.address()).await;
 
-    let task_id = "async_task_1".to_string();
+    let task_id = "async_task_completion_1".to_string();
     let task = TaskRequest {
         task_id: task_id.clone(),
-        method: "async_method".to_string(),
+        method: "delete".to_string(),
         args: vec![any_i32(1), any_i32(2), any_i32(3)],
         deps: vec![],
         is_async: true,
@@ -499,13 +498,11 @@ async fn test_async_task_completion() {
         .await
         .expect("Failed to submit task");
     let result = response.into_inner();
-    // Restore the original assertion, expecting 1 for successful submission (even for async)
+
     assert_eq!(result.status, 1, "Task should be submitted successfully");
 
-    // Wait a bit for the async task to potentially complete
     tokio::time::sleep(Duration::from_secs(1)).await;
 
-    // Check the result
     let result_request = ResultRequest {
         task_id: task_id.clone(),
     };
@@ -515,14 +512,15 @@ async fn test_async_task_completion() {
         .expect("Failed to get task result");
 
     let result = response.into_inner();
-    // Check status using the correct enum variant from proto
+
     assert_eq!(
         result.status,
         task_scheduler::tasks::taskscheduler::task_response::Status::Success as i32,
         "Task should be completed successfully"
     );
-    assert!(
-        result.result.contains("items"),
-        "Result value is unexpected"
+
+    assert_eq!(
+        result.result, "Deleted 3 items",
+        "Result value is unexpected for delete task"
     );
 }
