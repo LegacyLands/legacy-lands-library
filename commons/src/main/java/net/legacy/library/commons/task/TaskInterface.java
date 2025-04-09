@@ -5,7 +5,6 @@ import io.fairyproject.mc.scheduler.MCSchedulers;
 import io.fairyproject.scheduler.ScheduledTask;
 import io.fairyproject.scheduler.repeat.RepeatPredicate;
 import io.fairyproject.scheduler.response.TaskResponse;
-import lombok.SneakyThrows;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
@@ -37,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * overriding the {@link #start()} method, potentially using either the {@link MCScheduler} or
  * virtual thread execution methods.
  *
- * @param <T> the type of the result returned by the task, which could be {@link ScheduledTask},
+ * @param <R> the type of the result returned by the task, which could be {@link ScheduledTask},
  *            {@link Future}, {@link ScheduledFuture}, or another type depending on the implementation
  * @author qwq-dev
  * @see MCSchedulers
@@ -45,7 +44,7 @@ import java.util.concurrent.TimeUnit;
  * @see io.fairyproject.scheduler.Scheduler
  * @since 2024-12-14 12:30
  */
-public interface TaskInterface<T> {
+public interface TaskInterface<R> {
     /**
      * Starts the task. Implementations should define the logic of the task within this method.
      *
@@ -55,7 +54,7 @@ public interface TaskInterface<T> {
      *
      * @return an object representing the started task
      */
-    T start();
+    R start();
 
     /**
      * Provides the {@link MCScheduler} instance used for scheduling tasks.
@@ -132,10 +131,16 @@ public interface TaskInterface<T> {
      * @param task the task to be executed
      * @param <T>  the type of the result
      * @return a {@link CompletableFuture<T>} that will be completed with the task's result
+     * @throws RuntimeException if the callable task throws any Throwable during execution
      */
-    @SneakyThrows
-    default <T> CompletableFuture<T> submitWithVirtualThreadAsync(Callable<T> task) {
-        return CompletableFuture.supplyAsync(task::call, getVirtualThreadPerTaskExecutor());
+    default <T> CompletableFuture<T> submitWithVirtualThreadAsync(Callable<T> task) throws RuntimeException {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return task.call();
+            } catch (Throwable throwable) {
+                throw new RuntimeException(throwable);
+            }
+        }, getVirtualThreadPerTaskExecutor());
     }
 
     /**
