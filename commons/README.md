@@ -10,7 +10,7 @@ this document when there's new content.
 dependencies {
     // annotation module
     compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
-  
+
     // commons module
     compileOnly(files("libs/commons-1.0-SNAPSHOT.jar"))
 }
@@ -71,7 +71,7 @@ public class Example {
             @Override
             public ScheduledTask<?> start() {
                 // This is a simple example of a task that prints "Hello, world!" every second.
-                return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+                return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 20);
             }
         };
 
@@ -81,11 +81,28 @@ public class Example {
 }
 ```
 
+This module also supports various scheduling operations for virtual threads, which is particularly useful in network
+communication, I/O, and other areas, leading to higher performance.
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        TaskInterface taskInterface = new TaskInterface() {
+            @Override
+            public ScheduledTask<?> start() {
+                // This is a simple example using virtual threads that prints "Hello, world!" every second.
+                return scheduleAtFixedRateWithVirtualThread(() -> System.out.println("Hello, world!"), 0, 1, TimeUnit.SECONDS);
+            }
+        };
+    }
+}
+```
+
 It also
 provides [TaskAutoStartAnnotation](src/main/java/net/legacy/library/commons/task/annotation/TaskAutoStartAnnotation.java)
 to handle some tasks that need to be automatically started at a specific time. When there are many tasks to start,
 annotation automation will help us avoid manually managing the creation and calling of these instances, thereby
-simplifying the code.
+simplifying the code. For more methods and detailed information, please refer to the JavaDoc.
 
 ```java
 
@@ -94,7 +111,7 @@ public class Example implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
         // This is a simple example of a task that prints "Hello, world!" every second.
-        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 20);
     }
 }
 ```

@@ -9,7 +9,7 @@
 dependencies {
     // annotation module
     compileOnly(files("libs/annotation-1.0-SNAPSHOT.jar"))
-    
+
     // commons module
     compileOnly(files("libs/commons-1.0-SNAPSHOT.jar"))
 }
@@ -69,12 +69,28 @@ public class Example {
             @Override
             public ScheduledTask<?> start() {
                 // 这是一个简单的任务示例，每秒打印一次 "Hello, world!"。
-                return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+                return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 20);
             }
         };
 
         // 启动任务
         taskInterface.start();
+    }
+}
+```
+
+同时，该模块也支持虚拟线程的各种调度操作，这在网络通信，IO 等方面尤为有用，拥有更高的性能。
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        TaskInterface taskInterface = new TaskInterface() {
+            @Override
+            public ScheduledTask<?> start() {
+                // 这是一个简单的任务示例，使用虚拟线程，每秒打印一次 "Hello, world!"。
+                return scheduleAtFixedRateWithVirtualThread(() -> System.out.println("Hello, world!"), 0, 1, TimeUnit.SECONDS);
+            }
+        };
     }
 }
 ```
@@ -89,12 +105,12 @@ public class Example implements TaskInterface {
     @Override
     public ScheduledTask<?> start() {
         // 这是一个简单的任务示例，每秒打印一次 "Hello, world!"。
-        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 1000);
+        return scheduleAtFixedRate(() -> System.out.println("Hello, world!"), 0, 20);
     }
 }
 ```
 
-至于如何在您自己的插件上使注解处理器工作，请参阅 [annotation](../annotation/README.md) 模块。
+至于如何在您自己的插件上使注解处理器工作，请参阅 [annotation](../annotation/README.md) 模块。更多方法请详细阅读 JavaDoc。
 
 ### [GsonUtil](src/main/java/net/legacy/library/commons/util/GsonUtil.java)
 

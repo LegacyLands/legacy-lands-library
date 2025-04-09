@@ -18,7 +18,7 @@
 ## 核心模块
 
 - [**annotation**](annotation/README_ZHCN.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理。
-- [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度和 JSON 操作。
+- [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度、虚拟线程调度和 JSON 操作。
 - [**configuration**](configuration/README_ZHCN.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化。
 - [**mongodb**](mongodb/README_ZHCN.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化。
 - [**cache**](cache/README_ZHCN.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制与通用的线程安全资源管理框架。

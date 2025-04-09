@@ -19,8 +19,8 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 
 - [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and
   lifecycle management.
-- [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, and JSON
-  operations.
+- [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, virtual thread
+  scheduling, and JSON operations.
 - [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with
   serialization support.
 - [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence.
