@@ -1,12 +1,13 @@
 package net.legacy.library.player.task;
 
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Timer task that schedules periodic execution of {@link PlayerDataPersistenceTask}
@@ -19,7 +20,7 @@ import java.time.Duration;
  * @since 2025-01-04 12:53
  */
 @RequiredArgsConstructor
-public class PlayerDataPersistenceTimerTask implements TaskInterface {
+public class PlayerDataPersistenceTimerTask implements TaskInterface<ScheduledFuture<?>> {
     private final Duration delay;
     private final Duration interval;
     private final LockSettings lockSettings;
@@ -57,10 +58,11 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface {
     /**
      * Starts the scheduled timer task that periodically invokes {@link PlayerDataPersistenceTask}.
      *
-     * @return a {@link ScheduledTask} representing the running timer task
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return scheduleAtFixedRate(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService, ttl).start(), delay, interval);
+    public ScheduledFuture<?> start() {
+        return scheduleAtFixedRateWithVirtualThread(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService, ttl).start(),
+                delay.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
     }
 }

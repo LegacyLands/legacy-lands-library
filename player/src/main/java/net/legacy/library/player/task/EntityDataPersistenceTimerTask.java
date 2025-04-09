@@ -1,12 +1,13 @@
 package net.legacy.library.player.task;
 
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyEntityDataService;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Timer task for periodically persisting all entity data to the L2 cache and database.
@@ -20,7 +21,7 @@ import java.time.Duration;
  * @since 2024-03-30 01:49
  */
 @RequiredArgsConstructor
-public class EntityDataPersistenceTimerTask implements TaskInterface {
+public class EntityDataPersistenceTimerTask implements TaskInterface<ScheduledFuture<?>> {
     private final Duration delay;
     private final Duration period;
     private final LockSettings lockSettings;
@@ -91,17 +92,17 @@ public class EntityDataPersistenceTimerTask implements TaskInterface {
     /**
      * Starts the scheduled timer task that periodically invokes {@link EntityDataPersistenceTask}.
      *
-     * @return a {@link ScheduledTask} representing the running timer task
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return scheduleAtFixedRate(() -> {
+    public ScheduledFuture<?> start() {
+        return scheduleAtFixedRateWithVirtualThread(() -> {
             // First, sync L1 cache entities
             service.getL1Cache().getResource().asMap().forEach((uuid, data) ->
                     EntityDataPersistenceTask.of(lockSettings, service, uuid, ttl).start());
 
             // Then, perform bulk persistence operation for all entities in L2 cache
             EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start();
-        }, delay, period);
+        }, delay.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
     }
 } 

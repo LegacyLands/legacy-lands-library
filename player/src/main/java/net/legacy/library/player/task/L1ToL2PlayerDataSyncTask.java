@@ -2,7 +2,6 @@ package net.legacy.library.player.task;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.CacheServiceInterface;
@@ -13,6 +12,7 @@ import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2025-01-05 12:10
  */
 @RequiredArgsConstructor
-public class L1ToL2PlayerDataSyncTask implements TaskInterface {
+public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture<?>> {
     private final UUID uuid;
     private final LegacyPlayerDataService legacyPlayerDataService;
 
@@ -62,11 +62,11 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface {
      *
      * <p>Ensures that only changed data is updated in the L2 cache to optimize performance.
      *
-     * @return a {@link ScheduledTask} representing the running synchronization task
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return schedule(() -> {
+    public CompletableFuture<?> start() {
+        return submitWithVirtualThreadAsync(() -> {
             CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache =
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();

@@ -3,7 +3,6 @@ package net.legacy.library.player.task;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import dev.morphia.Datastore;
 import io.fairyproject.log.Log;
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
@@ -21,6 +20,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -37,7 +37,7 @@ import java.util.function.Consumer;
  * @since 2024-03-30 01:49
  */
 @RequiredArgsConstructor
-public class EntityDataPersistenceTask implements TaskInterface {
+public class EntityDataPersistenceTask implements TaskInterface<CompletableFuture<?>> {
     private final LockSettings lockSettings;
     private final LegacyEntityDataService service;
     private final Set<UUID> entityUuids;
@@ -162,11 +162,11 @@ public class EntityDataPersistenceTask implements TaskInterface {
      * <p>If entity UUIDs are provided, it persists only those specific entities.
      * Otherwise, it performs a bulk persistence of all entity data in the L2 cache.
      *
-     * @return a {@link ScheduledTask} representing the running task
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return schedule(() -> {
+    public CompletableFuture<?> start() {
+        return submitWithVirtualThreadAsync(() -> {
             boolean success = false;
             try {
                 // If specific entities are provided, persist just those entities

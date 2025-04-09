@@ -65,7 +65,7 @@ public class Test {
 ```java
 public class Example {
     public static void main(String[] args) {
-        TaskInterface taskInterface = new TaskInterface() {
+        TaskInterface<ScheduledTask<?>> taskInterface = new TaskInterface<>() {
             @Override
             public ScheduledTask<?> start() {
                 // 这是一个简单的任务示例，每秒打印一次 "Hello, world!"。
@@ -84,9 +84,9 @@ public class Example {
 ```java
 public class Example {
     public static void main(String[] args) {
-        TaskInterface taskInterface = new TaskInterface() {
+        TaskInterface<ScheduledFuture<?>> taskInterface = new TaskInterface<>() {
             @Override
-            public ScheduledTask<?> start() {
+            public ScheduledFuture<?> start() {
                 // 这是一个简单的任务示例，使用虚拟线程，每秒打印一次 "Hello, world!"。
                 return scheduleAtFixedRateWithVirtualThread(() -> System.out.println("Hello, world!"), 0, 1, TimeUnit.SECONDS);
             }
@@ -101,7 +101,7 @@ public class Example {
 ```java
 
 @TaskAutoStartAnnotation(isFromFairyIoC = false)
-public class Example implements TaskInterface {
+public class Example implements TaskInterface<ScheduledTask<?>> {
     @Override
     public ScheduledTask<?> start() {
         // 这是一个简单的任务示例，每秒打印一次 "Hello, world!"。

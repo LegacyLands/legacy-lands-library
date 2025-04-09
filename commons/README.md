@@ -67,7 +67,7 @@ Framework [MCScheduler](https://docs.fairyproject.io/core/minecraft/scheduler).
 ```java
 public class Example {
     public static void main(String[] args) {
-        TaskInterface taskInterface = new TaskInterface() {
+        TaskInterface<ScheduledTask<?>> taskInterface = new TaskInterface<>() {
             @Override
             public ScheduledTask<?> start() {
                 // This is a simple example of a task that prints "Hello, world!" every second.
@@ -87,9 +87,9 @@ communication, I/O, and other areas, leading to higher performance.
 ```java
 public class Example {
     public static void main(String[] args) {
-        TaskInterface taskInterface = new TaskInterface() {
+        TaskInterface<ScheduledFuture<?>> taskInterface = new TaskInterface<>() {
             @Override
-            public ScheduledTask<?> start() {
+            public ScheduledFuture<?> start() {
                 // This is a simple example using virtual threads that prints "Hello, world!" every second.
                 return scheduleAtFixedRateWithVirtualThread(() -> System.out.println("Hello, world!"), 0, 1, TimeUnit.SECONDS);
             }
@@ -105,9 +105,8 @@ annotation automation will help us avoid manually managing the creation and call
 simplifying the code. For more methods and detailed information, please refer to the JavaDoc.
 
 ```java
-
 @TaskAutoStartAnnotation(isFromFairyIoC = false)
-public class Example implements TaskInterface {
+public class Example implements TaskInterface<ScheduledTask<?>> {
     @Override
     public ScheduledTask<?> start() {
         // This is a simple example of a task that prints "Hello, world!" every second.

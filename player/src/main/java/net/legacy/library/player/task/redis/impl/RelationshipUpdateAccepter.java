@@ -6,6 +6,7 @@ import net.legacy.library.commons.util.GsonUtil;
 import net.legacy.library.player.annotation.EntityRStreamAccepterRegister;
 import net.legacy.library.player.model.LegacyEntityData;
 import net.legacy.library.player.service.LegacyEntityDataService;
+import net.legacy.library.player.task.redis.EntityRStreamAccepterInterface;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 

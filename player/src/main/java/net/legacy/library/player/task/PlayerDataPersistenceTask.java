@@ -3,7 +3,6 @@ package net.legacy.library.player.task;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import dev.morphia.Datastore;
 import io.fairyproject.log.Log;
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
@@ -18,6 +17,7 @@ import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Task responsible for persisting player data from the L2 cache (Redis) to the database.
@@ -32,7 +32,7 @@ import java.time.Duration;
  * @since 2025-01-04 12:53
  */
 @RequiredArgsConstructor
-public class PlayerDataPersistenceTask implements TaskInterface {
+public class PlayerDataPersistenceTask implements TaskInterface<CompletableFuture<?>> {
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final int limit;
@@ -92,10 +92,12 @@ public class PlayerDataPersistenceTask implements TaskInterface {
      * <p>Acquires an exclusive lock to prevent concurrent modifications, iterates through the
      * Redis cache keys related to player data, deserializes the data, and saves it to the database.
      * Ensures that only valid and non-expired data is persisted.
+     *
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return schedule(() -> {
+    public CompletableFuture<?> start() {
+        return submitWithVirtualThreadAsync(() -> {
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
             RedissonClient redissonClient = l2Cache.getResource();
 

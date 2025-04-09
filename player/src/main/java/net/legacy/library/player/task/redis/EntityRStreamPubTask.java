@@ -1,6 +1,5 @@
 package net.legacy.library.player.task.redis;
 
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.commons.task.TaskInterface;
@@ -11,6 +10,7 @@ import org.redisson.api.RStream;
 import org.redisson.api.stream.StreamAddArgs;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2024-03-30 01:49
  */
 @RequiredArgsConstructor
-public class EntityRStreamPubTask implements TaskInterface {
+public class EntityRStreamPubTask implements TaskInterface<CompletableFuture<?>> {
     private final LegacyEntityDataService service;
     private final EntityRStreamTask entityRStreamTask;
 
@@ -44,11 +44,11 @@ public class EntityRStreamPubTask implements TaskInterface {
      * <p>This method creates a message map containing the task data and adds it to the Redis stream.
      * If an expiration time is set, it will also include an expiration timestamp in the message.
      *
-     * @return a {@link ScheduledTask} instance tracking the execution status of the task
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return schedule(() -> {
+    public CompletableFuture<?> start() {
+        return submitWithVirtualThreadAsync(() -> {
             // Get the stream key and client
             String streamKey = EntityRKeyUtil.getEntityStreamKey(service);
 

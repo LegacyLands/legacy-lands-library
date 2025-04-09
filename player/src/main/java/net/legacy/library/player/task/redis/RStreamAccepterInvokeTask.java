@@ -21,6 +21,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Task responsible for invoking and managing {@link RStreamAccepterInterface}
@@ -34,7 +36,7 @@ import java.util.Set;
  * @since 2025-01-04 20:06
  */
 @Getter
-public class RStreamAccepterInvokeTask implements TaskInterface {
+public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<?>> {
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -122,10 +124,10 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
     /**
      * Starts the scheduled task that periodically checks and processes tasks from Redis streams.
      *
-     * @return a {@link ScheduledTask} representing the running scheduled task
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
+    public ScheduledFuture<?> start() {
         Runnable runnable = () -> {
             RedisCacheServiceInterface redisCacheService = legacyPlayerDataService.getL2Cache();
             RedissonClient redissonClient = redisCacheService.getResource();
@@ -203,6 +205,6 @@ public class RStreamAccepterInvokeTask implements TaskInterface {
             }
         };
 
-        return scheduleAtFixedRate(runnable, interval, interval);
+        return scheduleAtFixedRateWithVirtualThread(runnable, interval.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
     }
 }

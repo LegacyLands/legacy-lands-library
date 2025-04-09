@@ -1,6 +1,5 @@
 package net.legacy.library.player.task.redis;
 
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyPlayerDataService;
@@ -11,6 +10,7 @@ import org.redisson.api.RedissonClient;
 import org.redisson.api.stream.StreamAddArgs;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2025-01-04 19:59
  */
 @RequiredArgsConstructor
-public class RStreamPubTask implements TaskInterface {
+public class RStreamPubTask implements TaskInterface<CompletableFuture<?>> {
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final RStreamTask rStreamTask;
 
@@ -43,10 +43,12 @@ public class RStreamPubTask implements TaskInterface {
      *
      * <p>This method serializes the task data, stores it in a temporary map with an expiration time,
      * and then adds the task to the Redis stream for processing.
+     *
+     * @return {@inheritDoc}
      */
     @Override
-    public ScheduledTask<?> start() {
-        return schedule(() -> {
+    public CompletableFuture<?> start() {
+        return submitWithVirtualThreadAsync(() -> {
             RedissonClient redissonClient = legacyPlayerDataService.getL2Cache().getResource();
 
             RStream<String, String> rStream = redissonClient.getStream(

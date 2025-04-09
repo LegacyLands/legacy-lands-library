@@ -10,7 +10,6 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.annotation.EntityRStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyEntityDataService;
-import net.legacy.library.player.task.redis.impl.EntityRStreamAccepterInterface;
 import net.legacy.library.player.util.EntityRKeyUtil;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
@@ -21,6 +20,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Task for invoking entity Redis stream accepters.
@@ -34,7 +35,7 @@ import java.util.Set;
  * @since 2024-03-30 01:49
  */
 @Getter
-public class EntityRStreamAccepterInvokeTask implements TaskInterface {
+public class EntityRStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<?>> {
     private final LegacyEntityDataService service;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -122,8 +123,13 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
         });
     }
 
+    /**
+     * Starts the scheduled task that periodically checks and processes tasks from Redis streams.
+     *
+     * @return {@inheritDoc}
+     */
     @Override
-    public ScheduledTask<?> start() {
+    public ScheduledFuture<?> start() {
         Runnable runnable = () -> {
             RedisCacheServiceInterface redisCacheService = service.getL2Cache();
             RedissonClient redissonClient = redisCacheService.getResource();
@@ -194,6 +200,6 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface {
             }
         };
 
-        return scheduleAtFixedRate(runnable, period, period);
+        return scheduleAtFixedRateWithVirtualThread(runnable, period.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
     }
 } 

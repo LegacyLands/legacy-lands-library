@@ -1,5 +1,7 @@
 package net.legacy.library.player.annotation;
 
+import net.legacy.library.player.task.redis.EntityRStreamAccepterInterface;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -10,7 +12,7 @@ import java.lang.annotation.Target;
  *
  * <p>Classes annotated with {@code EntityRStreamAccepterRegister} will be automatically
  * discovered and registered as entity Redis stream accepters. Implementations using
- * this annotation must implement the {@link net.legacy.library.player.task.redis.impl.EntityRStreamAccepterInterface}.
+ * this annotation must implement the {@link EntityRStreamAccepterInterface}.
  *
  * @author qwq-dev
  * @since 2024-03-30 01:49

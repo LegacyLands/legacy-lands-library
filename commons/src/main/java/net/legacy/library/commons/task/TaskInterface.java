@@ -5,9 +5,11 @@ import io.fairyproject.mc.scheduler.MCSchedulers;
 import io.fairyproject.scheduler.ScheduledTask;
 import io.fairyproject.scheduler.repeat.RepeatPredicate;
 import io.fairyproject.scheduler.response.TaskResponse;
+import lombok.SneakyThrows;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -35,13 +37,15 @@ import java.util.concurrent.TimeUnit;
  * overriding the {@link #start()} method, potentially using either the {@link MCScheduler} or
  * virtual thread execution methods.
  *
+ * @param <T> the type of the result returned by the task, which could be {@link ScheduledTask},
+ *            {@link Future}, {@link ScheduledFuture}, or another type depending on the implementation
  * @author qwq-dev
  * @see MCSchedulers
  * @see MCScheduler
  * @see io.fairyproject.scheduler.Scheduler
  * @since 2024-12-14 12:30
  */
-public interface TaskInterface {
+public interface TaskInterface<T> {
     /**
      * Starts the task. Implementations should define the logic of the task within this method.
      *
@@ -49,9 +53,9 @@ public interface TaskInterface {
      * {@link MCScheduler} provided by {@link #getMCScheduler()}. This method could, for example,
      * schedule periodic tasks or a single one-time task.
      *
-     * @return a {@link ScheduledTask} representing the started task
+     * @return an object representing the started task
      */
-    ScheduledTask<?> start();
+    T start();
 
     /**
      * Provides the {@link MCScheduler} instance used for scheduling tasks.
@@ -120,6 +124,41 @@ public interface TaskInterface {
      */
     default Future<?> submitWithVirtualThread(Runnable runnable) {
         return getVirtualThreadPerTaskExecutor().submit(runnable);
+    }
+
+    /**
+     * Submits a value-returning task for execution in a virtual thread and returns a {@link CompletableFuture}.
+     *
+     * @param task the task to be executed
+     * @param <T>  the type of the result
+     * @return a {@link CompletableFuture<T>} that will be completed with the task's result
+     */
+    @SneakyThrows
+    default <T> CompletableFuture<T> submitWithVirtualThreadAsync(Callable<T> task) {
+        return CompletableFuture.supplyAsync(task::call, getVirtualThreadPerTaskExecutor());
+    }
+
+    /**
+     * Submits a task for execution in a virtual thread with a preset result and returns a {@link CompletableFuture}.
+     *
+     * @param task   the task to be executed
+     * @param result the result to return upon completion
+     * @param <T>    the type of the result
+     * @return a {@link CompletableFuture<T>} that will be completed with the preset result
+     */
+    default <T> CompletableFuture<T> submitWithVirtualThreadAsync(Runnable task, T result) {
+        return CompletableFuture.runAsync(task, getVirtualThreadPerTaskExecutor())
+                .thenApply(v -> result);
+    }
+
+    /**
+     * Submits a {@link Runnable} task for execution in a virtual thread and returns a {@link CompletableFuture}.
+     *
+     * @param runnable the task to be executed
+     * @return a {@link CompletableFuture<Void>} representing the pending completion of the task
+     */
+    default CompletableFuture<Void> submitWithVirtualThreadAsync(Runnable runnable) {
+        return CompletableFuture.runAsync(runnable, getVirtualThreadPerTaskExecutor());
     }
 
     /**

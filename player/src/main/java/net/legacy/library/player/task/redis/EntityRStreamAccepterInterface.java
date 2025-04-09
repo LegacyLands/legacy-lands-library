@@ -1,4 +1,4 @@
-package net.legacy.library.player.task.redis.impl;
+package net.legacy.library.player.task.redis;
 
 import net.legacy.library.player.service.LegacyEntityDataService;
 import org.redisson.api.RStream;
