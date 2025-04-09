@@ -1,6 +1,14 @@
 package net.legacy.library.script.engine;
 
-import com.eclipsesource.v8.*;
+import com.eclipsesource.v8.V8;
+import com.eclipsesource.v8.V8Array;
+import com.eclipsesource.v8.V8Function;
+import com.eclipsesource.v8.V8Object;
+import com.eclipsesource.v8.V8ResultUndefined;
+import com.eclipsesource.v8.V8ScriptCompilationException;
+import com.eclipsesource.v8.V8ScriptExecutionException;
+import com.eclipsesource.v8.V8TypedArray;
+import com.eclipsesource.v8.V8Value;
 import io.fairyproject.log.Log;
 import lombok.Getter;
 import net.legacy.library.script.exception.ScriptException;
