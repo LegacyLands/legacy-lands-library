@@ -117,6 +117,9 @@ public class Example implements TaskInterface<ScheduledTask<?>> {
 `GsonUtil` 提供了一种线程安全的方式来管理和自定义共享的 `Gson` 实例。它允许在您的应用程序中保持一致的 `Gson`
 配置，防止分散和潜在冲突的设置。
 
+为了防止依赖冲突，所以您应该先将 `fairy-lib-plugin` 作为依赖导入，使用重定位后的 `Gson`，包应为 `io.fairyproject.libs.gson`
+。而无需手动导入依赖并重定位。
+
 ```java
 public class Example {
     public static void main(String[] args) {

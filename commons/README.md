@@ -105,6 +105,7 @@ annotation automation will help us avoid manually managing the creation and call
 simplifying the code. For more methods and detailed information, please refer to the JavaDoc.
 
 ```java
+
 @TaskAutoStartAnnotation(isFromFairyIoC = false)
 public class Example implements TaskInterface<ScheduledTask<?>> {
     @Override
@@ -122,6 +123,9 @@ module.
 
 `GsonUtil` provides a thread-safe way to manage and customize a shared `Gson` instance. It allows for consistent `Gson`
 configuration across your application, preventing scattered and potentially conflicting settings.
+
+To prevent dependency conflicts, you should first import `fairy-lib-plugin` as a dependency and use the relocated
+`Gson`, the package should be `io.fairyproject.libs.gson`. No need to manually import dependencies and relocate.
 
 ```java
 public class Example {
