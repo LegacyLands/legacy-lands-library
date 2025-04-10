@@ -95,4 +95,16 @@ public interface RStreamAccepterInterface {
     default void ack(RStream<Object, Object> rStream, StreamMessageId streamMessageId) {
         rStream.remove(streamMessageId);
     }
+
+    /**
+     * Determines whether to use virtual threads.
+     *
+     * <p>Defaults to {@code true}.If set to {@code false},
+     * the task will be directly scheduled using the Bukkit thread.
+     *
+     * @return use virtual threads, defaults to {@code true}
+     */
+    default boolean useVirtualThread() {
+        return true;
+    }
 }

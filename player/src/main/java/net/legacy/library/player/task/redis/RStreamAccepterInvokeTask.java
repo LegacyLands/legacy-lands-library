@@ -2,7 +2,6 @@ package net.legacy.library.player.task.redis;
 
 import com.google.common.collect.Sets;
 import io.fairyproject.log.Log;
-import io.fairyproject.scheduler.ScheduledTask;
 import lombok.Getter;
 import net.legacy.library.annotation.util.AnnotationScanner;
 import net.legacy.library.annotation.util.ReflectUtil;
@@ -83,7 +82,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
      *
      * @param basePackages the new list of base packages to scan
      */
-    public void updateBasePacakges(List<String> basePackages) {
+    public void updateBasePackages(List<String> basePackages) {
         this.basePackages.clear();
         this.basePackages.addAll(basePackages);
         updateAccepter();
@@ -191,14 +190,19 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
                             continue;
                         }
 
-                        // New thread async accept
-                        ScheduledTask<?> schedule =
-                                schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
+                        boolean recodeLimit = accepter.isRecodeLimit();
+                        boolean useVirtualThread = accepter.useVirtualThread();
 
-                        if (accepter.isRecodeLimit()) {
-                            schedule.getFuture().whenComplete(
-                                    (result, throwable) -> acceptedId.add(streamMessageId)
-                            );
+                        if (useVirtualThread) {
+                            accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight());
+                            if (recodeLimit) {
+                                acceptedId.add(streamMessageId);
+                            }
+                        } else {
+                            // Use bukkit thread
+                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()))
+                                    .getFuture()
+                                    .whenComplete((result, throwable) -> acceptedId.add(streamMessageId));
                         }
                     }
                 }
