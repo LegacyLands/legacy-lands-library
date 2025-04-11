@@ -1,8 +1,13 @@
 package net.legacy.library.player.task.redis;
 
+import io.fairyproject.mc.scheduler.MCScheduler;
+import io.fairyproject.mc.scheduler.MCSchedulers;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Interface defining the contract for handling tasks received via Redisson's RStream feature.
@@ -106,5 +111,37 @@ public interface RStreamAccepterInterface {
      */
     default boolean useVirtualThread() {
         return true;
+    }
+
+    /**
+     * Provides the {@link MCScheduler} instance used for scheduling tasks.
+     *
+     * <p>Only valid when the useVirtualThread method returns {@code false}.
+     *
+     * <p>By default, this returns {@code MCSchedulers.getAsyncScheduler()}, but implementations can
+     * override it to return a different scheduler (e.g., {@link MCSchedulers#getGlobalScheduler()}, or a custom one).
+     *
+     * @return the {@link MCScheduler} scheduler instance
+     */
+    default MCScheduler getMCScheduler() {
+        return MCSchedulers.getAsyncScheduler();
+    }
+
+    /**
+     * Provides an {@link ExecutorService} that uses a virtual thread per task execution model.
+     *
+     * <p>Only valid when the useVirtualThread method returns {@code true}.
+     *
+     * <p>This method returns a new {@link ExecutorService} instance where each submitted task is
+     * executed in its own virtual thread. Virtual threads are lightweight and allow for high concurrency,
+     * making them suitable for tasks that are I/O-bound or involve waiting.
+     *
+     * <p>The returned executor is intended for scenarios where task isolation and concurrency are
+     * important, without the overhead associated with traditional threads.
+     *
+     * @return a virtual thread-per-task {@link ExecutorService} instance
+     */
+    default ExecutorService getVirtualThreadPerTaskExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
     }
 }

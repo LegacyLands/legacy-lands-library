@@ -60,7 +60,7 @@ public interface TaskInterface<R> {
      * Provides the {@link MCScheduler} instance used for scheduling tasks.
      *
      * <p>By default, this returns {@code MCSchedulers.getAsyncScheduler()}, but implementations can
-     * override it to return a different scheduler (e.g., synchronous, or a custom one).
+     * override it to return a different scheduler (e.g., {@link MCSchedulers#getGlobalScheduler()}, or a custom one).
      *
      * @return the {@link MCScheduler} scheduler instance
      */

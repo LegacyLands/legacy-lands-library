@@ -2,6 +2,7 @@ package net.legacy.library.player.task.redis;
 
 import com.google.common.collect.Sets;
 import io.fairyproject.log.Log;
+import io.fairyproject.mc.scheduler.MCScheduler;
 import lombok.Getter;
 import net.legacy.library.annotation.util.AnnotationScanner;
 import net.legacy.library.annotation.util.ReflectUtil;
@@ -20,6 +21,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -194,15 +197,44 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
                         boolean useVirtualThread = accepter.useVirtualThread();
 
                         if (useVirtualThread) {
-                            accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight());
-                            if (recodeLimit) {
-                                acceptedId.add(streamMessageId);
-                            }
+                            new TaskInterface<CompletableFuture<?>>() {
+                                @Override
+                                public ExecutorService getVirtualThreadPerTaskExecutor() {
+                                    return accepter.getVirtualThreadPerTaskExecutor();
+                                }
+
+                                @Override
+                                public CompletableFuture<?> start() {
+                                    CompletableFuture<Void> completableFuture =
+                                            submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
+
+                                    if (recodeLimit) {
+                                        completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
+                                    }
+
+                                    return completableFuture;
+                                }
+                            }.start();
                         } else {
                             // Use bukkit thread
-                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()))
-                                    .getFuture()
-                                    .whenComplete((result, throwable) -> acceptedId.add(streamMessageId));
+                            new TaskInterface<CompletableFuture<?>>() {
+                                @Override
+                                public MCScheduler getMCScheduler() {
+                                    return accepter.getMCScheduler();
+                                }
+
+                                @Override
+                                public CompletableFuture<?> start() {
+                                    CompletableFuture<?> completableFuture =
+                                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight())).getFuture();
+
+                                    if (recodeLimit) {
+                                        completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
+                                    }
+
+                                    return completableFuture;
+                                }
+                            }.start();
                         }
                     }
                 }
