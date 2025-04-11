@@ -193,7 +193,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
                             continue;
                         }
 
-                        boolean recodeLimit = accepter.isRecodeLimit();
+                        boolean recordLimit = accepter.isRecordLimit();
                         boolean useVirtualThread = accepter.useVirtualThread();
 
                         if (useVirtualThread) {
@@ -208,7 +208,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
                                     CompletableFuture<Void> completableFuture =
                                             submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
 
-                                    if (recodeLimit) {
+                                    if (recordLimit) {
                                         completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
                                     }
 
@@ -228,7 +228,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
                                     CompletableFuture<?> completableFuture =
                                             schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight())).getFuture();
 
-                                    if (recodeLimit) {
+                                    if (recordLimit) {
                                         completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
                                     }
 

@@ -3,6 +3,7 @@ package net.legacy.library.player.task.redis.impl;
 import com.google.common.reflect.TypeToken;
 import net.legacy.library.commons.util.GsonUtil;
 import net.legacy.library.player.annotation.RStreamAccepterRegister;
+import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.redis.RStreamAccepterInterface;
 import net.legacy.library.player.task.redis.RStreamTask;
@@ -49,7 +50,7 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
     /**
      * {@inheritDoc}
      *
-     * @return the action name associated with this accepter, which is {@code "player-data-update-name"}
+     * @return {@inheritDoc}
      */
     @Override
     public String getActionName() {
@@ -59,10 +60,10 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
     /**
      * {@inheritDoc}
      *
-     * @return {@code true}, indicating that this accepter processes each task only once per connection
+     * @return {@inheritDoc}
      */
     @Override
-    public boolean isRecodeLimit() {
+    public boolean isRecordLimit() {
         return true;
     }
 
@@ -70,12 +71,18 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
      * {@inheritDoc}
      *
      * <p>This method deserializes the incoming JSON (a pair of player name and data map),
-     * checks if the player is online, and if so, updates their {@link net.legacy.library.player.model.LegacyPlayerData}
+     * checks if the player is online, and if so, updates their {@link LegacyPlayerData}
      * in L1 cache. The stream message is then acknowledged and removed if the update is successful.
+     *
+     * @param rStream                 {@inheritDoc}
+     * @param streamMessageId         {@inheritDoc}
+     * @param legacyPlayerDataService {@inheritDoc}
+     * @param data                    {@inheritDoc}
      */
     @Override
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId,
                        LegacyPlayerDataService legacyPlayerDataService, String data) {
+        @SuppressWarnings("UnstableApiUsage")
         Pair<String, Map<String, String>> pairData =
                 GsonUtil.getGson().fromJson(data, new TypeToken<Pair<String, Map<String, String>>>() {
                 }.getType());
@@ -84,6 +91,8 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
         Map<String, String> dataMap = pairData.getRight();
 
         Player player = Bukkit.getPlayer(playerName);
+
+        @SuppressWarnings("deprecation")
         UUID uuid = player != null ? player.getUniqueId() : Bukkit.getOfflinePlayer(playerName).getUniqueId();
 
         legacyPlayerDataService.getLegacyPlayerData(uuid).addData(dataMap);

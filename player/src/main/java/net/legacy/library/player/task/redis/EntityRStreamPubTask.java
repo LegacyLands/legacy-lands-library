@@ -58,7 +58,7 @@ public class EntityRStreamPubTask implements TaskInterface<CompletableFuture<?>>
             );
 
             // Set task data
-            mapCache.put("taskName", entityRStreamTask.getTaskName());
+            mapCache.put("actionName", entityRStreamTask.getActionName());
             mapCache.put("data", entityRStreamTask.getData());
 
             // Add expiration time if timeout is set

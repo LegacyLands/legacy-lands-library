@@ -10,7 +10,6 @@ package net.legacy.library.player.model;
  * @since 2025-3-30 20:47
  */
 public enum RelationshipQueryType {
-
     /**
      * Requires that an entity must satisfy ALL criteria (logical AND).
      * Entity must match every single relationship criteria to be included in results.

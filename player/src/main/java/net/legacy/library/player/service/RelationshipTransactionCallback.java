@@ -1,5 +1,7 @@
 package net.legacy.library.player.service;
 
+import java.util.UUID;
+
 /**
  * Callback interface for executing relationship operations within a transaction.
  *
@@ -11,7 +13,6 @@ package net.legacy.library.player.service;
  */
 @FunctionalInterface
 public interface RelationshipTransactionCallback {
-
     /**
      * Executes relationship operations using the provided transaction context.
      *
@@ -37,7 +38,7 @@ public interface RelationshipTransactionCallback {
          * @param targetEntityId   the UUID of the target entity
          * @return the transaction context for method chaining
          */
-        RelationshipTransaction addRelationship(java.util.UUID sourceEntityId, String relationshipType, java.util.UUID targetEntityId);
+        RelationshipTransaction addRelationship(UUID sourceEntityId, String relationshipType, UUID targetEntityId);
 
         /**
          * Removes a relationship between two entities.
@@ -47,7 +48,7 @@ public interface RelationshipTransactionCallback {
          * @param targetEntityId   the UUID of the target entity
          * @return the transaction context for method chaining
          */
-        RelationshipTransaction removeRelationship(java.util.UUID sourceEntityId, String relationshipType, java.util.UUID targetEntityId);
+        RelationshipTransaction removeRelationship(UUID sourceEntityId, String relationshipType, UUID targetEntityId);
 
         /**
          * Creates a bidirectional relationship between two entities.
@@ -58,8 +59,6 @@ public interface RelationshipTransactionCallback {
          * @param relationshipType2 the relationship type from entity2 to entity1
          * @return the transaction context for method chaining
          */
-        RelationshipTransaction createBidirectionalRelationship(
-                java.util.UUID entity1Id, String relationshipType1,
-                java.util.UUID entity2Id, String relationshipType2);
+        RelationshipTransaction createBidirectionalRelationship(UUID entity1Id, String relationshipType1, UUID entity2Id, String relationshipType2);
     }
 } 

@@ -236,13 +236,13 @@ public class LegacyEntityDataService {
      * <p>This method creates a new {@link EntityRStreamTask} with the provided parameters
      * and starts it immediately, returning the resulting {@link ScheduledTask}.
      *
-     * @param taskName       the name of the task
+     * @param actionName     the name of the task
      * @param data           the data payload of the task
      * @param expirationTime the duration after which the task expires
      * @return a {@link CompletableFuture} instance tracking the execution status of the task
      */
-    public CompletableFuture<?> createEntityStreamTask(String taskName, String data, Duration expirationTime) {
-        return pubEntityRStreamTask(EntityRStreamTask.of(taskName, data, expirationTime));
+    public CompletableFuture<?> createEntityStreamTask(String actionName, String data, Duration expirationTime) {
+        return pubEntityRStreamTask(EntityRStreamTask.of(actionName, data, expirationTime));
     }
 
     /**

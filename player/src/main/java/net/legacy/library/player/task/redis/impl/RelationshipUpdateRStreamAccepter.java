@@ -7,9 +7,11 @@ import net.legacy.library.player.annotation.EntityRStreamAccepterRegister;
 import net.legacy.library.player.model.LegacyEntityData;
 import net.legacy.library.player.service.LegacyEntityDataService;
 import net.legacy.library.player.task.redis.EntityRStreamAccepterInterface;
+import net.legacy.library.player.task.redis.EntityRStreamTask;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -22,29 +24,58 @@ import java.util.UUID;
  * @author qwq-dev
  * @since 2024-03-30 01:49
  */
-@EntityRStreamAccepterRegister(taskName = "relationship-update")
-public class RelationshipUpdateAccepter implements EntityRStreamAccepterInterface {
+@EntityRStreamAccepterRegister
+public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterInterface {
+    /**
+     * Creates a new {@link EntityRStreamTask} for updating entity relationships.
+     *
+     * @param sourceEntityUuid the UUID of the source entity
+     * @param targetEntityUuid the UUID of the target entity
+     * @param relationshipType the type of relationship between the entities
+     * @param remove          whether to remove the relationship (true) or add it (false)
+     * @param expirationTime  the duration after which the task expires
+     * @return a {@link EntityRStreamTask} instance for updating entity relationships
+     */
+    public static EntityRStreamTask createRStreamTask(UUID sourceEntityUuid, UUID targetEntityUuid, 
+                                                     String relationshipType, boolean remove, 
+                                                     Duration expirationTime) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("sourceEntityUuid", sourceEntityUuid.toString());
+        jsonObject.addProperty("targetEntityUuid", targetEntityUuid.toString());
+        jsonObject.addProperty("relationshipType", relationshipType);
+        jsonObject.addProperty("remove", remove);
+        
+        return EntityRStreamTask.of("relationship-update", GsonUtil.getGson().toJson(jsonObject), expirationTime);
+    }
 
     /**
-     * Returns the task name that this accepter handles.
+     * {@inheritDoc}
      *
-     * @return the task name "relationship-update"
+     * @return {@inheritDoc}
      */
     @Override
-    public String getTaskName() {
+    public String getActionName() {
         return "relationship-update";
     }
 
     /**
-     * Determines whether this accepter should process a message only once.
+     * {@inheritDoc}
      *
-     * @return true to limit processing to once per message per connection
+     * @return {@inheritDoc}
      */
     @Override
     public boolean isRecordLimit() {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param stream  {@inheritDoc}
+     * @param id      {@inheritDoc}
+     * @param service {@inheritDoc}
+     * @param data    {@inheritDoc}
+     */
     @Override
     public void accept(RStream<Object, Object> stream,
                        StreamMessageId id,
@@ -81,4 +112,4 @@ public class RelationshipUpdateAccepter implements EntityRStreamAccepterInterfac
             Log.error(exception);
         }
     }
-} 
+}

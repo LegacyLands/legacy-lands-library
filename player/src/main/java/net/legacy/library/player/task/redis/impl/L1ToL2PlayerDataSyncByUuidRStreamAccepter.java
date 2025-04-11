@@ -53,7 +53,7 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
     /**
      * {@inheritDoc}
      *
-     * @return the action name associated with this accepter, which is {@code "player-data-sync-uuid"}
+     * @return {@inheritDoc}
      */
     @Override
     public String getActionName() {
@@ -63,10 +63,10 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
     /**
      * {@inheritDoc}
      *
-     * @return {@code true}, indicating that this accepter processes each task only once per connection
+     * @return {@inheritDoc}
      */
     @Override
-    public boolean isRecodeLimit() {
+    public boolean isRecordLimit() {
         return true;
     }
 
@@ -76,6 +76,11 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
      * <p>This method parses the UUID from the incoming data and initiates an
      * L1-to-L2 sync task via {@link L1ToL2PlayerDataSyncTask}.
      * If the sync completes successfully, the message is acknowledged and removed from the stream.
+     *
+     * @param rStream                 {@inheritDoc}
+     * @param streamMessageId         {@inheritDoc}
+     * @param legacyPlayerDataService {@inheritDoc}
+     * @param data                    {@inheritDoc}
      */
     @Override
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId,

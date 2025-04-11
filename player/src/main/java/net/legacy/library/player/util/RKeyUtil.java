@@ -80,7 +80,7 @@ public class RKeyUtil {
                 .append(COLON)
                 .append(uuid.toString());
 
-        if (strings != null && strings.length > 0) {
+        if (strings != null) {
             for (String str : strings) {
                 keyBuilder.append(COLON).append(str);
             }
@@ -100,7 +100,7 @@ public class RKeyUtil {
                 .append(legacyPlayerDataService.getName())
                 .append(SUFFIX_DATA);
 
-        if (strings != null && strings.length > 0) {
+        if (strings != null) {
             for (String str : strings) {
                 keyBuilder.append(COLON).append(str);
             }

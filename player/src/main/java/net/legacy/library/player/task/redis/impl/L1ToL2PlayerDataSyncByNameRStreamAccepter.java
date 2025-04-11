@@ -43,7 +43,7 @@ public class L1ToL2PlayerDataSyncByNameRStreamAccepter implements RStreamAccepte
     /**
      * {@inheritDoc}
      *
-     * @return the action name associated with this accepter, which is {@code "player-data-sync-name"}
+     * @return {@inheritDoc}
      */
     @Override
     public String getActionName() {
@@ -53,10 +53,10 @@ public class L1ToL2PlayerDataSyncByNameRStreamAccepter implements RStreamAccepte
     /**
      * {@inheritDoc}
      *
-     * @return {@code true}, indicating that this accepter processes each task only once per connection
+     * @return {@inheritDoc}
      */
     @Override
-    public boolean isRecodeLimit() {
+    public boolean isRecordLimit() {
         return true;
     }
 
@@ -66,11 +66,17 @@ public class L1ToL2PlayerDataSyncByNameRStreamAccepter implements RStreamAccepte
      * <p>This method retrieves an {@link OfflinePlayer} by name and initiates an
      * L1-to-L2 sync task via {@link L1ToL2PlayerDataSyncTask}.
      * If the sync completes successfully, the message is acknowledged and removed from the stream.
+     *
+     * @param rStream                 {@inheritDoc}
+     * @param streamMessageId         {@inheritDoc}
+     * @param legacyPlayerDataService {@inheritDoc}
+     * @param data                    {@inheritDoc}
      */
     @Override
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId,
                        LegacyPlayerDataService legacyPlayerDataService, String data) {
         // OfflinePlayer retrieval by name
+        @SuppressWarnings("deprecation")
         OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(data);
 
         L1ToL2PlayerDataSyncTask.of(offlinePlayer.getUniqueId(), legacyPlayerDataService)

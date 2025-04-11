@@ -271,7 +271,7 @@ public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface
 
     // 同一任务是否要在单个服务器上被处理多次
     @Override
-    public boolean isRecodeLimit() {
+    public boolean isRecordLimit() {
         return true;
     }
 

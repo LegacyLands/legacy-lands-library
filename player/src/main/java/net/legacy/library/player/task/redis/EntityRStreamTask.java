@@ -23,7 +23,7 @@ public class EntityRStreamTask {
     /**
      * The name of the task, used for identifying the type of operation.
      */
-    private final String taskName;
+    private final String actionName;
 
     /**
      * The data payload for the task, typically serialized as JSON.
@@ -39,13 +39,13 @@ public class EntityRStreamTask {
     /**
      * Creates a new {@link EntityRStreamTask} instance with the specified task name, data, and expiration time.
      *
-     * @param taskName       the name of the task associated with this task
+     * @param actionName     the name of the task associated with this task
      * @param data           the data payload of the task
      * @param expirationTime the duration after which the task expires
      * @return a new {@link EntityRStreamTask} instance
      */
-    public static EntityRStreamTask of(String taskName, String data, Duration expirationTime) {
-        return new EntityRStreamTask(taskName, data, expirationTime);
+    public static EntityRStreamTask of(String actionName, String data, Duration expirationTime) {
+        return new EntityRStreamTask(actionName, data, expirationTime);
     }
 
     /**

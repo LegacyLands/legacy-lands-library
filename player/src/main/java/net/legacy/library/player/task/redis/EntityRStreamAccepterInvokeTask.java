@@ -2,7 +2,7 @@ package net.legacy.library.player.task.redis;
 
 import com.google.common.collect.Sets;
 import io.fairyproject.log.Log;
-import io.fairyproject.scheduler.ScheduledTask;
+import io.fairyproject.mc.scheduler.MCScheduler;
 import lombok.Getter;
 import net.legacy.library.annotation.util.AnnotationScanner;
 import net.legacy.library.annotation.util.ReflectUtil;
@@ -20,6 +20,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * <p>This task periodically checks for new messages in Redis streams and invokes
  * the appropriate accepters to process them. It handles the scanning of classes
  * annotated with {@link EntityRStreamAccepterRegister} and dispatches messages
- * to the corresponding accepters based on the task name.
+ * to the corresponding accepters based on the action name.
  *
  * @author qwq-dev
  * @since 2024-03-30 01:49
@@ -164,37 +166,65 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface<ScheduledF
                 }
 
                 // Process message entries
-                String taskName = (String) value.get("taskName");
+                String actionName = (String) value.get("actionName");
                 String data = (String) value.get("data");
 
-                if (taskName == null || data == null) {
+                if (actionName == null || data == null) {
                     Log.error("Entity RStream message has invalid format! StreamMessageId: " + streamMessageId);
                     continue;
                 }
 
                 // Find and invoke matching accepters
                 for (EntityRStreamAccepterInterface accepter : accepters) {
-                    String accepterTaskName = accepter.getTaskName();
+                    String accepterActionName = accepter.getActionName();
 
                     // Skip non-matching accepters
-                    if (accepterTaskName != null && !accepterTaskName.equals(taskName)) {
+                    if (accepterActionName != null && !accepterActionName.equals(actionName)) {
                         continue;
                     }
 
-                    // Process asynchronously
-                    ScheduledTask<?> acceptTask = schedule(() -> {
-                        try {
-                            accepter.accept(rStream, streamMessageId, service, data);
-                        } catch (Exception exception) {
-                            Log.error("Error processing entity stream message", exception);
-                        }
-                    });
+                    boolean recordLimit = accepter.isRecordLimit();
+                    boolean useVirtualThread = accepter.useVirtualThread();
 
-                    // Mark as processed if record limit is enabled
-                    if (accepter.isRecordLimit()) {
-                        acceptTask.getFuture().whenComplete((result, throwable) ->
-                                acceptedId.add(streamMessageId)
-                        );
+                    if (useVirtualThread) {
+                        new TaskInterface<CompletableFuture<?>>() {
+                            @Override
+                            public ExecutorService getVirtualThreadPerTaskExecutor() {
+                                return accepter.getVirtualThreadPerTaskExecutor();
+                            }
+
+                            @Override
+                            public CompletableFuture<?> start() {
+                                CompletableFuture<Void> completableFuture =
+                                        submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, service, data));
+
+                                if (recordLimit) {
+                                    completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
+                                }
+
+                                return completableFuture;
+                            }
+                        }.start();
+                    } else {
+                        // Use bukkit thread
+                        new TaskInterface<CompletableFuture<?>>() {
+                            @Override
+                            public MCScheduler getMCScheduler() {
+                                return accepter.getMCScheduler();
+                            }
+
+                            @Override
+                            public CompletableFuture<?> start() {
+                                CompletableFuture<?> completableFuture =
+                                        schedule(() -> accepter.accept(rStream, streamMessageId, service, data)).getFuture();
+
+                                if (recordLimit) {
+                                    completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
+                                }
+
+                                return completableFuture;
+                            }
+                        }.start();
                     }
                 }
             }
@@ -202,4 +232,4 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface<ScheduledF
 
         return scheduleAtFixedRateWithVirtualThread(runnable, period.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
     }
-} 
+}
