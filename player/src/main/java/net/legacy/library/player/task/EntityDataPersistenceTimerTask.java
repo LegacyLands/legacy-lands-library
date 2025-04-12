@@ -96,13 +96,7 @@ public class EntityDataPersistenceTimerTask implements TaskInterface<ScheduledFu
      */
     @Override
     public ScheduledFuture<?> start() {
-        return scheduleAtFixedRateWithVirtualThread(() -> {
-            // First, sync L1 cache entities
-            service.getL1Cache().getResource().asMap().forEach((uuid, data) ->
-                    EntityDataPersistenceTask.of(lockSettings, service, uuid, ttl).start());
-
-            // Then, perform bulk persistence operation for all entities in L2 cache
-            EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start();
-        }, delay.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
+        return scheduleAtFixedRateWithVirtualThread(() -> EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start(),
+                delay.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
     }
 } 

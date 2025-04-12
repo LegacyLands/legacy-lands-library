@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import dev.morphia.query.MorphiaCursor;
 import dev.morphia.query.filters.Filters;
+import io.fairyproject.log.Log;
 import io.fairyproject.scheduler.ScheduledTask;
 import lombok.Cleanup;
 import lombok.Getter;
@@ -21,7 +22,11 @@ import net.legacy.library.player.task.redis.RStreamAccepterInvokeTask;
 import net.legacy.library.player.task.redis.RStreamPubTask;
 import net.legacy.library.player.task.redis.RStreamTask;
 import net.legacy.library.player.util.RKeyUtil;
+import net.legacy.library.player.util.TTLUtil;
+import org.redisson.api.RBucket;
+import org.redisson.api.RKeys;
 import org.redisson.api.RedissonClient;
+import org.redisson.api.options.KeysScanOptions;
 import org.redisson.config.Config;
 
 import java.time.Duration;
@@ -384,13 +389,16 @@ public class LegacyPlayerDataService {
 
         try {
             String playerKey = RKeyUtil.getRLPDSKey(uuid, this);
-            org.redisson.api.RedissonClient redissonClient = getL2Cache().getResource();
-            if (redissonClient.getBucket(playerKey).isExists()) {
-                return redissonClient.getBucket(playerKey).expire(ttl);
+            RedissonClient redissonClient = getL2Cache().getResource();
+            RBucket<Object> bucket = redissonClient.getBucket(playerKey);
+
+            if (!bucket.isExists()) {
+                return false;
             }
-            return false;
+
+            return TTLUtil.setReliableTTL(bucket, ttl);
         } catch (Exception exception) {
-            io.fairyproject.log.Log.error("Failed to set TTL for player " + uuid, exception);
+            Log.error("Failed to set TTL for player " + uuid, exception);
             return false;
         }
     }
@@ -415,22 +423,20 @@ public class LegacyPlayerDataService {
     public int setDefaultTTLForAllPlayers() {
         int count = 0;
         try {
-            org.redisson.api.RedissonClient redissonClient = getL2Cache().getResource();
-            org.redisson.api.RKeys keys = redissonClient.getKeys();
+            RedissonClient redissonClient = getL2Cache().getResource();
+            RKeys keys = redissonClient.getKeys();
             String pattern = RKeyUtil.getPlayerKeyPattern(this);
 
-            org.redisson.api.options.KeysScanOptions keysScanOptions =
-                    org.redisson.api.options.KeysScanOptions.defaults().pattern(pattern);
+            KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(pattern);
 
             for (String key : keys.getKeys(keysScanOptions)) {
-                // If key has no TTL (remainTimeToLive < 0)
-                org.redisson.api.RBucket<Object> bucket = redissonClient.getBucket(key);
-                if (bucket.remainTimeToLive() < 0 && bucket.expire(DEFAULT_TTL_DURATION)) {
+                RBucket<Object> bucket = redissonClient.getBucket(key);
+                if (TTLUtil.processBucketTTL(bucket, DEFAULT_TTL_DURATION)) {
                     count++;
                 }
             }
         } catch (Exception exception) {
-            io.fairyproject.log.Log.error("Error setting default TTL for players", exception);
+            Log.error("Error setting default TTL for players", exception);
         }
         return count;
     }

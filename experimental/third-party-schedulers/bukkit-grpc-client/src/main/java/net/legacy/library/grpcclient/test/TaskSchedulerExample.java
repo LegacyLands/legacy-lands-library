@@ -80,8 +80,8 @@ public class TaskSchedulerExample {
             try {
                 String nestedListResult = scheduler.submitTaskBlocking(nestedListTaskId, "process_nested_list", nestedList);
                 Log.info("[TaskID: %s] Sync Process Nested List result: %s", nestedListTaskId, nestedListResult);
-            } catch (Exception e) {
-                Log.warn("[TaskID: %s] Sync Process Nested List (potentially expected) failure: %s", nestedListTaskId, e.getMessage());
+            } catch (Exception exception) {
+                Log.warn("[TaskID: %s] Sync Process Nested List (potentially expected) failure: %s", nestedListTaskId, exception.getMessage());
             }
 
             Map<String, Object> complexMap = new HashMap<>();
@@ -96,8 +96,8 @@ public class TaskSchedulerExample {
             try {
                 String complexMapResult = scheduler.submitTaskBlocking(complexMapTaskId, "process_complex_map", complexMap);
                 Log.info("[TaskID: %s] Sync Process Complex Map result: %s", complexMapTaskId, complexMapResult);
-            } catch (Exception e) {
-                Log.warn("[TaskID: %s] Sync Process Complex Map (potentially expected) failure: %s", complexMapTaskId, e.getMessage());
+            } catch (Exception exception) {
+                Log.warn("[TaskID: %s] Sync Process Complex Map (potentially expected) failure: %s", complexMapTaskId, exception.getMessage());
             }
 
             List<String> collectionList = Arrays.asList("sync_item1", "sync_item2");
@@ -106,8 +106,8 @@ public class TaskSchedulerExample {
             try {
                 String collectionResult = scheduler.submitTaskBlocking(collectionTaskId, "process_collection", collectionList, collectionMap);
                 Log.info("[TaskID: %s] Sync Process Collection result: %s", collectionTaskId, collectionResult);
-            } catch (Exception e) {
-                Log.warn("[TaskID: %s] Sync Process Collection (potentially expected) failure: %s", collectionTaskId, e.getMessage());
+            } catch (Exception exception) {
+                Log.warn("[TaskID: %s] Sync Process Collection (potentially expected) failure: %s", collectionTaskId, exception.getMessage());
             }
 
             // --- Asynchronous Task Examples --- (Keep using submitTaskAsync)
@@ -147,8 +147,8 @@ public class TaskSchedulerExample {
             Log.info("Waiting for all %d async tasks (gRPC calls) to complete...", futures.size());
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             Log.info("All async tasks completed.");
-        } catch (Exception e) {
-            Log.error("An error occurred during task scheduler demonstration logic", e);
+        } catch (Exception exception) {
+            Log.error("An error occurred during task scheduler demonstration logic", exception);
         }
     }
 } 

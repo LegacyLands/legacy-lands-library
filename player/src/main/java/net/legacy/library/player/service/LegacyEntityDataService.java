@@ -23,7 +23,10 @@ import net.legacy.library.player.task.EntityDataPersistenceTimerTask;
 import net.legacy.library.player.task.redis.EntityRStreamAccepterInvokeTask;
 import net.legacy.library.player.task.redis.EntityRStreamPubTask;
 import net.legacy.library.player.task.redis.EntityRStreamTask;
+import net.legacy.library.player.task.redis.impl.EntityDataUpdateRStreamAccepter;
 import net.legacy.library.player.util.EntityRKeyUtil;
+import net.legacy.library.player.util.TTLUtil;
+import org.apache.commons.lang3.Validate;
 import org.redisson.api.RBucket;
 import org.redisson.api.RKeys;
 import org.redisson.api.RedissonClient;
@@ -341,6 +344,8 @@ public class LegacyEntityDataService {
      *       within the same service instance.</li>
      *   <li>Schedules an asynchronous task ({@link EntityDataPersistenceTask}) to persist the data
      *       to the L2 cache (Redis) with the configured TTL and to the underlying database (MongoDB).</li>
+     *   <li>Publishes an entity data update to the Redis stream to notify other servers to update their
+     *       L1 cache for this entity. This ensures cross-server cache consistency.</li>
      * </ol>
      *
      * <p><b>Important:</b> This method returns immediately after scheduling the persistence task.
@@ -350,12 +355,91 @@ public class LegacyEntityDataService {
      * @param entityData the entity data to save and schedule for persistence
      */
     public void saveEntity(LegacyEntityData entityData) {
-        if (entityData == null) {
-            return;
+        // noinspection DuplicatedCode
+        Validate.notNull(entityData, "Entity data cannot be null.");
+
+        Cache<UUID, LegacyEntityData> l1Cache = getL1Cache().getResource();
+        LegacyEntityData existingEntity = l1Cache.getIfPresent(entityData.getUuid());
+
+        // Ensure higher version data is not overwritten by lower version
+        if (existingEntity != null) {
+            if (existingEntity.getVersion() > entityData.getVersion()) {
+                existingEntity.mergeChangesFrom(entityData);
+                entityData = existingEntity;
+            } else if (existingEntity.getVersion() == entityData.getVersion() &&
+                    existingEntity.getLastModifiedTime() > entityData.getLastModifiedTime()) {
+                existingEntity.mergeChangesFrom(entityData);
+                entityData = existingEntity;
+            }
+        }
+
+        // Check for possibly higher version in L2 cache
+        Optional<LegacyEntityData> dataFromL2Cache = getFromL2Cache(entityData.getUuid());
+        if (dataFromL2Cache.isPresent()) {
+            LegacyEntityData l2Entity = dataFromL2Cache.get();
+            if (l2Entity.getVersion() > entityData.getVersion()) {
+                // L2 cache has higher version, apply changes but keep higher version number
+                l2Entity.mergeChangesFrom(entityData);
+                entityData = l2Entity;
+            }
         }
 
         // Put in L1 cache immediately to make it available for the async task
-        getL1Cache().getResource().put(entityData.getUuid(), entityData);
+        l1Cache.put(entityData.getUuid(), entityData);
+
+        // Schedule persistence to L2 and DB
+        EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+
+        // Publish entity update to Redis Stream for cross-server L1 cache synchronization
+        pubEntityRStreamTask(EntityDataUpdateRStreamAccepter.createRStreamTask(
+                entityData.getUuid(),
+                entityData.getAttributes(),
+                entityData.getVersion(),
+                Duration.ofMinutes(5)
+        ));
+    }
+
+    /**
+     * Saves entity data to the L1 cache and schedules asynchronous persistence to L2 cache and database
+     * without publishing to Redis Stream.
+     *
+     * <p>This method is similar to {@link #saveEntity(LegacyEntityData)} but does not publish
+     * entity updates to the Redis Stream. It is used internally to avoid infinite loops when
+     * handling version conflicts during entity updates.
+     *
+     * @param entityData the entity data to save and schedule for persistence
+     */
+    public void saveEntityWithoutRepublish(LegacyEntityData entityData) {
+        // noinspection DuplicatedCode
+        Validate.notNull(entityData, "Entity data cannot be null.");
+
+        Cache<UUID, LegacyEntityData> l1Cache = getL1Cache().getResource();
+        LegacyEntityData existingEntity = l1Cache.getIfPresent(entityData.getUuid());
+
+        if (existingEntity != null) {
+            if (existingEntity.getVersion() > entityData.getVersion()) {
+                existingEntity.mergeChangesFrom(entityData);
+                entityData = existingEntity;
+            } else if (existingEntity.getVersion() == entityData.getVersion() &&
+                    existingEntity.getLastModifiedTime() > entityData.getLastModifiedTime()) {
+                existingEntity.mergeChangesFrom(entityData);
+                entityData = existingEntity;
+            }
+        }
+
+        // Check for possibly higher version in L2 cache
+        Optional<LegacyEntityData> dataFromL2Cache = getFromL2Cache(entityData.getUuid());
+        if (dataFromL2Cache.isPresent()) {
+            LegacyEntityData l2Entity = dataFromL2Cache.get();
+            if (l2Entity.getVersion() > entityData.getVersion()) {
+                // L2 cache has higher version, apply changes but keep higher version number
+                l2Entity.mergeChangesFrom(entityData);
+                entityData = l2Entity;
+            }
+        }
+
+        // Put in L1 cache immediately to make it available for the async task
+        l1Cache.put(entityData.getUuid(), entityData);
 
         // Schedule persistence to L2 and DB
         EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
@@ -371,6 +455,8 @@ public class LegacyEntityDataService {
      *       within the same service instance.</li>
      *   <li>Schedules a single asynchronous task ({@link EntityDataPersistenceTask}) to persist all
      *       provided entities to the L2 cache (Redis) with the configured TTL and to the underlying database (MongoDB).</li>
+     *   <li>Publishes entity data updates to the Redis stream for each entity to notify other servers to update
+     *       their L1 cache. This ensures cross-server cache consistency.</li>
      * </ol>
      *
      * <p><b>Important:</b> This method returns immediately after scheduling the persistence task.
@@ -380,14 +466,98 @@ public class LegacyEntityDataService {
      * @param entityDataList the list of entity data to save and schedule for persistence
      */
     public void saveEntities(List<LegacyEntityData> entityDataList) {
-        if (entityDataList == null || entityDataList.isEmpty()) {
-            return;
-        }
+        Validate.notEmpty(entityDataList, "Entity data list cannot be empty.");
 
-        // Put all entities in L1 cache immediately
+        Cache<UUID, LegacyEntityData> l1Cache = getL1Cache().getResource();
+
+        // Process each entity, check versions and merge changes
         entityDataList.forEach(entityData -> {
             if (entityData != null) {
-                getL1Cache().getResource().put(entityData.getUuid(), entityData);
+                // noinspection DuplicatedCode
+                LegacyEntityData existingEntity = l1Cache.getIfPresent(entityData.getUuid());
+                LegacyEntityData finalEntity = entityData;
+
+                if (existingEntity != null) {
+                    if (existingEntity.getVersion() > entityData.getVersion()) {
+                        existingEntity.mergeChangesFrom(entityData);
+                        finalEntity = existingEntity;
+                    } else if (existingEntity.getVersion() == entityData.getVersion() &&
+                            existingEntity.getLastModifiedTime() > entityData.getLastModifiedTime()) {
+                        existingEntity.mergeChangesFrom(entityData);
+                        finalEntity = existingEntity;
+                    }
+                }
+
+                Optional<LegacyEntityData> dataFromL2Cache = getFromL2Cache(entityData.getUuid());
+                if (dataFromL2Cache.isPresent()) {
+                    LegacyEntityData l2Entity = dataFromL2Cache.get();
+                    if (l2Entity.getVersion() > finalEntity.getVersion()) {
+                        l2Entity.mergeChangesFrom(finalEntity);
+                        finalEntity = l2Entity;
+                    }
+                }
+
+                // Save to L1 cache
+                LegacyEntityData entityToSave = finalEntity;
+                l1Cache.put(entityToSave.getUuid(), entityToSave);
+
+                // Publish entity update to Redis Stream for cross-server L1 cache synchronization
+                pubEntityRStreamTask(EntityDataUpdateRStreamAccepter.createRStreamTask(
+                        entityToSave.getUuid(),
+                        entityToSave.getAttributes(),
+                        entityToSave.getVersion(),
+                        Duration.ofMinutes(5)
+                ));
+            }
+        });
+
+        // Schedule persistence to L2 and DB
+        EntityDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+    }
+
+    /**
+     * Saves multiple entities to the L1 cache and schedules asynchronous persistence without republishing.
+     *
+     * <p>This method is similar to {@link #saveEntities(List)} but does not publish
+     * entity updates to the Redis Stream. It is used internally to avoid infinite loops when
+     * handling version conflicts during entity updates.
+     *
+     * @param entityDataList the list of entity data to save and schedule for persistence
+     */
+    public void saveEntitiesWithoutRepublish(List<LegacyEntityData> entityDataList) {
+        Validate.notEmpty(entityDataList, "Entity data list cannot be empty.");
+
+        Cache<UUID, LegacyEntityData> l1Cache = getL1Cache().getResource();
+
+        // Process each entity, check versions and merge changes
+        entityDataList.forEach(entityData -> {
+            if (entityData != null) {
+                // noinspection DuplicatedCode
+                LegacyEntityData existingEntity = l1Cache.getIfPresent(entityData.getUuid());
+                LegacyEntityData finalEntity = entityData;
+
+                if (existingEntity != null) {
+                    if (existingEntity.getVersion() > entityData.getVersion()) {
+                        existingEntity.mergeChangesFrom(entityData);
+                        finalEntity = existingEntity;
+                    } else if (existingEntity.getVersion() == entityData.getVersion() &&
+                            existingEntity.getLastModifiedTime() > entityData.getLastModifiedTime()) {
+                        existingEntity.mergeChangesFrom(entityData);
+                        finalEntity = existingEntity;
+                    }
+                }
+
+                Optional<LegacyEntityData> dataFromL2Cache = getFromL2Cache(entityData.getUuid());
+                if (dataFromL2Cache.isPresent()) {
+                    LegacyEntityData l2Entity = dataFromL2Cache.get();
+                    if (l2Entity.getVersion() > finalEntity.getVersion()) {
+                        l2Entity.mergeChangesFrom(finalEntity);
+                        finalEntity = l2Entity;
+                    }
+                }
+
+                LegacyEntityData entityToSave = finalEntity;
+                l1Cache.put(entityToSave.getUuid(), entityToSave);
             }
         });
 
@@ -810,35 +980,33 @@ public class LegacyEntityDataService {
      * @throws InterruptedException if the shutdown process is interrupted
      */
     public void shutdown() throws InterruptedException {
-        // Create a latch to track completion of all persistence tasks
+        // Create a latch to track completion of persistence task
+        CountDownLatch completionLatch = new CountDownLatch(1);
         AtomicInteger successCount = new AtomicInteger(0);
         int entityCount = getL1Cache().getResource().asMap().size();
-        CountDownLatch completionLatch = new CountDownLatch(entityCount);
 
-        // Persist all entities in L1 cache using tasks that signal the latch when done
-        getL1Cache().getResource().asMap().forEach((uuid, data) -> {
-            EntityDataPersistenceTask task = EntityDataPersistenceTask.of(
-                    LockSettings.of(500, 500, TimeUnit.MILLISECONDS),
-                    this,
-                    uuid
-            );
+        // Create a single task to persist all entities in L1 cache
+        EntityDataPersistenceTask task = EntityDataPersistenceTask.of(
+                LockSettings.of(500, 500, TimeUnit.MILLISECONDS),
+                this
+        );
 
-            // Add completion callback
-            task.setCompletionCallback(success -> {
-                if (success) {
-                    successCount.incrementAndGet();
-                }
-                completionLatch.countDown();
-            });
-
-            // Start the task
-            task.start();
+        // Add completion callback
+        task.setCompletionCallback(success -> {
+            if (success) {
+                // If successful, consider all entities persisted
+                successCount.set(entityCount);
+            }
+            completionLatch.countDown();
         });
 
-        // Wait for all tasks to complete with a timeout
+        // Start the task
+        task.start();
+
+        // Wait for the task to complete with a timeout
         if (!completionLatch.await(5, TimeUnit.SECONDS)) {
-            Log.warn("Timed out waiting for all entity persistence tasks to complete. " +
-                    "Only " + successCount.get() + " out of " + entityCount + " entities were persisted.");
+            Log.warn("Timed out waiting for entity persistence task to complete. " +
+                    "Only " + successCount.get() + " out of " + entityCount + " entities were likely persisted.");
         }
 
         // Remove this service from the registry
@@ -864,15 +1032,13 @@ public class LegacyEntityDataService {
         try {
             String entityKey = EntityRKeyUtil.getEntityKey(uuid, this);
             RedissonClient redissonClient = getL2Cache().getResource();
+            RBucket<Object> bucket = redissonClient.getBucket(entityKey);
 
-            // Check if the key exists
-            boolean keyExists = redissonClient.getBucket(entityKey).isExists();
-            if (!keyExists) {
+            if (!bucket.isExists()) {
                 return false;
             }
 
-            // Set TTL
-            return redissonClient.getBucket(entityKey).expire(ttl);
+            return TTLUtil.setReliableTTL(bucket, ttl);
         } catch (Exception exception) {
             Log.error("Failed to set TTL for entity " + uuid, exception);
             return false;
@@ -906,9 +1072,8 @@ public class LegacyEntityDataService {
             KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(pattern);
 
             for (String key : keys.getKeys(keysScanOptions)) {
-                // If key has no TTL (remainTimeToLive < 0)
                 RBucket<Object> bucket = redissonClient.getBucket(key);
-                if (bucket.remainTimeToLive() < 0 && bucket.expire(DEFAULT_TTL_DURATION)) {
+                if (TTLUtil.processBucketTTL(bucket, DEFAULT_TTL_DURATION)) {
                     count++;
                 }
             }
@@ -917,4 +1082,4 @@ public class LegacyEntityDataService {
         }
         return count;
     }
-} 
+}

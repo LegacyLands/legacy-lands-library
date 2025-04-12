@@ -32,19 +32,19 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
      * @param sourceEntityUuid the UUID of the source entity
      * @param targetEntityUuid the UUID of the target entity
      * @param relationshipType the type of relationship between the entities
-     * @param remove          whether to remove the relationship (true) or add it (false)
-     * @param expirationTime  the duration after which the task expires
+     * @param remove           whether to remove the relationship (true) or add it (false)
+     * @param expirationTime   the duration after which the task expires
      * @return a {@link EntityRStreamTask} instance for updating entity relationships
      */
-    public static EntityRStreamTask createRStreamTask(UUID sourceEntityUuid, UUID targetEntityUuid, 
-                                                     String relationshipType, boolean remove, 
-                                                     Duration expirationTime) {
+    public static EntityRStreamTask createRStreamTask(UUID sourceEntityUuid, UUID targetEntityUuid,
+                                                      String relationshipType, boolean remove,
+                                                      Duration expirationTime) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("sourceEntityUuid", sourceEntityUuid.toString());
         jsonObject.addProperty("targetEntityUuid", targetEntityUuid.toString());
         jsonObject.addProperty("relationshipType", relationshipType);
         jsonObject.addProperty("remove", remove);
-        
+
         return EntityRStreamTask.of("relationship-update", GsonUtil.getGson().toJson(jsonObject), expirationTime);
     }
 
@@ -104,8 +104,8 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
                 sourceEntity.addRelationship(relationshipType, targetEntityUuid);
             }
 
-            // Save the updated entity
-            service.saveEntity(sourceEntity);
+            // Save the updated entity without republishing to avoid infinite loops
+            service.saveEntityWithoutRepublish(sourceEntity);
 
             ack(stream, id);
         } catch (Exception exception) {

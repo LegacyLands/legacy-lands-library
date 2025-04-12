@@ -92,7 +92,7 @@ public class PlayerDataUpdateByUuidRStreamAccepter implements RStreamAccepterInt
     @Override
     public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId,
                        LegacyPlayerDataService legacyPlayerDataService, String data) {
-        @SuppressWarnings("UnstableApiUsage")
+        @SuppressWarnings({"UnstableApiUsage", "DuplicatedCode"})
         Pair<String, Map<String, String>> pairData =
                 GsonUtil.getGson().fromJson(data, new TypeToken<Pair<String, Map<String, String>>>() {
                 }.getType());

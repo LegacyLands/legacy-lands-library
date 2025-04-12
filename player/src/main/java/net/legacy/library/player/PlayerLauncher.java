@@ -50,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 public class PlayerLauncher extends Plugin {
     // DEBUG
     public static final boolean DEBUG = false;
+
     @Autowired
     @SuppressWarnings("unused")
     private AnnotationProcessingServiceInterface annotationProcessingService;
@@ -93,7 +94,8 @@ public class PlayerLauncher extends Plugin {
 
             // Test Index Management
             try {
-                Log.info("Testing database index management...");
+                Log.info("----------");
+                Log.info("Test: Database Index Management");
                 LegacyIndexManager indexManager = LegacyIndexManager.of(mongoConfig);
 
                 // Ensure common indexes
@@ -103,9 +105,11 @@ public class PlayerLauncher extends Plugin {
                 indexManager.ensureRelationshipIndex("team"); // For LegacyEntityData
                 indexManager.ensurePlayerDataIndex("lastLogin", true); // For LegacyPlayerData
 
-                Log.info("Index ensuring process completed.");
+                Log.info("Index creation process completed");
+                Log.info("----------");
             } catch (Exception exception) {
-                Log.error("Error during index management test.", exception);
+                Log.error("Error during index management test", exception);
+                Log.info("----------");
             }
 
             // Create test entities
@@ -131,6 +135,14 @@ public class PlayerLauncher extends Plugin {
             entityDataService.saveEntity(testEntity);
             entityDataService.saveEntity(relatedEntity);
 
+            // Give sufficient time for L1 to L2 persistence
+            try {
+                Thread.sleep(5000); // Increased persistence delay time
+            } catch (InterruptedException exception) {
+                Log.warn("Sleep interrupted during persistence delay", exception);
+                Thread.currentThread().interrupt();
+            }
+
             // Set TTL for entity data in Redis (30 minutes)
             RedissonClient redissonClient = entityDataService.getL2Cache().getResource();
             String testEntityKey = net.legacy.library.player.util.EntityRKeyUtil.getEntityKey(testEntityId, entityDataService);
@@ -139,16 +151,32 @@ public class PlayerLauncher extends Plugin {
             // Get Redis objects and set expiration time
             RBucket<Object> testEntityBucket = redissonClient.getBucket(testEntityKey);
             RBucket<Object> relatedEntityBucket = redissonClient.getBucket(relatedEntityKey);
-            testEntityBucket.expire(Duration.ofMinutes(30));
-            relatedEntityBucket.expire(Duration.ofMinutes(30));
+
+            // Using set with TTL is more reliable than expire
+            Object testEntityValue = testEntityBucket.get();
+            Object relatedEntityValue = relatedEntityBucket.get();
+
+            if (testEntityValue != null) {
+                testEntityBucket.set(testEntityValue, Duration.ofMinutes(30).toMillis(), TimeUnit.MILLISECONDS);
+            } else {
+                // Fallback to expire method if value cannot be retrieved
+                testEntityBucket.expire(Duration.ofMinutes(30));
+            }
+
+            if (relatedEntityValue != null) {
+                relatedEntityBucket.set(relatedEntityValue, Duration.ofMinutes(30).toMillis(), TimeUnit.MILLISECONDS);
+            } else {
+                // Fallback to expire method if value cannot be retrieved
+                relatedEntityBucket.expire(Duration.ofMinutes(30));
+            }
 
             try {
                 // Wait 3 seconds for services to initialize
                 Thread.sleep(3000);
 
                 // ===== Player data testing =====
-                // Get LegacyPlayerDataService
-                LegacyPlayerDataService legacyPlayerDataService1 = playerDataService;
+                Log.info("----------");
+                Log.info("Test: Player Data Testing");
 
                 // Create test player data
                 UUID fakePlayerUuid = UUID.randomUUID();
@@ -157,7 +185,7 @@ public class PlayerLauncher extends Plugin {
 
                 // Use saveLegacyPlayerData to save test player data
                 Log.info("Saving player data...");
-                legacyPlayerDataService1.saveLegacyPlayerData(fakePlayerData);
+                playerDataService.saveLegacyPlayerData(fakePlayerData);
                 Log.info("Player data saved to L1 cache and scheduled for async persistence");
 
                 // Test player data L1 L2 sync through rstream
@@ -167,8 +195,8 @@ public class PlayerLauncher extends Plugin {
                 RStreamTask rStreamTask2 = L1ToL2PlayerDataSyncByNameRStreamAccepter.createRStreamTask(
                         "PsycheQwQ2", Duration.ofSeconds(5)
                 );
-                legacyPlayerDataService1.pubRStreamTask(rStreamTask1);
-                legacyPlayerDataService1.pubRStreamTask(rStreamTask2);
+                playerDataService.pubRStreamTask(rStreamTask1);
+                playerDataService.pubRStreamTask(rStreamTask2);
 
                 // Test player data update through rstream
                 Map<String, String> testData = new HashMap<>();
@@ -176,10 +204,10 @@ public class PlayerLauncher extends Plugin {
                 RStreamTask rStreamTask3 = PlayerDataUpdateByNameRStreamAccepter.createRStreamTask(
                         "PsycheQwQ", testData, Duration.ofSeconds(5)
                 );
-                legacyPlayerDataService1.pubRStreamTask(rStreamTask3);
+                playerDataService.pubRStreamTask(rStreamTask3);
 
                 // The task has just been published, player data has not been updated yet
-                LegacyPlayerData playerData = legacyPlayerDataService1.getLegacyPlayerData(fakePlayerUuid);
+                LegacyPlayerData playerData = playerDataService.getLegacyPlayerData(fakePlayerUuid);
                 Log.info("Initial player data: " + playerData.getData());
 
                 // Delay 1 second
@@ -187,14 +215,17 @@ public class PlayerLauncher extends Plugin {
 
                 // Try again
                 Log.info("Player data after 1 second: " + playerData.getData());
+                Log.info("----------");
 
                 // ===== Entity data testing =====
+                Log.info("----------");
+                Log.info("Test: Entity Data Testing");
                 // Retrieve entities from cache or database
                 LegacyEntityData retrievedEntity = entityDataService.getEntityData(testEntityId);
                 LegacyEntityData retrievedRelatedEntity = entityDataService.getEntityData(relatedEntityId);
 
                 if (retrievedEntity != null) {
-                    Log.info("====== Retrieved Test Entity ======");
+                    Log.info("Test entity information:");
                     Log.info("Entity ID: " + retrievedEntity.getUuid());
                     Log.info("Entity Type: " + retrievedEntity.getEntityType());
                     Log.info("Entity Name: " + retrievedEntity.getAttribute("name"));
@@ -217,7 +248,7 @@ public class PlayerLauncher extends Plugin {
                 }
 
                 if (retrievedRelatedEntity != null) {
-                    Log.info("====== Retrieved Related Entity ======");
+                    Log.info("Related entity information:");
                     Log.info("Entity ID: " + retrievedRelatedEntity.getUuid());
                     Log.info("Entity Name: " + retrievedRelatedEntity.getAttribute("name"));
 
@@ -244,9 +275,11 @@ public class PlayerLauncher extends Plugin {
                 // Test finding entities by attribute
                 List<LegacyEntityData> entitiesWithName = entityDataService.findEntitiesByAttribute("name", "Test Entity");
                 Log.info("Number of entities with name 'Test Entity': " + entitiesWithName.size());
+                Log.info("----------");
 
                 // ===== Test new features =====
-                Log.info("====== Testing N-way Relationships ======");
+                Log.info("----------");
+                Log.info("Test: N-way Relationships");
 
                 // Create multiple test entities for complex relationship testing
                 UUID teamId = UUID.randomUUID();
@@ -328,8 +361,11 @@ public class PlayerLauncher extends Plugin {
                 Log.info("Complex query test: TeamMembers=" + teamMembers.size()
                         + ", Admins=" + admins.size()
                         + ", NonAdmins=" + nonAdmins.size());
+                Log.info("----------");
 
                 // Test relationship transaction
+                Log.info("----------");
+                Log.info("Test: Relationship Transaction");
                 UUID member4Id = UUID.randomUUID();
                 LegacyEntityData member4 = LegacyEntityData.of(member4Id, "user");
                 member4.addAttribute("name", "Member 4");
@@ -337,12 +373,10 @@ public class PlayerLauncher extends Plugin {
                 entityDataService.saveEntity(member4);
 
                 // Execute relationship transaction
-                boolean transactionSuccess = entityDataService.executeRelationshipTransaction(transaction -> {
-                    transaction.addRelationship(teamId, "moderator", member4Id)
-                            .addRelationship(member4Id, "team", teamId)
-                            .addRelationship(member4Id, "moderator-of", teamId)
-                            .createBidirectionalRelationship(member1Id, "friend", member4Id, "friend");
-                });
+                boolean transactionSuccess = entityDataService.executeRelationshipTransaction(transaction -> transaction.addRelationship(teamId, "moderator", member4Id)
+                        .addRelationship(member4Id, "team", teamId)
+                        .addRelationship(member4Id, "moderator-of", teamId)
+                        .createBidirectionalRelationship(member1Id, "friend", member4Id, "friend"));
 
                 // Verify the transaction results
                 LegacyEntityData updatedTeam = entityDataService.getEntityData(teamId);
@@ -354,33 +388,68 @@ public class PlayerLauncher extends Plugin {
                 boolean allRelationsCreated = teamHasModerator && member4HasTeam && member4IsModerator;
 
                 Log.info("Relationship transaction test: " + (transactionSuccess && allRelationsCreated ? "Successful" : "Failed"));
+                Log.info("----------");
 
                 // Test saveEntity with schedulePersistence parameter
+                Log.info("----------");
+                Log.info("Test: Persistence Parameter");
                 member4.addAttribute("status", "active");
                 entityDataService.saveEntity(member4);
                 entityDataService.saveEntity(member4);
-                Log.info("Persistence parameter test: Entity saved to L1 cache and scheduled for persistence");
+                Log.info("Entity saved to L1 cache and scheduled for persistence");
+                Log.info("----------");
 
                 // Test entity TTL functionality
-                Log.info("TTL test: Setting TTL for entities with no expiration");
+                Log.info("----------");
+                Log.info("Test: Entity TTL Functionality");
                 int fixedEntities = entityDataService.setDefaultTTLForAllEntities();
-                Log.info("TTL test: Set TTL for " + fixedEntities + " entities that had no expiration");
+                Log.info("Set TTL for " + fixedEntities + " entities that had no expiration");
 
-                // Check TTL on a specific entity
-                UUID randomTestId = UUID.randomUUID();
-                LegacyEntityData testTTLEntity = LegacyEntityData.of(randomTestId, "ttl-test");
-                testTTLEntity.addAttribute("name", "TTL Test Entity");
+                // Test specific entity TTL methods
+                UUID ttlTestEntityId = UUID.randomUUID();
+                LegacyEntityData ttlTestEntity = LegacyEntityData.of(ttlTestEntityId, "ttl-test-entity");
+                ttlTestEntity.addAttribute("name", "TTL Test Entity");
+                ttlTestEntity.addAttribute("description", "This entity is used for testing TTL functionality");
 
-                // Save and manually persist to L2 cache
-                Log.info("TTL test: Creating test entity with UUID: " + randomTestId);
-                entityDataService.saveEntity(testTTLEntity);
-                Thread.sleep(500); // Give a moment for persistence
+                // Save the entity to L1 cache, which will trigger async persistence to L2 cache
+                entityDataService.saveEntity(ttlTestEntity);
+
+                // Wait for the async persistence task to complete (increased from 500ms to 5000ms)
+                Log.info("Waiting for async persistence to complete...");
+                try {
+                    Thread.sleep(5000); // 5 seconds should be enough for the async task
+                } catch (InterruptedException exception) {
+                    Log.warn("Sleep interrupted during persistence delay", exception);
+                    Thread.currentThread().interrupt();
+                }
+
+                // Get the entity key and verify if entity exists in Redis
+                String entityKey = EntityRKeyUtil.getEntityKey(ttlTestEntityId, entityDataService);
+                RBucket<Object> entityBucket = redissonClient.getBucket(entityKey);
+                boolean entityExists = entityBucket.isExists();
+                Log.info("Entity exists in Redis after async persistence: " + entityExists);
+
+                // Now test setEntityTTL with custom duration (10 minutes)
+                boolean ttlSetSuccess = entityDataService.setEntityTTL(ttlTestEntityId, Duration.ofMinutes(10));
+                long entityTtl = entityBucket.remainTimeToLive();
+                Log.info("setEntityTTL test (10 minutes): Success=" + ttlSetSuccess + ", TTL=" + entityTtl + " ms");
+
+                // Test setEntityDefaultTTL method
+                boolean defaultTtlSetSuccess = entityDataService.setEntityDefaultTTL(ttlTestEntityId);
+                long defaultEntityTtl = entityBucket.remainTimeToLive();
+                Log.info("setEntityDefaultTTL test: Success=" + defaultTtlSetSuccess + ", TTL=" + defaultEntityTtl + " ms");
+
+                // Check if the default TTL is close to the expected value (30 minutes)
+                long expectedDefaultTtl = LegacyEntityDataService.DEFAULT_TTL_DURATION.toMillis();
+                boolean ttlInRange = Math.abs(defaultEntityTtl - expectedDefaultTtl) < 5000; // 5 second tolerance
+                Log.info("Default TTL verification: Expected=" + expectedDefaultTtl + ", Actual=" + defaultEntityTtl +
+                        ", In expected range=" + ttlInRange);
 
                 // Check the entity key and pattern
-                String randomEntityKey = EntityRKeyUtil.getEntityKey(randomTestId, entityDataService);
+                String randomEntityKey = EntityRKeyUtil.getEntityKey(ttlTestEntityId, entityDataService);
                 String entityPattern = EntityRKeyUtil.getEntityKeyPattern(entityDataService);
-                Log.info("TTL test: Entity key is: " + randomEntityKey);
-                Log.info("TTL test: Entity pattern is: " + entityPattern);
+                Log.info("Entity key: " + randomEntityKey);
+                Log.info("Entity pattern: " + entityPattern);
 
                 // Direct check in Redis
                 RedissonClient client = entityDataService.getL2Cache().getResource();
@@ -388,29 +457,29 @@ public class PlayerLauncher extends Plugin {
                 boolean exists = bucket.isExists();
                 long initialTtl = bucket.remainTimeToLive();
 
-                Log.info("TTL test: Entity exists in Redis: " + exists + ", initial TTL: " + initialTtl + " ms");
+                Log.info("Entity exists in Redis: " + exists + ", initial TTL: " + initialTtl + " ms");
 
                 // Try different approaches to set TTL
                 if (exists && initialTtl < 0) {
                     // Try direct Redis command
                     boolean expireSuccess = bucket.expire(Duration.ofMinutes(30));
                     long afterDirectTtl = bucket.remainTimeToLive();
-                    Log.info("TTL test: Direct Redis expire result: " + expireSuccess + ", TTL after: " + afterDirectTtl + " ms");
+                    Log.info("Direct Redis expire result: " + expireSuccess + ", TTL after: " + afterDirectTtl + " ms");
                 }
 
                 // Also check using a Redis SET command with TTL parameter
-                Log.info("TTL test: Trying SET with expiration option");
-                String serialized = SimplixSerializer.serialize(testTTLEntity).toString();
+                Log.info("Trying SET with expiration option");
+                String serialized = SimplixSerializer.serialize(ttlTestEntity).toString();
                 bucket.set(serialized, 30, TimeUnit.MINUTES);
                 long afterSetTtl = bucket.remainTimeToLive();
-                Log.info("TTL test: After explicit SET with TTL, value is: " + afterSetTtl + " ms");
+                Log.info("After explicit SET with TTL, value is: " + afterSetTtl + " ms");
 
                 // Try another entity with different approach
                 UUID finalTestId = UUID.randomUUID();
                 LegacyEntityData finalTestEntity = LegacyEntityData.of(finalTestId, "final-ttl-test");
                 finalTestEntity.addAttribute("name", "Final TTL Test");
 
-                Log.info("TTL test: Checking manual persistence with direct TTL control");
+                Log.info("Checking manual persistence with direct TTL control");
 
                 // Save to L1 cache but don't schedule persistence
                 entityDataService.saveEntity(finalTestEntity);
@@ -422,47 +491,176 @@ public class PlayerLauncher extends Plugin {
                 client.getBucket(finalEntityKey).set(finalSerialized, 30, TimeUnit.MINUTES);
                 long finalTtl = client.getBucket(finalEntityKey).remainTimeToLive();
 
-                Log.info("TTL test: Final entity TTL after direct set: " + finalTtl + " ms");
+                Log.info("Final entity TTL after direct set: " + finalTtl + " ms");
+                Log.info("----------");
 
                 // Test LegacyPlayerDataService TTL functionality
-                Log.info("--- PlayerData TTL Test ---");
+                Log.info("----------");
+                Log.info("Test: Player Data TTL");
                 UUID playerTestId = UUID.randomUUID();
                 LegacyPlayerData testPlayerData = new LegacyPlayerData(playerTestId);
                 testPlayerData.addData("testKey", "testValue");
                 testPlayerData.addData("ttlTest", "true");
 
                 // Save the player data
-                legacyPlayerDataService1.saveLegacyPlayerData(testPlayerData);
+                playerDataService.saveLegacyPlayerData(testPlayerData);
                 Thread.sleep(500); // Give time for persistence
 
                 // Get the Redis key for player data
-                String playerKey = RKeyUtil.getRLPDSKey(playerTestId, legacyPlayerDataService1);
-                Log.info("PlayerData TTL test: Player key is: " + playerKey);
+                String playerKey = RKeyUtil.getRLPDSKey(playerTestId, playerDataService);
+                Log.info("Player key: " + playerKey);
 
                 // Check if the key exists and its TTL
                 RBucket<Object> playerBucket = client.getBucket(playerKey);
                 boolean playerExists = playerBucket.isExists();
                 long playerInitialTtl = playerBucket.remainTimeToLive();
-                Log.info("PlayerData TTL test: Player data exists: " + playerExists + ", TTL: " + playerInitialTtl + " ms");
+                Log.info("Player data exists: " + playerExists + ", TTL: " + playerInitialTtl + " ms");
 
                 // Try to set TTL on player data
                 if (playerExists) {
-                    boolean playerTtlSuccess = legacyPlayerDataService1.setPlayerDefaultTTL(playerTestId);
+                    boolean playerTtlSuccess = playerDataService.setPlayerDefaultTTL(playerTestId);
                     long playerTtlAfter = playerBucket.remainTimeToLive();
-                    Log.info("PlayerData TTL test: TTL set success: " + playerTtlSuccess + ", new TTL: " + playerTtlAfter + " ms");
+                    Log.info("TTL set success: " + playerTtlSuccess + ", new TTL: " + playerTtlAfter + " ms");
+
+                    // Verify the default TTL is close to expected (1 day)
+                    long expectedPlayerDefaultTtl = LegacyPlayerDataService.DEFAULT_TTL_DURATION.toMillis();
+                    boolean playerTtlInRange = Math.abs(playerTtlAfter - expectedPlayerDefaultTtl) < 5000; // 5 second tolerance
+                    Log.info("Player default TTL verification: Expected=" + expectedPlayerDefaultTtl +
+                            ", Actual=" + playerTtlAfter + ", In expected range=" + playerTtlInRange);
 
                     // Try manual TTL setting with a different duration (15 minutes)
-                    playerTtlSuccess = legacyPlayerDataService1.setPlayerTTL(playerTestId, Duration.ofMinutes(15));
+                    playerTtlSuccess = playerDataService.setPlayerTTL(playerTestId, Duration.ofMinutes(15));
                     playerTtlAfter = playerBucket.remainTimeToLive();
-                    Log.info("PlayerData TTL test: Manual TTL set success: " + playerTtlSuccess + ", final TTL: " + playerTtlAfter + " ms");
+                    Log.info("Manual TTL set success: " + playerTtlSuccess + ", final TTL: " + playerTtlAfter + " ms");
                 }
 
                 // Test setting TTL for all players without TTL
-                int fixedPlayers = legacyPlayerDataService1.setDefaultTTLForAllPlayers();
-                Log.info("PlayerData TTL test: Set TTL for " + fixedPlayers + " player data that had no expiration");
+                int fixedPlayers = playerDataService.setDefaultTTLForAllPlayers();
+                Log.info("Set TTL for " + fixedPlayers + " player data that had no expiration");
+                Log.info("----------");
 
                 // Give some time for persistence
                 Thread.sleep(1000);
+
+                // ===== Optimistic Locking Test =====
+                Log.info("----------");
+                Log.info("Test: Optimistic Locking Mechanism");
+
+                // Create a test entity
+                UUID optimisticLockEntityId = UUID.randomUUID();
+                LegacyEntityData optimisticLockEntity = LegacyEntityData.of(optimisticLockEntityId, "lock-test");
+                optimisticLockEntity.addAttribute("name", "Optimistic Lock Test Entity");
+                optimisticLockEntity.addAttribute("counter", "0");
+
+                // Save entity and ensure it's persisted to L2 cache
+                entityDataService.saveEntity(optimisticLockEntity);
+                Log.info("Created optimistic lock test entity, initial version: " + optimisticLockEntity.getVersion());
+                Thread.sleep(500); // Allow time for persistence
+
+                // Simulate first server reading the entity (from L2 cache/database)
+                LegacyEntityData server1Entity = entityDataService.getEntityData(optimisticLockEntityId);
+                Log.info("Server 1 read entity, version: " + server1Entity.getVersion());
+
+                // Simulate second server reading the same entity
+                LegacyEntityData server2Entity = new LegacyEntityData(optimisticLockEntityId);
+                server2Entity.addAttributes(server1Entity.getAttributes());
+                server2Entity.setVersion(server1Entity.getVersion());
+                Log.info("Server 2 read entity, version: " + server2Entity.getVersion());
+
+                // Server 1 modifies the entity
+                server1Entity.addAttribute("counter", "1");
+                server1Entity.addAttribute("updatedBy", "server1");
+                entityDataService.saveEntity(server1Entity);
+                Log.info("Server 1 updated entity, new version: " + server1Entity.getVersion());
+                Thread.sleep(500); // Allow time for persistence
+
+                // Server 2 modifies the entity (with an older version)
+                server2Entity.addAttribute("counter", "2");
+                server2Entity.addAttribute("updatedBy", "server2");
+                entityDataService.saveEntity(server2Entity);
+                Log.info("Server 2 updated entity with older version: " + server2Entity.getVersion());
+                Thread.sleep(500); // Allow time for persistence
+
+                // Read the entity again to see the merged result
+                LegacyEntityData resolvedEntity = entityDataService.getEntityData(optimisticLockEntityId);
+                Log.info("Final entity state after conflict resolution:");
+                Log.info("Version: " + resolvedEntity.getVersion());
+                Log.info("Counter value: " + resolvedEntity.getAttribute("counter"));
+                Log.info("Last updated by: " + resolvedEntity.getAttribute("updatedBy"));
+
+                // Now test concurrent updates where the second update has a higher version number
+                // (simulating a scenario where server 2 got a newer version from elsewhere)
+                UUID optimisticLockEntityId2 = UUID.randomUUID();
+                LegacyEntityData optimisticLockEntity2 = LegacyEntityData.of(optimisticLockEntityId2, "lock-test-2");
+                optimisticLockEntity2.addAttribute("name", "Optimistic Lock Test Entity 2");
+                optimisticLockEntity2.addAttribute("status", "new");
+                entityDataService.saveEntity(optimisticLockEntity2);
+                Thread.sleep(500);
+
+                // Server 1 reads and updates
+                LegacyEntityData server1Entity2 = entityDataService.getEntityData(optimisticLockEntityId2);
+                server1Entity2.addAttribute("status", "processing");
+                server1Entity2.addAttribute("processor", "server1");
+
+                // Server 2 reads, increases version manually, and updates with higher version
+                LegacyEntityData server2Entity2 = new LegacyEntityData(optimisticLockEntityId2);
+                server2Entity2.addAttributes(optimisticLockEntity2.getAttributes());
+                server2Entity2.setVersion(optimisticLockEntity2.getVersion() + 10); // Simulate much higher version
+                server2Entity2.addAttribute("status", "completed");
+                server2Entity2.addAttribute("processor", "server2");
+                entityDataService.saveEntity(server2Entity2);
+                Log.info("Server 2 updated entity2 with higher version: " + server2Entity2.getVersion());
+                Thread.sleep(500);
+
+                // Now server 1 tries to save its update (should be handled as an older version)
+                entityDataService.saveEntity(server1Entity2);
+                Log.info("Server 1 tries to update entity2 with lower version: " + server1Entity2.getVersion());
+                Thread.sleep(500);
+
+                // Check final state
+                LegacyEntityData resolvedEntity2 = entityDataService.getEntityData(optimisticLockEntityId2);
+                Log.info("Final entity2 state after conflict resolution:");
+                Log.info("Version: " + resolvedEntity2.getVersion());
+                Log.info("Status: " + resolvedEntity2.getAttribute("status"));
+                Log.info("Processor: " + resolvedEntity2.getAttribute("processor"));
+
+                // Test merging behavior when entity attributes are removed
+                UUID optimisticLockEntityId3 = UUID.randomUUID();
+                LegacyEntityData optimisticLockEntity3 = LegacyEntityData.of(optimisticLockEntityId3, "lock-test-3");
+                optimisticLockEntity3.addAttribute("field1", "value1");
+                optimisticLockEntity3.addAttribute("field2", "value2");
+                optimisticLockEntity3.addAttribute("field3", "value3");
+                entityDataService.saveEntity(optimisticLockEntity3);
+                Thread.sleep(500);
+
+                // Server 1 reads and removes field2, adds field4
+                LegacyEntityData server1Entity3 = entityDataService.getEntityData(optimisticLockEntityId3);
+                server1Entity3.removeAttribute("field2");
+                server1Entity3.addAttribute("field4", "value4");
+                // Simulate higher version for server 1
+                server1Entity3.setVersion(server1Entity3.getVersion() + 5);
+                entityDataService.saveEntity(server1Entity3);
+                Thread.sleep(500);
+
+                // Server 2 reads original, removes field3, adds field5
+                LegacyEntityData server2Entity3 = new LegacyEntityData(optimisticLockEntityId3);
+                server2Entity3.addAttributes(optimisticLockEntity3.getAttributes());
+                server2Entity3.setVersion(optimisticLockEntity3.getVersion());
+                server2Entity3.removeAttribute("field3");
+                server2Entity3.addAttribute("field5", "value5");
+                entityDataService.saveEntity(server2Entity3);
+                Thread.sleep(500);
+
+                // Check final result of merge
+                LegacyEntityData resolvedEntity3 = entityDataService.getEntityData(optimisticLockEntityId3);
+                Log.info("Final entity3 state after complex merge:");
+                Log.info("Version: " + resolvedEntity3.getVersion());
+                Log.info("field1 exists: " + (resolvedEntity3.getAttribute("field1") != null));
+                Log.info("field2 exists: " + (resolvedEntity3.getAttribute("field2") != null));
+                Log.info("field3 exists: " + (resolvedEntity3.getAttribute("field3") != null));
+                Log.info("field4 exists: " + (resolvedEntity3.getAttribute("field4") != null));
+                Log.info("field5 exists: " + (resolvedEntity3.getAttribute("field5") != null));
+                Log.info("----------");
 
             } catch (InterruptedException exception) {
                 Log.warn("Test interrupted", exception);

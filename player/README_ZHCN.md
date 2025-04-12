@@ -339,6 +339,9 @@ public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface
 }
 ```
 
+上述实例为 `LegacyPlayerData`，若想为 `LegacyEntityData` 创建，
+则只需要使用 `EntityRStreamAccepterRegister` 与 `EntityRStreamAccepterInterface` 即可。
+
 ### 实体数据管理系统
 
 除了玩家数据外，我们还提供了灵活的实体数据管理系统，适用于任何需要持久化存储的游戏对象，如公会等。

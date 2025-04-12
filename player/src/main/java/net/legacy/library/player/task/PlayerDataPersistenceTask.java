@@ -10,6 +10,8 @@ import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
+import net.legacy.library.player.util.TTLUtil;
+import org.redisson.api.RBucket;
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
 import org.redisson.api.RType;
@@ -98,76 +100,102 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
     @Override
     public CompletableFuture<?> start() {
         return submitWithVirtualThreadAsync(() -> {
-            RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
-            RedissonClient redissonClient = l2Cache.getResource();
-
-            // Sync L1 cache to L2 cache
-            L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();
-
-            // Persistence
-            String lockKey = RKeyUtil.getRLPDSKey(legacyPlayerDataService, "persistence-lock");
-            RLock lock = redissonClient.getLock(lockKey);
-
             try {
-                // Exclusive
-                if (!lock.tryLock(lockSettings.getWaitTime(), lockSettings.getLeaseTime(), lockSettings.getTimeUnit())) {
-                    throw new RuntimeException("Could not acquire lock: " + lock.getName());
-                }
+                // Sync L1 cache to L2 cache first
+                L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();
 
-                try {
-                    Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
+                // Perform persistence operation
+                persistPlayerData();
 
-                    /*
-                     * Get all LPDS key (name + "-rlpds-*") and deserialize and save all LegacyPlayerData
-                     */
-                    RKeys keys = redissonClient.getKeys();
-                    KeysScanOptions keysScanOptions =
-                            KeysScanOptions.defaults()
-                                    .pattern(RKeyUtil.getPlayerKeyPattern(legacyPlayerDataService))
-                                    .limit(limit);
-
-                    for (String string : keys.getKeys(keysScanOptions)) {
-                        if (keys.getType(string) != RType.OBJECT) {
-                            continue;
-                        }
-
-                        String legacyPlayerDataString =
-                                l2Cache.getWithType(client -> client.getBucket(string).get(), () -> "", null, false);
-
-                        if (!legacyPlayerDataString.isEmpty()) {
-                            datastore.save(SimplixSerializer.deserialize(legacyPlayerDataString, LegacyPlayerData.class));
-
-                            // Set TTL for this player data if custom TTL is provided 
-                            // or if it currently has no TTL
-                            if (ttl != null) {
-                                boolean expireSuccess = redissonClient.getBucket(string).expire(ttl);
-                                if (!expireSuccess) {
-                                    Log.warn(String.format("Failed to set custom TTL for player data key: %s", string));
-                                }
-                            } else {
-                                // Check if key has no TTL and set default if needed
-                                long currentTtl = redissonClient.getBucket(string).remainTimeToLive();
-                                if (currentTtl < 0) {
-                                    boolean expireSuccess = redissonClient.getBucket(string).expire(LegacyPlayerDataService.DEFAULT_TTL_DURATION);
-                                    if (!expireSuccess) {
-                                        Log.warn(String.format("Failed to set default TTL for player data key: %s", string));
-                                    }
-                                }
-                            }
-                        } else {
-                            Log.error("The key value is not expected to be null, this should not happen!! key: " + string);
-                        }
-                    }
-                } finally {
-                    // Ensure the lock is always released
-                    lock.forceUnlock();
-                }
-            } catch (InterruptedException exception) {
-                Log.error(exception);
-                Thread.currentThread().interrupt();
             } catch (Exception exception) {
-                Log.error(exception);
+                Log.error("Error during player data persistence", exception);
             }
         });
+    }
+
+    /**
+     * Persists player data from L2 cache to the database.
+     *
+     * <p>This method acquires an exclusive lock to prevent concurrent operations,
+     * then delegates to {@link #processPlayerDataInL2Cache} to handle the actual persistence.
+     * It ensures proper error handling and lock release, even in case of exceptions.
+     */
+    private void persistPlayerData() {
+        RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
+        RedissonClient redissonClient = l2Cache.getResource();
+
+        // Persistence lock
+        String lockKey = RKeyUtil.getRLPDSKey(legacyPlayerDataService, "persistence-lock");
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            // Try to acquire lock
+            if (!lock.tryLock(lockSettings.getWaitTime(), lockSettings.getLeaseTime(), lockSettings.getTimeUnit())) {
+                throw new RuntimeException("Could not acquire lock: " + lock.getName());
+            }
+
+            try {
+                Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
+                processPlayerDataInL2Cache(l2Cache, redissonClient, datastore);
+            } finally {
+                // Ensure the lock is always released
+                lock.forceUnlock();
+            }
+        } catch (InterruptedException exception) {
+            Log.error("Task interrupted during persistence", exception);
+            Thread.currentThread().interrupt();
+        } catch (Exception exception) {
+            Log.error("Exception during player data persistence", exception);
+        }
+    }
+
+    /**
+     * Processes all player data from L2 cache and saves it to the database.
+     *
+     * <p>This method scans the Redis cache for player data keys, deserializes the data,
+     * and persists it to the MongoDB database. It also maintains TTL for each entry in Redis,
+     * either using the provided custom TTL or falling back to the default TTL.
+     *
+     * @param l2Cache        the Redis cache service
+     * @param redissonClient the Redisson client
+     * @param datastore      the MongoDB datastore
+     */
+    private void processPlayerDataInL2Cache(RedisCacheServiceInterface l2Cache,
+                                            RedissonClient redissonClient,
+                                            Datastore datastore) {
+        // Get all LPDS keys and process them
+        RKeys keys = redissonClient.getKeys();
+        KeysScanOptions keysScanOptions = KeysScanOptions.defaults()
+                .pattern(RKeyUtil.getPlayerKeyPattern(legacyPlayerDataService))
+                .limit(limit);
+
+        for (String key : keys.getKeys(keysScanOptions)) {
+            if (keys.getType(key) != RType.OBJECT) {
+                continue;
+            }
+
+            String playerDataString = l2Cache.getWithType(
+                    client -> client.getBucket(key).get(),
+                    () -> "",
+                    null,
+                    false
+            );
+
+            if (playerDataString.isEmpty()) {
+                Log.error("The key value is not expected to be null, this should not happen!! key: " + key);
+                continue;
+            }
+
+            // Save to database
+            datastore.save(SimplixSerializer.deserialize(playerDataString, LegacyPlayerData.class));
+
+            // Update TTL if needed
+            RBucket<Object> bucket = redissonClient.getBucket(key);
+            if (ttl != null) {
+                TTLUtil.setTTLIfMissing(bucket, ttl);
+            } else {
+                TTLUtil.setTTLIfMissing(bucket, LegacyPlayerDataService.DEFAULT_TTL_DURATION);
+            }
+        }
     }
 }

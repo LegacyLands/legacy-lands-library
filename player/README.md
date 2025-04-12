@@ -355,6 +355,10 @@ public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface
 }
 ```
 
+The above example is for `LegacyPlayerData`.
+If you want to create it for `LegacyEntityData`, you only need to use `EntityRStreamAccepterRegister` and
+`EntityRStreamAccepterInterface`.
+
 ### Entity Data Management System
 
 In addition to player data, we also provide a flexible entity data management system suitable for any game objects that

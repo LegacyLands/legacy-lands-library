@@ -26,8 +26,8 @@ public class GRPCClientLauncher extends Plugin {
         if (DEBUG) {
             try {
                 new TaskSchedulerExample().runDemonstrationLogic(new GRPCTaskSchedulerClient("localhost", 50051, 10000, 5, Executors.newCachedThreadPool()));
-            } catch (TaskSchedulerException e) {
-                throw new RuntimeException(e);
+            } catch (TaskSchedulerException exception) {
+                throw new RuntimeException(exception);
             }
         }
     }
