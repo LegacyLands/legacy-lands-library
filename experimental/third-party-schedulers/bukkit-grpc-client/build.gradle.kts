@@ -71,5 +71,5 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java-util:4.30.2")
 
     // Guava for immutable collections
-    implementation("com.google.guava:guava:33.4.7-jre")
+    implementation("com.google.guava:guava:33.4.8-jre")
 }
