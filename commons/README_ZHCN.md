@@ -148,6 +148,8 @@ public class Example {
 - `SecureRandom`: 提供更高安全性的随机数生成器，适用于对随机性要求严格的场景
 - **蒙特卡罗方法 (`getResultWithMonteCarlo`)**: 通过模拟大量随机事件来逼近概率分布，理论上更公平，但在大数据集下效率可能较低
 - **洗牌方法 (`getResultWithShuffle`)**: 通过打乱对象列表的顺序来实现随机化，随机性较好，但可能不严格符合设定的权重
+- **梅森旋转 (`getResultWithMersenneTwister`)**: 高质量的伪随机数生成器，以其极长的周期和良好的统计特性而闻名
+- **XORShift (`getResultWithXORShift`)**: 一类快速且简单的伪随机数生成器。通常表现良好，但可能无法通过所有严格的统计测试
 - **高斯方法 (`getResultWithGaussian`)**: 生成符合高斯分布（正态分布）的随机数进行选择，可以使得选择结果更倾向于权重集中的区域，而非简单的线性概率
 
 ```java

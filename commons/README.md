@@ -163,6 +163,8 @@ algorithms to meet the needs of different scenarios.
   number of random events. Theoretically fairer, but may be less efficient with large datasets.
 - **Shuffle Method (`getResultWithShuffle`)**: Randomizes by shuffling the order of the object list. Good randomness,
   but may not strictly adhere to the set weights.
+- **Mersenne Twister (`getResultWithMersenneTwister`)**: A high-quality pseudo-random number generator known for its very long period and good statistical properties.
+- **XORShift (`getResultWithXORShift`)**: A class of fast and simple pseudo-random number generators. Generally good, but might not pass all stringent statistical tests.
 - **Gaussian Method (`getResultWithGaussian`)**: Generates random numbers following a Gaussian (normal) distribution for
   selection. This can make the selection result tend towards areas with concentrated weights, rather than simple linear
   probability.
