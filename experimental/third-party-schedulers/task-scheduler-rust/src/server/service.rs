@@ -1,6 +1,10 @@
+use crate::error::TaskError;
+use crate::error_log;
 use crate::info_log;
 use crate::tasks::taskscheduler::task_scheduler_server::TaskScheduler;
-use crate::tasks::taskscheduler::{ResultRequest, ResultResponse, TaskRequest, TaskResponse};
+use crate::tasks::taskscheduler::{
+    task_response, ResultRequest, ResultResponse, TaskRequest, TaskResponse,
+};
 use crate::tasks::REGISTRY;
 use std::time::Instant;
 use tonic::{Request, Response, Status};
@@ -15,34 +19,59 @@ impl TaskScheduler for TaskSchedulerService {
         request: Request<TaskRequest>,
     ) -> Result<Response<TaskResponse>, Status> {
         let task = request.into_inner();
+        let task_id = task.task_id.clone();
+        let method = task.method.clone();
+        let is_async = task.is_async;
+
         info_log!(
             "Received task: {} with method: {}, async: {}",
-            task.task_id,
-            task.method,
-            task.is_async
+            task_id,
+            method,
+            is_async
         );
 
         let start = Instant::now();
-        let result = REGISTRY.execute_task(&task).await;
+        let execution_result = REGISTRY.execute_task(&task).await;
         let duration = start.elapsed().as_millis();
 
-        REGISTRY
-            .cache_task_result(task.task_id.clone(), result.clone())
-            .await;
-
-        info_log!(
-            "Completed task: {} with status {} (took {}ms). Result: {}",
-            task.task_id,
-            result.status,
-            duration,
-            result.value
-        );
-
-        Ok(Response::new(TaskResponse {
-            task_id: task.task_id,
-            status: result.status,
-            result: result.value,
-        }))
+        match execution_result {
+            Ok(value) => {
+                info_log!(
+                    "Completed task: {} successfully (took {}ms). Result: {}",
+                    task_id,
+                    duration,
+                    value
+                );
+                Ok(Response::new(TaskResponse {
+                    task_id,
+                    status: task_response::Status::Success as i32,
+                    result: value,
+                }))
+            }
+            Err(err) => {
+                error_log!(
+                    "Failed task: {} (took {}ms). Error: {}",
+                    task_id,
+                    duration,
+                    err
+                );
+                let status = match err {
+                    TaskError::MethodNotFound(m) => {
+                        Status::not_found(format!("Method not found: {}", m))
+                    }
+                    TaskError::InvalidArguments(a) => {
+                        Status::invalid_argument(format!("Invalid arguments: {}", a))
+                    }
+                    TaskError::MissingDependency(d) => {
+                        Status::failed_precondition(format!("Missing dependency: {}", d))
+                    }
+                    TaskError::ExecutionError(e) => {
+                        Status::internal(format!("Task execution failed: {}", e))
+                    }
+                };
+                Err(status)
+            }
+        }
     }
 
     async fn get_result(

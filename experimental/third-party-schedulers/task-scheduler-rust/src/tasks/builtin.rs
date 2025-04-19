@@ -1,25 +1,50 @@
+use crate::error::{Result, TaskError};
+use crate::info_log;
 use crate::models::ArgValue;
 use task_macro::{async_task, sync_task};
 
 #[sync_task]
-pub fn add(args: Vec<ArgValue>) -> String {
-    let sum: i32 = args
+pub fn add(args: Vec<ArgValue>) -> Result<String> {
+    let sum: Result<i32> = args
         .into_iter()
-        .map(|v| if let ArgValue::Int32(n) = v { n } else { 0 })
+        .map(|v| match v {
+            ArgValue::Int32(n) => Ok(n),
+            _ => Err(TaskError::InvalidArguments(
+                "Expected Int32 for add".to_string(),
+            )),
+        })
         .sum();
-    sum.to_string()
+    Ok(sum?.to_string())
 }
 
 #[sync_task]
-pub fn remove(args: Vec<ArgValue>) -> String {
-    let nums: Vec<i32> = args
+pub fn remove(args: Vec<ArgValue>) -> Result<String> {
+    info_log!("Executing builtin::remove with args: {:?}", args);
+    let nums: Result<Vec<i32>> = args
         .into_iter()
-        .map(|v| if let ArgValue::Int32(n) = v { n } else { 0 })
+        .map(|v| match v {
+            ArgValue::Int32(n) => Ok(n),
+            _ => Err(TaskError::InvalidArguments(
+                "Invalid argument type for remove, expected Int32".to_string(),
+            )),
+        })
         .collect();
+    let nums = match nums {
+        Ok(n) => n,
+        Err(e) => {
+            info_log!("builtin::remove returning Err (conversion): {}", e);
+            return Err(e);
+        }
+    };
+
     if nums.len() < 2 {
-        "Error: Need at least 2 arguments".to_string()
+        let err = TaskError::InvalidArguments("Need at least 2 arguments for remove".to_string());
+        info_log!("builtin::remove returning Err (arg count): {}", err);
+        Err(err)
     } else {
-        (nums[0] - nums[1..].iter().sum::<i32>()).to_string()
+        let result = (nums[0] - nums[1..].iter().sum::<i32>()).to_string();
+        info_log!("builtin::remove returning Ok: {}", result);
+        Ok(result)
     }
 }
 
@@ -34,23 +59,37 @@ pub async fn delete(args: Vec<ArgValue>) -> String {
 }
 
 #[sync_task]
-pub fn process_collection(args: Vec<ArgValue>) -> String {
+pub fn process_collection(args: Vec<ArgValue>) -> Result<String> {
     if args.len() != 2 {
-        return "Error: Expected two arguments".to_string();
+        return Err(TaskError::InvalidArguments(
+            "Expected two arguments".to_string(),
+        ));
     }
     let array = match &args[0] {
         ArgValue::Array(arr) => arr,
-        _ => return "Error: First argument is not an array".to_string(),
+        _ => {
+            return Err(TaskError::InvalidArguments(
+                "First argument is not an array".to_string(),
+            ))
+        }
     };
     let map = match &args[1] {
         ArgValue::Map(m) => m,
-        _ => return "Error: Second argument is not a map".to_string(),
+        _ => {
+            return Err(TaskError::InvalidArguments(
+                "Second argument is not a map".to_string(),
+            ))
+        }
     };
-    format!("Array: {} items, Map: {} items", array.len(), map.len())
+    Ok(format!(
+        "Array: {} items, Map: {} items",
+        array.len(),
+        map.len()
+    ))
 }
 
 #[sync_task]
-pub fn echo_bool(args: Vec<ArgValue>) -> String {
+pub fn echo_bool(args: Vec<ArgValue>) -> Result<String> {
     let bools: Vec<String> = args
         .into_iter()
         .map(|v| {
@@ -61,11 +100,11 @@ pub fn echo_bool(args: Vec<ArgValue>) -> String {
             }
         })
         .collect();
-    bools.join(",")
+    Ok(bools.join(","))
 }
 
 #[sync_task]
-pub fn echo_string(args: Vec<ArgValue>) -> String {
+pub fn echo_string(args: Vec<ArgValue>) -> Result<String> {
     let strings: Vec<String> = args
         .into_iter()
         .map(|v| {
@@ -76,26 +115,27 @@ pub fn echo_string(args: Vec<ArgValue>) -> String {
             }
         })
         .collect();
-    strings.join(",")
+    Ok(strings.join(","))
 }
 
 #[sync_task]
-pub fn echo_bytes(args: Vec<ArgValue>) -> String {
-    let bytes: Vec<String> = args
+pub fn echo_bytes(args: Vec<ArgValue>) -> Result<String> {
+    let bytes_res: Result<Vec<String>> = args
         .into_iter()
         .map(|v| {
             if let ArgValue::Bytes(b) = v {
-                String::from_utf8_lossy(&b).into_owned()
+                String::from_utf8(b)
+                    .map_err(|e| TaskError::InvalidArguments(format!("Invalid UTF-8 bytes: {}", e)))
             } else {
-                "".to_string()
+                Ok("".to_string())
             }
         })
         .collect();
-    bytes.join(",")
+    Ok(bytes_res?.join(","))
 }
 
 #[sync_task]
-pub fn process_nested_list(args: Vec<ArgValue>) -> String {
+pub fn process_nested_list(args: Vec<ArgValue>) -> Result<String> {
     if let Some(ArgValue::Array(outer_list)) = args.first() {
         let mut description = format!(
             "Received nested list with {} inner lists: ",
@@ -120,14 +160,16 @@ pub fn process_nested_list(args: Vec<ArgValue>) -> String {
                 description.push_str(&format!("[Item {} is not a list] ", i));
             }
         }
-        description
+        Ok(description)
     } else {
-        "Error: Expected a nested list argument.".to_string()
+        Err(TaskError::InvalidArguments(
+            "Expected a nested list argument.".to_string(),
+        ))
     }
 }
 
 #[sync_task]
-pub fn process_complex_map(args: Vec<ArgValue>) -> String {
+pub fn process_complex_map(args: Vec<ArgValue>) -> Result<String> {
     if let Some(ArgValue::Map(map)) = args.first() {
         let mut description = "Received complex map: ".to_string();
         if let Some(ArgValue::Int64(id)) = map.get("id") {
@@ -164,14 +206,16 @@ pub fn process_complex_map(args: Vec<ArgValue>) -> String {
             description.pop();
             description.pop();
         }
-        description
+        Ok(description)
     } else {
-        "Error: Expected a map argument.".to_string()
+        Err(TaskError::InvalidArguments(
+            "Expected a map argument.".to_string(),
+        ))
     }
 }
 
 #[sync_task]
-pub fn process_person_map(args: Vec<ArgValue>) -> String {
+pub fn process_person_map(args: Vec<ArgValue>) -> Result<String> {
     if let Some(ArgValue::Map(map)) = args.first() {
         let mut description = "Processing person: ".to_string();
         if let Some(ArgValue::String(name)) = map.get("name") {
@@ -198,23 +242,25 @@ pub fn process_person_map(args: Vec<ArgValue>) -> String {
             description.pop();
             description.pop();
         }
-        description
+        Ok(description)
     } else {
-        "Error: Expected a person map argument.".to_string()
+        Err(TaskError::InvalidArguments(
+            "Expected a person map argument.".to_string(),
+        ))
     }
 }
 
 #[sync_task]
-pub fn ping(args: Vec<ArgValue>) -> String {
+pub fn ping(args: Vec<ArgValue>) -> Result<String> {
     if let Some(ArgValue::String(s)) = args.first() {
-        format!("pong: {}", s)
+        Ok(format!("pong: {}", s))
     } else {
-        "pong".to_string()
+        Ok("pong".to_string())
     }
 }
 
 #[sync_task]
-pub fn sum_list(args: Vec<ArgValue>) -> String {
+pub fn sum_list(args: Vec<ArgValue>) -> Result<String> {
     if let Some(ArgValue::Array(list)) = args.first() {
         let sum: i64 = list
             .iter()
@@ -224,9 +270,11 @@ pub fn sum_list(args: Vec<ArgValue>) -> String {
                 _ => None,
             })
             .sum();
-        sum.to_string()
+        Ok(sum.to_string())
     } else {
-        "Error: Expected a list argument.".to_string()
+        Err(TaskError::InvalidArguments(
+            "Expected a list argument.".to_string(),
+        ))
     }
 }
 

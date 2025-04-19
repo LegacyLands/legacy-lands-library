@@ -1,85 +1,83 @@
+use portpicker;
 use std::process::{Child, Command, Stdio};
-use std::sync::Once;
 use std::time::Duration;
 
 pub struct TestServer {
-    address: String,
     process: Child,
+    port: u16,
 }
 
 impl TestServer {
     pub fn address(&self) -> String {
-        format!("http://{}", self.address)
+        format!("http://127.0.0.1:{}", self.port)
     }
 }
 
-// Ensure the child process is killed when TestServer is dropped
 impl Drop for TestServer {
     fn drop(&mut self) {
-        println!("Stopping test server process...");
-        // Try to kill the process gently first, then forcefully if needed
+        println!(
+            "Stopping test server process (PID: {}) on port {}...",
+            self.process.id(),
+            self.port
+        );
         if let Err(e) = self.process.kill() {
-            eprintln!("Failed to kill test server process: {}", e);
+            eprintln!(
+                "Failed to kill test server process (PID: {}, Port: {}): {}",
+                self.process.id(),
+                self.port,
+                e
+            );
         } else {
-            // Wait for the process to ensure it's terminated
             match self.process.wait() {
-                Ok(status) => println!("Test server process exited with: {}", status),
-                Err(e) => eprintln!("Failed to wait for test server process: {}", e),
+                Ok(status) => println!(
+                    "Test server process (PID: {}, Port: {}) exited with: {}",
+                    self.process.id(),
+                    self.port,
+                    status
+                ),
+                Err(e) => eprintln!(
+                    "Failed to wait for test server process (PID: {}, Port: {}): {}",
+                    self.process.id(),
+                    self.port,
+                    e
+                ),
             }
         }
     }
 }
 
-static START: Once = Once::new();
-
-/// Sets up the test server, ensuring it only starts once per test run.
+/// Sets up a *new* test server instance on a free port for each call.
 /// Returns a TestServer struct containing the server address and process handle.
 #[allow(clippy::zombie_processes)]
 pub async fn setup() -> TestServer {
-    let server_address = "127.0.0.1:50051".to_string();
-    static SERVER_PROCESS: std::sync::Mutex<Option<Child>> = std::sync::Mutex::new(None);
+    println!("Ensuring test server binary is built...");
+    assert!(
+        Command::new("cargo")
+            .args(["build", "--bin", "task-scheduler"])
+            .status()
+            .expect("Failed to build server binary")
+            .success(),
+        "Failed to build the server binary"
+    );
 
-    START.call_once(|| {
-        // Build the server binary
-        println!("Building test server binary...");
-        assert!(
-            Command::new("cargo")
-                .args(["build", "--bin", "task-scheduler"])
-                .status()
-                .expect("Failed to build server binary")
-                .success(),
-            "Failed to build the server binary"
-        );
-        println!("Test server binary built.");
+    let port = portpicker::pick_unused_port().expect("Failed to find an unused port");
+    println!("Selected port {} for test server.", port);
 
-        // Start the server process
-        println!("Starting test server process...");
-        let process = Command::new("target/debug/task-scheduler")
-            .arg("--addr")
-            .arg(&server_address)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("Failed to start server process");
-        println!("Test server process started (PID: {}).", process.id());
-        *SERVER_PROCESS.lock().unwrap() = Some(process);
-    });
-
-    // Wait a moment for the server to potentially start listening
-    tokio::time::sleep(Duration::from_secs(2)).await;
-
-    // Re-fetch or restart a dummy process to get a Child handle for Drop
-    // This is a workaround because getting the original Child out of call_once is hard.
-    let process_for_drop = Command::new("target/debug/task-scheduler")
+    println!("Starting test server process on port {}...", port);
+    let process = Command::new("target/debug/task-scheduler")
         .arg("--addr")
-        .arg(&server_address)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .arg(format!("127.0.0.1:{}", port))
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .spawn()
-        .expect("Failed to start dummy server process for drop handle");
+        .expect("Failed to start server process");
+    println!(
+        "Test server process started (PID: {}, Port: {}).",
+        process.id(),
+        port
+    );
 
-    TestServer {
-        address: server_address,
-        process: process_for_drop,
-    }
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    TestServer { process, port }
 }

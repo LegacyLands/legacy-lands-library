@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum TaskError {
     #[error("Method not found: {0}")]
     MethodNotFound(String),

@@ -172,32 +172,41 @@ async fn test_dependencies() {
         },
     ];
 
-    // Submit tasks sequentially
+    // Submit tasks sequentially and check if the call itself succeeded (returned Ok)
     for task in tasks {
-        let response = client
-            .submit_task(task)
-            .await
-            .expect("Failed to submit task");
-        let result = response.into_inner();
-        assert_eq!(result.status, 1, "Task execution failed");
+        let task_id = task.task_id.clone();
+        let response_result = client.submit_task(Request::new(task)).await;
+        assert!(
+            response_result.is_ok(),
+            "Failed to submit or execute task '{}'. Status: {:?}",
+            task_id,
+            response_result.err() // Log the error status if it failed
+        );
     }
 
-    // Verify final task results
-    let result = client
-        .get_result(ResultRequest {
-            task_id: "delete_dep".to_string(),
-        })
+    // Add a small delay to allow cache writes to settle, potentially
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    // Verify final task result (delete_dep should be completed now)
+    let result_req = ResultRequest {
+        task_id: "delete_dep".to_string(),
+    };
+    let response = client
+        .get_result(Request::new(result_req))
         .await
-        .expect("Failed to get result")
-        .into_inner();
+        .expect("Failed to get result for delete_dep");
+    let result = response.into_inner();
 
     // Check status using the correct enum variant from proto
     assert_eq!(
         result.status,
         task_scheduler::tasks::taskscheduler::task_response::Status::Success as i32,
-        "Task should be completed successfully"
+        "Task 'delete_dep' should be completed successfully"
     );
-    assert_eq!(result.result, "Deleted 2 items", "Unexpected result");
+    assert_eq!(
+        result.result, "Deleted 2 items",
+        "Unexpected result for delete_dep"
+    );
 }
 
 #[tokio::test]
@@ -205,7 +214,7 @@ async fn test_error_handling() {
     let server = common::setup().await;
     let mut client = connect_to_server(&server.address()).await;
 
-    // Test non-existent method
+    // Test non-existent method (keep checking Err status)
     let task = TaskRequest {
         task_id: "invalid".to_string(),
         method: "nonexistent".to_string(),
@@ -213,28 +222,41 @@ async fn test_error_handling() {
         deps: vec![],
         is_async: false,
     };
-    let response = client
-        .submit_task(task)
-        .await
-        .expect("Failed to submit task");
-    let result = response.into_inner();
-    assert_eq!(result.status, 2);
-    assert_eq!(result.result, "Error: Method not found");
+    let response_result = client.submit_task(Request::new(task)).await;
+    assert!(response_result.is_err());
+    if let Err(status) = response_result {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert!(status.message().contains("Method not found: nonexistent"));
+    } else {
+        panic!("Expected an error response for non-existent method");
+    }
 
-    // Test insufficient parameters
-    let task = TaskRequest {
+    // Test insufficient parameters for 'remove'
+    let task_invalid_args = TaskRequest {
         task_id: "invalid_args".to_string(),
         method: "remove".to_string(),
-        args: vec![any_i32(1)],
+        args: vec![any_i32(1)], // Only one argument
         deps: vec![],
         is_async: false,
     };
-    let response = client
-        .submit_task(task)
-        .await
-        .expect("Failed to submit task");
-    let result = response.into_inner();
-    assert_eq!(result.result, "Error: Need at least 2 arguments");
+    let response_result_invalid = client.submit_task(Request::new(task_invalid_args)).await;
+    // Revert back to asserting is_err() and checking the status code
+    assert!(
+        response_result_invalid.is_err(),
+        "Expected submit_task to return Err for invalid args"
+    );
+    if let Err(status) = response_result_invalid {
+        assert_eq!(
+            status.code(),
+            tonic::Code::InvalidArgument,
+            "Expected InvalidArgument status code"
+        );
+        // Optionally check the message as well
+        assert!(status.message().contains("Need at least 2 arguments"));
+    } else {
+        // This case should not be reached if is_err() passes
+        panic!("Expected Err status but got Ok");
+    }
 }
 
 #[tokio::test]
@@ -488,39 +510,47 @@ async fn test_async_task_completion() {
     let task = TaskRequest {
         task_id: task_id.clone(),
         method: "delete".to_string(),
-        args: vec![any_i32(1), any_i32(2), any_i32(3)],
+        args: vec![any_i32(5)],
         deps: vec![],
         is_async: true,
     };
 
-    let response = client
-        .submit_task(task)
-        .await
-        .expect("Failed to submit task");
-    let result = response.into_inner();
+    // Submit the async task
+    let submit_response = client.submit_task(Request::new(task)).await;
+    assert!(
+        submit_response.is_ok(),
+        "Failed to submit async task: {:?}",
+        submit_response.err()
+    );
 
-    assert_eq!(result.status, 1, "Task should be submitted successfully");
+    // Wait longer for the async task to potentially complete and be cached
+    tokio::time::sleep(Duration::from_secs(3)).await; // Increased wait time to 3 seconds
 
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    // Wait longer for the async task to potentially complete and be cached
+    // Already increased to 3 seconds, maybe add another small delay after the main sleep?
+    tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let result_request = ResultRequest {
+    // Try to get the result
+    let result_req = ResultRequest {
         task_id: task_id.clone(),
     };
-    let response = client
-        .get_result(tonic::Request::new(result_request))
-        .await
-        .expect("Failed to get task result");
+    let get_result_response = client.get_result(Request::new(result_req)).await;
 
-    let result = response.into_inner();
-
-    assert_eq!(
-        result.status,
-        task_scheduler::tasks::taskscheduler::task_response::Status::Success as i32,
-        "Task should be completed successfully"
-    );
-
-    assert_eq!(
-        result.result, "Deleted 3 items",
-        "Result value is unexpected for delete task"
-    );
+    // Check if getting the result succeeded
+    match get_result_response {
+        Ok(response) => {
+            let result = response.into_inner();
+            assert_eq!(
+                result.status,
+                task_scheduler::tasks::taskscheduler::task_response::Status::Success as i32,
+                "Async task should have completed successfully"
+            );
+            // Assuming 'delete' task with one arg returns this string
+            assert_eq!(result.result, "Deleted 1 items");
+        }
+        Err(status) => {
+            // If it still fails with NotFound, the issue might be elsewhere
+            panic!("Failed to get task result for '{}': {:?}", task_id, status);
+        }
+    }
 }

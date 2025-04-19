@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use task_scheduler::logger;
@@ -32,28 +33,34 @@ struct Args {
     tls_ca_cert: Option<PathBuf>,
 }
 
-async fn load_identity(
-    cert_path: &PathBuf,
-    key_path: &PathBuf,
-) -> Result<Identity, Box<dyn std::error::Error>> {
-    let cert_pem = fs::read(cert_path).await?;
-    let key_pem = fs::read(key_path).await?;
+async fn load_identity(cert_path: &PathBuf, key_path: &PathBuf) -> Result<Identity> {
+    let cert_pem = fs::read(cert_path)
+        .await
+        .with_context(|| format!("Failed to read certificate file: {}", cert_path.display()))?;
+    let key_pem = fs::read(key_path)
+        .await
+        .with_context(|| format!("Failed to read key file: {}", key_path.display()))?;
     Ok(Identity::from_pem(cert_pem, key_pem))
 }
 
-async fn load_ca_cert(ca_path: &PathBuf) -> Result<Certificate, Box<dyn std::error::Error>> {
-    let ca_pem = fs::read(ca_path).await?;
+async fn load_ca_cert(ca_path: &PathBuf) -> Result<Certificate> {
+    let ca_pem = fs::read(ca_path)
+        .await
+        .with_context(|| format!("Failed to read CA certificate file: {}", ca_path.display()))?;
     Ok(Certificate::from_pem(ca_pem))
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let (_guard_file, _guard_stdout) = logger::init_logger();
 
     log_pending_registrations();
 
     let args = Args::parse();
-    let addr = args.addr.parse()?;
+    let addr = args
+        .addr
+        .parse()
+        .with_context(|| format!("Failed to parse address: {}", args.addr))?;
     let service = TaskSchedulerService::default();
 
     let mut server_builder = Server::builder();
@@ -78,7 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        server_builder = server_builder.tls_config(tls_config)?;
+        server_builder = server_builder
+            .tls_config(tls_config)
+            .context("Failed to apply TLS configuration")?;
         tls_enabled = true;
     } else {
         warn_log!("Starting server without TLS.");
@@ -93,7 +102,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     server_builder
         .add_service(TaskSchedulerServer::new(service))
         .serve(addr)
-        .await?;
+        .await
+        .context("Failed to start Tonic server")?;
 
     Ok(())
 }

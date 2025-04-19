@@ -49,6 +49,7 @@ tracing-subscriber = { version = "0.3", features = [
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["macros", "local-offset", "formatting"] }
 lazy_static = "1.4.0"
+anyhow = "1.0"
 
 [build-dependencies]
 tonic-build = { version = "0.13.0", features = ["transport", "prost"] }
