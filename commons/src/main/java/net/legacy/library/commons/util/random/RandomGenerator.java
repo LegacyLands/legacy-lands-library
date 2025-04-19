@@ -33,7 +33,7 @@ public class RandomGenerator<T> {
      * ThreadLocalRandom generator.
      */
     private final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-    
+
     /**
      * MersenneTwister generator.
      */
@@ -74,7 +74,7 @@ public class RandomGenerator<T> {
             addRandomObject(object, (int) Double.parseDouble(probabilityValue.toString()));
         }
     }
-    
+
     /**
      * Creates a RandomGenerator instance with a map of objects and their probabilities.
      *
@@ -100,7 +100,7 @@ public class RandomGenerator<T> {
         randomObjects.add(randomObject);
         totalProbability += probability;
     }
-    
+
     /**
      * Adds multiple random objects with their corresponding probabilities to the utility class.
      *
@@ -303,7 +303,7 @@ public class RandomGenerator<T> {
 
         return Optional.empty();
     }
-    
+
     /**
      * Randomly returns an object based on the probability of all current random objects,
      * using the Mersenne Twister with a given seed.
@@ -315,7 +315,7 @@ public class RandomGenerator<T> {
         mersenneTwister.setSeed(seed);
         return getResultWithMersenneTwister();
     }
-    
+
     /**
      * Randomly returns an object based on the probability of all current random objects,
      * using the Mersenne Twister with a given seed.
@@ -327,7 +327,7 @@ public class RandomGenerator<T> {
         mersenneTwister.setSeed(seed);
         return getResultWithMersenneTwister();
     }
-    
+
     /**
      * Randomly returns an object based on the probability of all current random objects,
      * using the Mersenne Twister with a given seed array.

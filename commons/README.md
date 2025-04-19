@@ -144,3 +144,63 @@ public class Example {
 
 We have a `TypeAdapterRegister` annotation in the `player` module, which can be used to simplify the registration of
 `Type Adapter`.
+
+### [RandomGenerator](src/main/java/net/legacy/library/commons/util/random/RandomGenerator.java)
+
+`RandomGenerator` originated from the author `qwq-dev (2000000)`'s deprecated project `Advanced Wish`, but this tool is
+still very useful in scenarios involving random selection based on weights.
+
+When you need to randomly select an object from a group based on their respective weights (probabilities),
+`RandomGenerator`
+is a convenient choice. It supports dynamically adding objects and their weights, and provides multiple random
+algorithms to meet the needs of different scenarios.
+
+- `ThreadLocalRandom` (default): Standard pseudo-random number generator, high performance, suitable for most general
+  scenarios.
+- `SecureRandom`: Provides a higher security random number generator, suitable for scenarios with strict randomness
+  requirements.
+- **Monte Carlo Method (`getResultWithMonteCarlo`)**: Approximates the probability distribution by simulating a large
+  number of random events. Theoretically fairer, but may be less efficient with large datasets.
+- **Shuffle Method (`getResultWithShuffle`)**: Randomizes by shuffling the order of the object list. Good randomness,
+  but may not strictly adhere to the set weights.
+- **Gaussian Method (`getResultWithGaussian`)**: Generates random numbers following a Gaussian (normal) distribution for
+  selection. This can make the selection result tend towards areas with concentrated weights, rather than simple linear
+  probability.
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        // Create a RandomGenerator instance and initialize objects with their weights
+        // "Apple" weight 30, "Banana" weight 50, "Orange" weight 20
+        RandomGenerator<String> randomGenerator = new RandomGenerator<>(
+                "Apple", 30,
+                "Banana", 50,
+                "Orange", 20
+        );
+
+        // Perform random selection using the default pseudo-random number generator
+        String result = randomGenerator.getResult();
+        System.out.println("Result using default pseudo-random generator: " + result);
+
+        // Perform random selection using a more secure random number generator
+        String secureResult = randomGenerator.getResultWithSecureRandom();
+        System.out.println("Result using secure random generator: " + secureResult);
+
+        // Perform random selection using the Monte Carlo method
+        String monteCarloResult = randomGenerator.getResultWithMonteCarlo();
+        System.out.println("Result using Monte Carlo method: " + monteCarloResult);
+
+        // Perform random selection using the Shuffle method
+        String shuffleResult = randomGenerator.getResultWithShuffle();
+        System.out.println("Result using Shuffle method: " + shuffleResult);
+
+        // Perform random selection using the Gaussian method
+        String gaussianResult = randomGenerator.getResultWithGaussian();
+        System.out.println("Result using Gaussian method: " + gaussianResult);
+    }
+}
+```
+
+Additionally, the sum of weights does not need to be 100; `RandomGenerator` automatically calculates probabilities based
+on the weight proportions. Choosing the appropriate random algorithm depends on the specific requirements of your
+application scenario regarding performance, security, and random distribution characteristics.

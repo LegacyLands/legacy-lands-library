@@ -136,3 +136,52 @@ public class Example {
 ```
 
 我们在 `player` 模块中有一个 `TypeAdapterRegister` 注解，它可以用来简化 `Type Adapter` 的注册。
+
+### [RandomGenerator](src/main/java/net/legacy/library/commons/util/random/RandomGenerator.java)
+
+`RandomGenerator` 源自作者 `qwq-dev (2000000)` 已废弃的项目 `Advanced Wish`，但该工具在按权重进行随机选择的场景下依旧十分实用。
+
+当你需要从一组对象中根据各自的权重（概率）随机抽取一个对象时，`RandomGenerator`
+会是一个便捷的选择。它支持动态添加对象及其权重，并提供了多种随机算法以满足不同场景下的需求。
+
+- `ThreadLocalRandom` (默认): 标准伪随机数生成器，性能高效，适用于大多数常规场景
+- `SecureRandom`: 提供更高安全性的随机数生成器，适用于对随机性要求严格的场景
+- **蒙特卡罗方法 (`getResultWithMonteCarlo`)**: 通过模拟大量随机事件来逼近概率分布，理论上更公平，但在大数据集下效率可能较低
+- **洗牌方法 (`getResultWithShuffle`)**: 通过打乱对象列表的顺序来实现随机化，随机性较好，但可能不严格符合设定的权重
+- **高斯方法 (`getResultWithGaussian`)**: 生成符合高斯分布（正态分布）的随机数进行选择，可以使得选择结果更倾向于权重集中的区域，而非简单的线性概率
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        // 创建一个 RandomGenerator 实例，并初始化对象及其权重
+        // "Apple" 权重 30, "Banana" 权重 50, "Orange" 权重 20
+        RandomGenerator<String> randomGenerator = new RandomGenerator<>(
+                "Apple", 30,
+                "Banana", 50,
+                "Orange", 20
+        );
+
+        // 使用普通伪随机数生成器进行随机选择
+        String result = randomGenerator.getResult();
+        System.out.println("普通伪随机数生成器选择的结果: " + result);
+
+        // 使用更安全的随机数生成器进行随机选择
+        String secureResult = randomGenerator.getResultWithSecureRandom();
+        System.out.println("更安全的随机数生成器选择的结果: " + secureResult);
+
+        // 使用蒙特卡罗方法进行随机选择
+        String monteCarloResult = randomGenerator.getResultWithMonteCarlo();
+        System.out.println("蒙特卡罗方法选择的结果: " + monteCarloResult);
+
+        // 使用洗牌方法进行随机选择
+        String shuffleResult = randomGenerator.getResultWithShuffle();
+        System.out.println("洗牌方法选择的结果: " + shuffleResult);
+
+        // 使用高斯方法进行随机选择
+        String gaussianResult = randomGenerator.getResultWithGaussian();
+        System.out.println("高斯方法选择的结果: " + gaussianResult);
+    }
+}
+```
+
+另外，权重的总和不必为 100，`RandomGenerator` 会自动根据权重比例计算概率。选择合适的随机算法取决于你的具体应用场景对性能、安全性和随机分布特性的要求。
