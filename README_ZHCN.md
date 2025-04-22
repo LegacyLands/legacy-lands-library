@@ -18,7 +18,7 @@
 ## 核心模块
 
 - [**annotation**](annotation/README_ZHCN.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理。
-- [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度、虚拟线程调度和 JSON 操作。
+- [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度、虚拟线程调度、JSON 操作和随机对象生成。。
 - [**configuration**](configuration/README_ZHCN.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化。
 - [**mongodb**](mongodb/README_ZHCN.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化。
 - [**cache**](cache/README_ZHCN.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制与通用的线程安全资源管理框架。
@@ -27,7 +27,9 @@
   三种 `JavaScript` 引擎。
 
 - [**experimental**](experimental/README.md) - 一些实验性的模块，可以显著提高性能，但可能过于复杂而无法使用或暂时不稳定。
-
+    - [**third-party-schedulers**](experimental/third-party-schedulers/README.md) - 通过 gRPC
+      外部任务调度器实现分布式任务处理，从而实现大型插件解耦和性能提升（适用于不需要访问 Bukkit API 的后端）。
+      非常适合机器学习、反作弊大数据计算、数学和类似应用。
 
 - **security** - *即将推出。*
 

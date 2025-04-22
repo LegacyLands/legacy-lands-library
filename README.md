@@ -20,7 +20,7 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 - [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and
   lifecycle management.
 - [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, virtual thread
-  scheduling, and JSON operations.
+  scheduling, JSON operations, and random object generation.
 - [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with
   serialization support.
 - [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence.
@@ -33,7 +33,11 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 
 - [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but
   may be too complex to use or temporarily unstable.
-
+    - [**third-party-schedulers**](experimental/third-party-schedulers/README.md) - Achieves distributed task processing
+      via gRPC external task schedulers, enabling large plugin decoupling and performance improvements (for backends
+      that cannot directly access the Bukkit API). Ideal for machine learning, anti-cheat large data computation,
+      mathematics, and similar
+      applications.
 
 - **security** - *Coming soon.*
 
