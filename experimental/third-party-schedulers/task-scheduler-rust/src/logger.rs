@@ -82,25 +82,25 @@ macro_rules! log {
 
 #[macro_export]
 macro_rules! info_log {
-    ($($arg:tt)+) => { $crate::log!(tracing::Level::INFO, $($arg)+); };
+    ($($arg:tt)+) => { $crate::log!(tracing::Level::INFO, $($arg)+) }
 }
 
 #[macro_export]
 macro_rules! warn_log {
-    ($($arg:tt)+) => { $crate::log!(tracing::Level::WARN, $($arg)+); };
+    ($($arg:tt)+) => { $crate::log!(tracing::Level::WARN, $($arg)+) }
 }
 
 #[macro_export]
 macro_rules! error_log {
-    ($($arg:tt)+) => { $crate::log!(tracing::Level::ERROR, $($arg)+); };
+    ($($arg:tt)+) => { $crate::log!(tracing::Level::ERROR, $($arg)+) }
 }
 
 #[macro_export]
 macro_rules! debug_log {
-    ($($arg:tt)+) => { $crate::log!(tracing::Level::DEBUG, $($arg)+); };
+    ($($arg:tt)+) => { $crate::log!(tracing::Level::DEBUG, $($arg)+) }
 }
 
 #[macro_export]
 macro_rules! trace_log {
-    ($($arg:tt)+) => { $crate::log!(tracing::Level::TRACE, $($arg)+); };
+    ($($arg:tt)+) => { $crate::log!(tracing::Level::TRACE, $($arg)+) }
 }

@@ -6,11 +6,14 @@ use crate::models::wrappers::{
 use crate::models::ArgValue;
 use crate::models::TaskResult;
 use crate::tasks::taskscheduler::{self, ListValue, MapValue};
+use crate::warn_log;
 use dashmap::DashMap;
 use lru::LruCache;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use prost::Message;
+use std::collections::HashMap;
+use std::future::Future;
 use std::num::NonZeroUsize;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -18,11 +21,35 @@ use std::sync::Arc;
 type TaskFn = fn(Vec<ArgValue>) -> TaskResultType<String>;
 type AsyncTaskFn = fn(Vec<ArgValue>) -> Pin<Box<dyn std::future::Future<Output = String> + Send>>;
 
+pub type DynamicSyncTaskFn = unsafe fn(Vec<ArgValue>) -> TaskResultType<String>;
+pub type DynamicAsyncTaskFn =
+    unsafe fn(Vec<ArgValue>) -> Pin<Box<dyn Future<Output = String> + Send>>;
+
 const CACHE_SIZE: usize = 1000;
 
+lazy_static::lazy_static! {
+    static ref DYNAMIC_SYNC_FUNCTIONS: DashMap<String, DynamicSyncTaskFn> = DashMap::new();
+    static ref DYNAMIC_ASYNC_FUNCTIONS: DashMap<String, DynamicAsyncTaskFn> = DashMap::new();
+    static ref FUNCTION_REGISTER_TIMES: DashMap<String, u64> = DashMap::new();
+}
+
+#[derive(Clone, Copy)]
+struct SyncTaskInfo {
+    func: TaskFn,
+    register_time: u64,
+    dynamic_lib: bool,
+}
+
+#[derive(Clone, Copy)]
+struct AsyncTaskInfo {
+    func: AsyncTaskFn,
+    register_time: u64,
+    dynamic_lib: bool,
+}
+
 pub struct TaskRegistry {
-    sync_tasks: DashMap<String, TaskFn, ahash::RandomState>,
-    async_tasks: DashMap<String, AsyncTaskFn, ahash::RandomState>,
+    sync_tasks: DashMap<String, SyncTaskInfo, ahash::RandomState>,
+    async_tasks: DashMap<String, AsyncTaskInfo, ahash::RandomState>,
     results_cache: Arc<[Mutex<LruCache<String, TaskResult>>; 32]>,
     cache_hasher: ahash::RandomState,
 }
@@ -44,11 +71,183 @@ impl Default for TaskRegistry {
 
 impl TaskRegistry {
     pub fn register_sync_task(&self, name: &str, func: TaskFn) {
-        self.sync_tasks.insert(name.to_string(), func);
+        let current_time = Self::get_current_timestamp();
+        if self.sync_tasks.contains_key(name) {
+            let old_reg_time = self
+                .sync_tasks
+                .get(name)
+                .map(|e| e.register_time)
+                .unwrap_or(0);
+            warn_log!(
+                "Task name conflict: Sync task '{}' already exists (registered at: {} ms), will be overwritten (new time: {} ms)",
+                name,
+                old_reg_time,
+                current_time
+            );
+        }
+
+        self.sync_tasks.insert(
+            name.to_string(),
+            SyncTaskInfo {
+                func,
+                register_time: current_time,
+                dynamic_lib: false,
+            },
+        );
     }
 
     pub fn register_async_task(&self, name: &str, func: AsyncTaskFn) {
-        self.async_tasks.insert(name.to_string(), func);
+        let current_time = Self::get_current_timestamp();
+        if self.async_tasks.contains_key(name) {
+            let old_reg_time = self
+                .async_tasks
+                .get(name)
+                .map(|e| e.register_time)
+                .unwrap_or(0);
+            warn_log!(
+                "Task name conflict: Async task '{}' already exists (registered at: {} ms), will be overwritten (new time: {} ms)",
+                name,
+                old_reg_time,
+                current_time
+            );
+        }
+
+        self.async_tasks.insert(
+            name.to_string(),
+            AsyncTaskInfo {
+                func,
+                register_time: current_time,
+                dynamic_lib: false,
+            },
+        );
+    }
+
+    pub fn register_dynamic_sync_task(
+        &self,
+        name: &str,
+        func: DynamicSyncTaskFn,
+        register_time: u64,
+    ) -> bool {
+        if self.sync_tasks.contains_key(name) {
+            let old_reg_time = self
+                .sync_tasks
+                .get(name)
+                .map(|e| e.register_time)
+                .unwrap_or(0);
+            if register_time <= old_reg_time {
+                warn_log!(
+                    "Task registration conflict: Dynamic sync task '{}' already exists with earlier registration time (existing: {} ms, attempted: {} ms), not overwriting",
+                    name, old_reg_time, register_time
+                );
+                return false;
+            }
+
+            warn_log!(
+                "Task name conflict: Sync task '{}' already exists (registered at: {} ms), will be overwritten by dynamic task (registration time: {} ms)",
+                name, old_reg_time, register_time
+            );
+        }
+
+        DYNAMIC_SYNC_FUNCTIONS.insert(name.to_string(), func);
+        FUNCTION_REGISTER_TIMES.insert(name.to_string(), register_time);
+
+        self.sync_tasks.insert(
+            name.to_string(),
+            SyncTaskInfo {
+                func: dynamic_sync_wrapper,
+                register_time,
+                dynamic_lib: true,
+            },
+        );
+
+        true
+    }
+
+    pub fn register_dynamic_async_task(
+        &self,
+        name: &str,
+        func: DynamicAsyncTaskFn,
+        register_time: u64,
+    ) -> bool {
+        if self.async_tasks.contains_key(name) {
+            let old_reg_time = self
+                .async_tasks
+                .get(name)
+                .map(|e| e.register_time)
+                .unwrap_or(0);
+            if register_time <= old_reg_time {
+                warn_log!(
+                    "Task registration conflict: Dynamic async task '{}' already exists with earlier registration time (existing: {} ms, attempted: {} ms), not overwriting",
+                    name, old_reg_time, register_time
+                );
+                return false;
+            }
+
+            warn_log!(
+                "Task name conflict: Async task '{}' already exists (registered at: {} ms), will be overwritten by dynamic task (registration time: {} ms)",
+                name, old_reg_time, register_time
+            );
+        }
+
+        DYNAMIC_ASYNC_FUNCTIONS.insert(name.to_string(), func);
+        FUNCTION_REGISTER_TIMES.insert(name.to_string(), register_time);
+
+        self.async_tasks.insert(
+            name.to_string(),
+            AsyncTaskInfo {
+                func: dynamic_async_wrapper,
+                register_time,
+                dynamic_lib: true,
+            },
+        );
+
+        true
+    }
+
+    pub fn unregister_task(&self, name: &str) {
+        let removed_sync = self.sync_tasks.remove(name);
+        let removed_async = self.async_tasks.remove(name);
+
+        DYNAMIC_SYNC_FUNCTIONS.remove(name);
+        DYNAMIC_ASYNC_FUNCTIONS.remove(name);
+        FUNCTION_REGISTER_TIMES.remove(name);
+
+        if removed_sync.is_some() || removed_async.is_some() {
+            let task_type = if removed_sync.is_some() {
+                "sync"
+            } else {
+                "async"
+            };
+            warn_log!("Unregistered {} task: {}", task_type, name);
+        }
+    }
+
+    fn get_current_timestamp() -> u64 {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64
+    }
+
+    pub fn list_all_tasks(&self) -> HashMap<String, (bool, bool, u64)> {
+        let mut tasks = HashMap::new();
+
+        for entry in self.sync_tasks.iter() {
+            tasks.insert(
+                entry.key().clone(),
+                (true, entry.dynamic_lib, entry.register_time),
+            );
+        }
+
+        for entry in self.async_tasks.iter() {
+            tasks.insert(
+                entry.key().clone(),
+                (false, entry.dynamic_lib, entry.register_time),
+            );
+        }
+
+        tasks
     }
 
     #[inline]
@@ -177,14 +376,14 @@ impl TaskRegistry {
             let async_func = self
                 .async_tasks
                 .get(&task.method)
-                .map(|f| *f.value())
+                .map(|entry| entry.func)
                 .ok_or_else(|| TaskError::MethodNotFound(task.method.clone()))?;
             async_func(args_converted).await
         } else {
             let sync_func = self
                 .sync_tasks
                 .get(&task.method)
-                .map(|f| *f.value())
+                .map(|entry| entry.func)
                 .ok_or_else(|| TaskError::MethodNotFound(task.method.clone()))?;
             sync_func(args_converted)?
         };
@@ -232,4 +431,37 @@ pub async fn process_task(req: &taskscheduler::TaskRequest) -> TaskResult {
             TaskResult { status, value }
         }
     }
+}
+
+fn dynamic_sync_wrapper(args: Vec<ArgValue>) -> TaskResultType<String> {
+    for entry in DYNAMIC_SYNC_FUNCTIONS.iter() {
+        let dynamic_fn = entry.value();
+        match unsafe { dynamic_fn(args.clone()) } {
+            Ok(result) => return Ok(result),
+            Err(_) => continue,
+        }
+    }
+
+    Err(TaskError::MethodNotFound(
+        "Dynamic sync function not found or all functions failed".to_string(),
+    ))
+}
+
+fn dynamic_async_wrapper(args: Vec<ArgValue>) -> Pin<Box<dyn Future<Output = String> + Send>> {
+    let args_clone = args.clone();
+
+    let mut function_list = Vec::new();
+    for entry in DYNAMIC_ASYNC_FUNCTIONS.iter() {
+        function_list.push((entry.key().clone(), *entry.value()));
+    }
+
+    Box::pin(async move {
+        if !function_list.is_empty() {
+            let (_, dynamic_fn) = &function_list[0];
+            let future = unsafe { dynamic_fn(args_clone) };
+            return future.await;
+        }
+
+        "Error: No dynamic async functions registered".to_string()
+    })
 }

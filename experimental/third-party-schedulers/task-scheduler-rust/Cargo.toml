@@ -24,6 +24,9 @@ tokio = { version = "1.0", features = [
     "macros",
     "sync",
     "fs",
+    "process",
+    "io-util",
+    "time",
 ] }
 prost = "0.13.5"
 prost-types = "0.13.5"
@@ -50,6 +53,10 @@ tracing-appender = "0.2"
 time = { version = "0.3", features = ["macros", "local-offset", "formatting"] }
 lazy_static = "1.4.0"
 anyhow = "1.0"
+libloading = "0.8"
+notify = "8.0.0"
+notify-debouncer-full = "0.5.0"
+rustyline = "15.0.0"
 
 [build-dependencies]
 tonic-build = { version = "0.13.0", features = ["transport", "prost"] }

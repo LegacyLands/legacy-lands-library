@@ -109,6 +109,7 @@ gradle-app.setting
 # Cache of project
 .gradletasknamecache
 
+# Rust artifacts
 **/build/
 
 # Common working directory
@@ -116,9 +117,6 @@ run/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
-
-# Rust artifacts
-**/build/
 
 ## Rust target
 **/target/
@@ -131,3 +129,7 @@ Cargo.lock
 
 # Log files
 logs/
+
+# third-party-schedulers rust libraries
+libraries/
+disabled_plugins/

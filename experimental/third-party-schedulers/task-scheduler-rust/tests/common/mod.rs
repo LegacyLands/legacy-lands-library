@@ -1,6 +1,20 @@
-use portpicker;
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, Once};
 use std::time::Duration;
+
+pub mod utils;
+
+// Define base test port
+pub const TEST_PORT: u16 = 50051;
+static INIT: Once = Once::new();
+static PORT_COUNTER: Mutex<u16> = Mutex::new(0);
+
+/// Get the next available port
+fn get_next_port() -> u16 {
+    let mut counter = PORT_COUNTER.lock().unwrap();
+    *counter += 1;
+    TEST_PORT + *counter
+}
 
 pub struct TestServer {
     process: Child,
@@ -46,23 +60,23 @@ impl Drop for TestServer {
     }
 }
 
-/// Sets up a *new* test server instance on a free port for each call.
-/// Returns a TestServer struct containing the server address and process handle.
+/// Set up test server with automatically assigned port
 #[allow(clippy::zombie_processes)]
 pub async fn setup() -> TestServer {
-    println!("Ensuring test server binary is built...");
-    assert!(
-        Command::new("cargo")
-            .args(["build", "--bin", "task-scheduler"])
-            .status()
-            .expect("Failed to build server binary")
-            .success(),
-        "Failed to build the server binary"
-    );
+    // Ensure binary is built only once
+    INIT.call_once(|| {
+        println!("Ensuring test server binary is built...");
+        assert!(
+            Command::new("cargo")
+                .args(["build", "--bin", "task-scheduler"])
+                .status()
+                .expect("Failed to build server binary")
+                .success(),
+            "Failed to build the server binary"
+        );
+    });
 
-    let port = portpicker::pick_unused_port().expect("Failed to find an unused port");
-    println!("Selected port {} for test server.", port);
-
+    let port = get_next_port();
     println!("Starting test server process on port {}...", port);
     let process = Command::new("target/debug/task-scheduler")
         .arg("--addr")
@@ -77,7 +91,53 @@ pub async fn setup() -> TestServer {
         port
     );
 
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    // Wait for server to start
+    tokio::time::sleep(Duration::from_millis(700)).await;
+
+    TestServer { process, port }
+}
+
+/// Set up test server with custom options
+#[allow(clippy::zombie_processes)]
+#[allow(dead_code)]
+pub async fn setup_with_options(port: Option<u16>, library_dir: Option<&str>) -> TestServer {
+    // Ensure binary is built only once
+    INIT.call_once(|| {
+        println!("Ensuring test server binary is built...");
+        assert!(
+            Command::new("cargo")
+                .args(["build", "--bin", "task-scheduler"])
+                .status()
+                .expect("Failed to build server binary")
+                .success(),
+            "Failed to build the server binary"
+        );
+    });
+
+    let port = port.unwrap_or_else(get_next_port);
+    println!("Starting test server process on port {}...", port);
+    let mut command = Command::new("target/debug/task-scheduler");
+    command.arg("--addr").arg(format!("127.0.0.1:{}", port));
+
+    // Add library directory option if provided
+    if let Some(dir) = library_dir {
+        command.arg("--library-dir").arg(dir);
+    }
+
+    let process = command
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("Failed to start server process");
+
+    println!(
+        "Test server process started (PID: {}, Port: {}).",
+        process.id(),
+        port
+    );
+
+    // Wait for server to start
+    tokio::time::sleep(Duration::from_millis(700)).await;
 
     TestServer { process, port }
 }
