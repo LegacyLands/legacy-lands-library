@@ -63,6 +63,6 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface<ScheduledFu
     @Override
     public ScheduledFuture<?> start() {
         return scheduleAtFixedRateWithVirtualThread(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService, ttl).start(),
-                delay.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
+                delay.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
     }
 }

@@ -97,6 +97,6 @@ public class EntityDataPersistenceTimerTask implements TaskInterface<ScheduledFu
     @Override
     public ScheduledFuture<?> start() {
         return scheduleAtFixedRateWithVirtualThread(() -> EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start(),
-                delay.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
+                delay.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
     }
 } 

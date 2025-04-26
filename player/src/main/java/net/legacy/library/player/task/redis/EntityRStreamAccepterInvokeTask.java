@@ -230,6 +230,6 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface<ScheduledF
             }
         };
 
-        return scheduleAtFixedRateWithVirtualThread(runnable, period.getSeconds(), period.getSeconds(), TimeUnit.SECONDS);
+        return scheduleAtFixedRateWithVirtualThread(runnable, period.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
     }
 }

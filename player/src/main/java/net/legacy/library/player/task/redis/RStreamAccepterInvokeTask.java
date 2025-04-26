@@ -241,6 +241,6 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
             }
         };
 
-        return scheduleAtFixedRateWithVirtualThread(runnable, interval.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
+        return scheduleAtFixedRateWithVirtualThread(runnable, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
     }
 }
