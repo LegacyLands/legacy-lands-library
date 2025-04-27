@@ -163,8 +163,10 @@ algorithms to meet the needs of different scenarios.
   number of random events. Theoretically fairer, but may be less efficient with large datasets.
 - **Shuffle Method (`getResultWithShuffle`)**: Randomizes by shuffling the order of the object list. Good randomness,
   but may not strictly adhere to the set weights.
-- **Mersenne Twister (`getResultWithMersenneTwister`)**: A high-quality pseudo-random number generator known for its very long period and good statistical properties.
-- **XORShift (`getResultWithXORShift`)**: A class of fast and simple pseudo-random number generators. Generally good, but might not pass all stringent statistical tests.
+- **Mersenne Twister (`getResultWithMersenneTwister`)**: A high-quality pseudo-random number generator known for its
+  very long period and good statistical properties.
+- **XORShift (`getResultWithXORShift`)**: A class of fast and simple pseudo-random number generators. Generally good,
+  but might not pass all stringent statistical tests.
 - **Gaussian Method (`getResultWithGaussian`)**: Generates random numbers following a Gaussian (normal) distribution for
   selection. This can make the selection result tend towards areas with concentrated weights, rather than simple linear
   probability.
@@ -206,3 +208,404 @@ public class Main {
 Additionally, the sum of weights does not need to be 100; `RandomGenerator` automatically calculates probabilities based
 on the weight proportions. Choosing the appropriate random algorithm depends on the specific requirements of your
 application scenario regarding performance, security, and random distribution characteristics.
+
+### [ValidationUtil](src/main/java/net/legacy/library/commons/util/ValidationUtil.java)
+
+`ValidationUtil` is a comprehensive static utility class designed to simplify various common input validation tasks in
+Java applications. It provides a concise and easy-to-use API, supporting multiple validation approaches and covering a
+wide range of data types.
+
+**Core Features:**
+
+* **Multiple Validation Modes**: Offers methods that return boolean values (e.g., `isNull`, `isEmpty`) and methods that
+  throw exceptions upon validation failure (e.g., `requireNonNull`, `requireNotEmpty`).
+* **Exception Flexibility**: Supports throwing standard Java exceptions (`IllegalArgumentException`,
+  `NullPointerException`, `IndexOutOfBoundsException`) or custom exceptions provided by the caller (via `Supplier`).
+* **Broad Type Coverage**: Supports validation for objects, strings, collections, maps, arrays, numeric types (
+  int/long), and indices.
+* **Ease of Use**: All methods are static, allowing for direct invocation.
+
+**Detailed Method Descriptions and Examples:**
+
+#### Object Validation
+
+Used to check if an object is `null` and if two objects are equal.
+
+* `isNull(Object value)`: Checks if the object is `null`.
+* `notNull(Object value)`: Checks if the object is not `null`.
+* `requireNonNull(Object value, String message)`: Ensures the object is not `null`, throws `NullPointerException`
+  otherwise.
+* `requireNonNull(T value, Supplier<? extends X> exceptionSupplier)`: Ensures the object is not `null`, throws a custom
+  exception otherwise.
+* `equals(Object object1, Object object2)`: Checks if two objects are equal.
+* `notEquals(Object object1, Object object2)`: Checks if two objects are not equal.
+* `requireEquals(Object object1, Object object2, String message)`: Ensures two objects are equal, throws
+  `IllegalArgumentException` otherwise.
+* `requireEquals(Object object1, Object object2, Supplier<? extends X> exceptionSupplier)`: Ensures two objects are
+  equal, throws a custom exception otherwise.
+
+```java
+public class ObjectValidationExample {
+    public static void main(String[] args) {
+        Object obj = null;
+        Object obj2 = "Hello";
+
+        if (ValidationUtil.isNull(obj)) {
+            System.out.println("obj is null"); // Output: obj is null
+        }
+
+        ValidationUtil.requireNonNull(obj2, "obj2 cannot be null");
+
+        try {
+            ValidationUtil.requireNonNull(obj, () -> new IllegalStateException("Object must not be null here."));
+        } catch (IllegalStateException exception) {
+            System.err.println(exception.getMessage()); // Output: Object must not be null here.
+        }
+
+        String s1 = "test";
+        String s2 = new String("test"); // Same content, different object
+        String s3 = "different";
+
+        // Compare content using Objects.equals
+        if (ValidationUtil.equals(s1, s2)) {
+            System.out.println("s1 and s2 are equal (content-wise)"); // Output: s1 and s2 are equal (content-wise)
+        }
+
+        ValidationUtil.requireEquals(s1, s2, "s1 and s2 must be equal");
+
+        try {
+            ValidationUtil.requireEquals(s1, s3, () -> new RuntimeException("Strings must match"));
+        } catch (RuntimeException exception) {
+            System.err.println(exception.getMessage()); // Output: Strings must match
+        }
+    }
+}
+```
+
+#### String Validation
+
+Provides checks for whether a string is empty, blank, within a specific length, or matches a regular expression.
+
+* `isEmpty(String inputString)`: Checks if the string is `null` or empty `""`.
+* `isBlank(String inputString)`: Checks if the string is `null`, empty `""`, or contains only whitespace characters.
+* `notEmpty(String inputString)`: Checks if the string is not `null` and not empty `""`.
+* `notBlank(String inputString)`: Checks if the string is not `null`, not empty `""`, and contains non-whitespace
+  characters.
+* `requireNotEmpty(String inputString, String message)`: Ensures the string is not empty, throws
+  `IllegalArgumentException` otherwise.
+* `requireNotBlank(String inputString, String message)`: Ensures the string is not blank, throws
+  `IllegalArgumentException` otherwise.
+* `requireNotEmpty(String inputString, Supplier<? extends X> exceptionSupplier)`: Ensures the string is not empty,
+  throws a custom exception otherwise.
+* `requireNotBlank(String inputString, Supplier<? extends X> exceptionSupplier)`: Ensures the string is not blank,
+  throws a custom exception otherwise.
+* `lengthBetween(String inputString, int minLength, int maxLength)`: Checks if the string length is within the range
+  `[minLength, maxLength]`.
+* `requireLengthBetween(String inputString, int minLength, int maxLength, String message)`: Ensures the string length is
+  within the range, throws `IllegalArgumentException` otherwise.
+* `requireLengthBetween(String inputString, int minLength, int maxLength, Supplier<? extends X> exceptionSupplier)`:
+  Ensures the string length is within the range, throws a custom exception otherwise.
+* `matches(String inputString, String regex)` / `matches(String inputString, Pattern pattern)`: Checks if the string
+  matches the regular expression.
+* `requireMatches(String inputString, String regex, String message)` /
+  `requireMatches(String inputString, Pattern pattern, String message)`: Ensures the string matches the regex, throws
+  `IllegalArgumentException` otherwise.
+* `requireMatches(String inputString, String regex, Supplier<? extends X> exceptionSupplier)` /
+  `requireMatches(String inputString, Pattern pattern, Supplier<? extends X> exceptionSupplier)`: Ensures the string
+  matches the regex, throws a custom exception otherwise.
+
+```java
+public class StringValidationExample {
+    public static void main(String[] args) {
+        String emptyStr = "";
+        String blankStr = "   ";
+        String validStr = " example ";
+        String numberStr = "12345";
+        Pattern numberPattern = Pattern.compile("\\d+");
+
+        if (ValidationUtil.isEmpty(emptyStr)) {
+            System.out.println("emptyStr is empty"); // Output: emptyStr is empty
+        }
+        if (ValidationUtil.isBlank(blankStr)) {
+            System.out.println("blankStr is blank"); // Output: blankStr is blank
+        }
+        if (ValidationUtil.notBlank(validStr)) {
+            System.out.println("validStr is not blank"); // Output: validStr is not blank
+        }
+
+        ValidationUtil.requireNotBlank(validStr, "String must not be blank");
+        ValidationUtil.requireLengthBetween(validStr.trim(), 5, 10, "Trimmed length (example) must be between 5 and 10"); // "example" has length 7
+        ValidationUtil.requireMatches(numberStr, numberPattern, "String must contain only digits");
+
+        try {
+            ValidationUtil.requireNotEmpty(emptyStr, () -> new NoSuchElementException("String is required."));
+        } catch (NoSuchElementException exception) {
+            System.err.println(exception.getMessage()); // Output: String is required.
+        }
+    }
+}
+```
+
+#### Collection/Map/Array Validation
+
+Used to check if a collection, map, or array is `null` or empty.
+
+* `isEmpty(Collection<?> collection)` / `isEmpty(Map<?, ?> map)` / `isEmpty(T[] array)`: Checks if `null` or empty.
+* `notEmpty(Collection<?> collection)` / `notEmpty(Map<?, ?> map)` / `notEmpty(T[] array)`: Checks if not `null` and not
+  empty.
+* `requireNotEmpty(Collection<?> collection, String message)` / `requireNotEmpty(Map<?, ?> map, String message)` /
+  `requireNotEmpty(T[] array, String message)`: Ensures not empty, throws `IllegalArgumentException` otherwise.
+*
+`requireNotEmpty(Collection<?> collection, Supplier<? extends X> exceptionSupplier)` / `requireNotEmpty(Map<?, ?> map, Supplier<? extends X> exceptionSupplier)` /
+`requireNotEmpty(T[] array, Supplier<? extends X> exceptionSupplier)`: Ensures not empty, throws a custom exception
+otherwise.
+
+```java
+public class CollectionMapArrayValidationExample {
+    public static void main(String[] args) {
+        List<String> emptyList = new ArrayList<>();
+        List<String> list = List.of("a", "b");
+        Map<String, Integer> emptyMap = Map.of();
+        Map<String, Integer> map = Map.of("one", 1);
+        String[] emptyArray = {};
+        String[] array = {"x", "y"};
+
+        if (ValidationUtil.isEmpty(emptyList)) {
+            System.out.println("emptyList is empty"); // Output: emptyList is empty
+        }
+        if (ValidationUtil.notEmpty(list)) {
+            System.out.println("list is not empty"); // Output: list is not empty
+        }
+        if (ValidationUtil.isEmpty(emptyMap)) {
+            System.out.println("emptyMap is empty"); // Output: emptyMap is empty
+        }
+        if (ValidationUtil.notEmpty(map)) {
+            System.out.println("map is not empty"); // Output: map is not empty
+        }
+        if (ValidationUtil.isEmpty(emptyArray)) {
+            System.out.println("emptyArray is empty"); // Output: emptyArray is empty
+        }
+        if (ValidationUtil.notEmpty(array)) {
+            System.out.println("array is not empty"); // Output: array is not empty
+        }
+
+        ValidationUtil.requireNotEmpty(list, "List cannot be empty.");
+        ValidationUtil.requireNotEmpty(map, "Map cannot be empty.");
+        ValidationUtil.requireNotEmpty(array, "Array cannot be empty.");
+
+        try {
+            ValidationUtil.requireNotEmpty(emptyList, () -> new IllegalStateException("Need at least one element in the list"));
+        } catch (IllegalStateException exception) {
+            System.err.println(exception.getMessage()); // Output: Need at least one element in the list
+        }
+
+        try {
+            ValidationUtil.requireNotEmpty(emptyMap, () -> new IllegalStateException("Need at least one entry in the map"));
+        } catch (IllegalStateException exception) {
+            System.err.println(exception.getMessage()); // Output: Need at least one entry in the map
+        }
+
+        try {
+            ValidationUtil.requireNotEmpty(emptyArray, () -> new IllegalStateException("Need at least one element in the array"));
+        } catch (IllegalStateException exception) {
+            System.err.println(exception.getMessage()); // Output: Need at least one element in the array
+        }
+    }
+}
+```
+
+#### Numeric Validation (int/long)
+
+Compares numeric values or checks if they fall within a specified range.
+
+* `isGreaterThan(int/long value, int/long min)`: Checks `value > min`.
+* `isGreaterThanOrEqual(int/long value, int/long min)`: Checks `value >= min`.
+* `isLessThan(int/long value, int/long max)`: Checks `value < max`.
+* `isLessThanOrEqual(int/long value, int/long max)`: Checks `value <= max`.
+* `isBetween(int/long value, int/long min, int/long max)`: Checks `min <= value <= max`.
+* `requireGreaterThan(int/long value, int/long min, String message)`: Ensures `value > min`, throws
+  `IllegalArgumentException` otherwise.
+* `requireBetween(int/long value, int/long min, int/long max, String message)`: Ensures `min <= value <= max`, throws
+  `IllegalArgumentException` otherwise.
+* `requireGreaterThan(int/long value, int/long min, Supplier<? extends X> exceptionSupplier)`: Ensures `value > min`,
+  throws a custom exception otherwise.
+* `requireBetween(int/long value, int/long min, int/long max, Supplier<? extends X> exceptionSupplier)`: Ensures
+  `min <= value <= max`, throws a custom exception otherwise.
+
+```java
+public class NumericValidationExample {
+    public static void main(String[] args) {
+        int age = 25;
+        long count = 100L;
+
+        if (ValidationUtil.isGreaterThan(age, 18)) {
+            System.out.println("Age is greater than 18"); // Output: Age is greater than 18
+        }
+        if (ValidationUtil.isBetween(count, 50L, 200L)) {
+            System.out.println("Count is between 50 and 200"); // Output: Count is between 50 and 200
+        }
+
+        ValidationUtil.requireGreaterThan(age, 0, "Age must be positive.");
+        ValidationUtil.requireBetween(count, 1L, 1000L, "Count must be between 1 and 1000.");
+
+        try {
+            ValidationUtil.requireBetween(age, 30, 40, () -> new IllegalArgumentException("Age must be in the 30s"));
+        } catch (IllegalArgumentException exception) {
+            System.err.println(exception.getMessage()); // Output: Age must be in the 30s
+        }
+
+        long largeValue = 5_000_000_000L;
+        ValidationUtil.requireGreaterThan(largeValue, 4_000_000_000L, "Value must be over 4 billion");
+    }
+}
+```
+
+#### Index Validation
+
+Used for safely accessing elements of arrays, lists, or strings, or checking if an index is a valid position.
+
+* `isIndexValid(int index, int size)`: Checks if the index is within the bounds `[0, size)`.
+* `checkElementIndex(int index, int size)` / `checkElementIndex(int index, int size, String message)` /
+  `checkElementIndex(int index, int size, Supplier<? extends X> exceptionSupplier)`: Ensures the index is within
+  `[0, size)` for element access. Throws `IndexOutOfBoundsException` or a custom exception on failure.
+* `checkPositionIndex(int index, int size)` / `checkPositionIndex(int index, int size, String message)` /
+  `checkPositionIndex(int index, int size, Supplier<? extends X> exceptionSupplier)`: Ensures the index is within
+  `[0, size]` for iteration or insertion. Throws `IndexOutOfBoundsException` or a custom exception on failure.
+
+```java
+public class IndexValidationExample {
+    public static void main(String[] args) {
+        List<String> data = new ArrayList<>(List.of("one", "two"));
+        int validAccessIndex = 1;
+        int invalidAccessIndex = 2;
+        int validPositionIndex = 2;
+        int invalidPositionIndex = 3;
+
+        if (ValidationUtil.isIndexValid(validAccessIndex, data.size())) {
+            System.out.println("Element at index " + validAccessIndex + ": " + data.get(validAccessIndex)); // Output: Element at index 1: two
+        }
+
+        // Validate access index
+        ValidationUtil.checkElementIndex(validAccessIndex, data.size(), "Invalid index to access element.");
+        try {
+            ValidationUtil.checkElementIndex(invalidAccessIndex, data.size());
+        } catch (IndexOutOfBoundsException exception) {
+            // Output: Access attempt failed: Index 2 out of bounds for length 2
+            System.err.println("Access attempt failed: " + exception.getMessage());
+        }
+
+        // Validate position index
+        ValidationUtil.checkPositionIndex(validPositionIndex, data.size(), "Invalid index for position.");
+        // data.add(validPositionIndex, "three"); // This line is now legal
+        // System.out.println("After adding at valid position: " + data);
+
+        try {
+            ValidationUtil.checkPositionIndex(invalidPositionIndex, data.size(), () -> new RuntimeException("Cannot use index " + invalidPositionIndex + " as position"));
+        } catch (RuntimeException exception) {
+            // Output: Position check failed: Cannot use index 3 as position
+            System.err.println("Position check failed: " + exception.getMessage());
+        }
+    }
+}
+```
+
+#### Boolean Condition Validation
+
+Ensures that a boolean condition is `true` or `false`.
+
+* `requireTrue(boolean condition, String message)` /
+  `requireTrue(boolean condition, Supplier<? extends X> exceptionSupplier)`: Ensures the condition is `true`, throws
+  `IllegalArgumentException` or a custom exception otherwise.
+* `requireFalse(boolean condition, String message)` /
+  `requireFalse(boolean condition, Supplier<? extends X> exceptionSupplier)`: Ensures the condition is `false`, throws
+  `IllegalArgumentException` or a custom exception otherwise.
+
+```java
+public class ConditionValidationExample {
+    public static void main(String[] args) {
+        boolean isEnabled = true;
+        boolean hasError = false;
+
+        ValidationUtil.requireTrue(isEnabled, "Feature must be enabled.");
+        ValidationUtil.requireFalse(hasError, () -> new IllegalStateException("Cannot proceed with errors."));
+
+        try {
+            ValidationUtil.requireTrue(!isEnabled, "This should fail if enabled.");
+        } catch (IllegalArgumentException exception) {
+            // Output: This should fail if enabled.
+            System.err.println(exception.getMessage());
+        }
+
+        try {
+            ValidationUtil.requireFalse(isEnabled, "This should fail if feature is enabled.");
+        } catch (IllegalArgumentException exception) {
+            // Output: This should fail if feature is enabled.
+            System.err.println(exception.getMessage());
+        }
+    }
+}
+```
+
+#### Generic Validation
+
+Allows using custom `Predicate` functions to perform complex validation logic.
+
+* `validate(T value, Predicate<T> predicate, String message)`: Validates `value` using the `predicate`. Throws
+  `IllegalArgumentException` if the predicate returns `false`.
+* `validate(T value, Predicate<T> predicate, Supplier<? extends X> exceptionSupplier)`: Validates `value` using the
+  `predicate`. Throws a custom exception if the predicate returns `false`.
+
+```java
+public class GenericValidationExample {
+    // Example User class
+    static class User {
+        String name;
+        int level;
+
+        User(String name, int level) {
+            this.name = name;
+            this.level = level;
+        }
+
+        @Override
+        public String toString() {
+            return "User{name='" + name + "', level=" + level + '}';
+        }
+    }
+
+    public static void main(String[] args) {
+        User validUser = new User("Admin", 10);
+        User invalidUserLowLevel = new User("PowerUser", 3);
+        User invalidUserGuest = new User("guest", 8);
+
+        // Define a validation rule: username cannot be "guest" (case-insensitive) and level must be > 5
+        Predicate<User> complexUserPredicate = u ->
+                !"guest".equalsIgnoreCase(u.name) && u.level > 5;
+
+        // Validate using standard exception
+        ValidationUtil.validate(validUser, complexUserPredicate, "Invalid user data: Must not be guest and level > 5.");
+        System.out.println("Valid user passed validation: " + validUser);
+
+        // Validate using custom exception - low level user
+        try {
+            ValidationUtil.validate(invalidUserLowLevel, complexUserPredicate, () ->
+                    new SecurityException("Access denied for user '" + invalidUserLowLevel.name + "': Level must be > 5."));
+        } catch (SecurityException exception) {
+            // Output: Access denied for user 'PowerUser': Level must be > 5.
+            System.err.println(exception.getMessage());
+        }
+
+        // Validate using custom exception - Guest user
+        try {
+            ValidationUtil.validate(invalidUserGuest, complexUserPredicate, () ->
+                    new SecurityException("Access denied: Guest users are not allowed."));
+        } catch (SecurityException exception) {
+            // Output: Access denied: Guest users are not allowed.
+            System.err.println(exception.getMessage());
+        }
+    }
+}
+```
+
+By combining these methods, `ValidationUtil` helps build robust and understandable validation layers, improving code
+quality and maintainability.
