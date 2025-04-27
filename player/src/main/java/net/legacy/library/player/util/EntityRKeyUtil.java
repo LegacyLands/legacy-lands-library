@@ -19,7 +19,6 @@ public class EntityRKeyUtil {
     private static final String ENTITY_RW_LOCK_PREFIX = "legacy:entity:rw-lock:";
     private static final String ENTITY_STREAM_PREFIX = "legacy:entity:stream:";
     private static final String ENTITY_LOCK_PREFIX = "legacy:entity:lock:";
-    private static final String ENTITY_PATTERN_PREFIX = "legacy:entity:";
     private static final String ENTITY_TEMP_MAP_PREFIX = "legacy:entity:temp:";
 
     /**
