@@ -356,6 +356,7 @@ Used to check if a collection, map, or array is `null` or empty.
 * `requireNotEmpty(Collection<?> collection, String message)` / `requireNotEmpty(Map<?, ?> map, String message)` /
   `requireNotEmpty(T[] array, String message)`: Ensures not empty, throws `IllegalArgumentException` otherwise.
 *
+
 `requireNotEmpty(Collection<?> collection, Supplier<? extends X> exceptionSupplier)` / `requireNotEmpty(Map<?, ?> map, Supplier<? extends X> exceptionSupplier)` /
 `requireNotEmpty(T[] array, Supplier<? extends X> exceptionSupplier)`: Ensures not empty, throws a custom exception
 otherwise.
@@ -609,3 +610,70 @@ public class GenericValidationExample {
 
 By combining these methods, `ValidationUtil` helps build robust and understandable validation layers, improving code
 quality and maintainability.
+
+### [SpatialUtil](src/main/java/net/legacy/library/commons/util/SpatialUtil.java)
+
+`SpatialUtil` is a utility class for handling spatial calculations related to Bukkit `Location`. It provides methods for
+checking positional relationships and the existence of blocks within an area.
+
+* **`isWithinRectangle(Location loc1, Location loc2, Location target)`**:
+    * **Function**: Checks if the target location `target` is horizontally (ignoring the Y-axis) within the rectangular
+      area defined by two corner points `loc1` and `loc2` (inclusive).
+    * **Return Value**: Returns `true` if the target location is within the rectangle and all `Location` objects are in
+      the same world and not `null`; otherwise returns `false`.
+    * **Complexity**: O(1)
+
+```java
+public class RectangleCheckExample {
+    public static void main(String[] args) {
+        // Assume loc1, loc2, target are valid Location objects in the same world
+        Location corner1 = new Location(world, 10, 64, 20);
+        Location corner2 = new Location(world, 30, 64, 40);
+        Location insideTarget = new Location(world, 15, 70, 25); // Y-axis is ignored
+        Location outsideTarget = new Location(world, 5, 64, 30);
+
+        if (SpatialUtil.isWithinRectangle(corner1, corner2, insideTarget)) {
+            System.out.println("insideTarget is within the rectangle"); // Output
+        } else {
+            System.out.println("insideTarget is not within the rectangle");
+        }
+
+        if (SpatialUtil.isWithinRectangle(corner1, corner2, outsideTarget)) {
+            System.out.println("outsideTarget is within the rectangle");
+        } else {
+            System.out.println("outsideTarget is not within the rectangle"); // Output
+        }
+    }
+}
+```
+
+* **`hasBlocksNearby(Location center, int xRange, int yRange, int zRange)`**:
+    * **Function**: Checks if there are any non-air blocks (`AIR`, `CAVE_AIR`, `VOID_AIR`) within the cuboid region
+      centered at `center`. The parameters `xRange`, `yRange`, and `zRange` define the approximate total size along each axis;
+      the actual check range extends `range / 2` blocks in both positive and negative directions from the center block's coordinates.
+      This method uses `ChunkSnapshot` for efficiency, especially when the check range spans multiple chunks.
+    * **Warning**: Checking very large ranges consumes significant server resources (CPU, memory) as it needs to iterate
+      through all blocks in the range and potentially load/create chunk snapshots. **It is strongly recommended to
+      perform this check asynchronously** to avoid blocking the main thread.
+    * **Complexity**: Worst case is approximately O(xRange * yRange * zRange), proportional to the volume of blocks
+      checked.
+
+```java
+public class BlockCheckExample {
+    public void checkArea(Location center) {
+        // Check for blocks within a range centered at 'center'.
+        // A range of 10 along an axis means checking 5 blocks in the positive and 5 blocks in the negative direction from the center block.
+        // So, xRange=10 checks from center.X - 5 to center.X + 5 (inclusive, covering 11 blocks if xRange is even).
+        int xRange = 10;
+        int yRange = 10;
+        int zRange = 10;
+
+        boolean blocksFound = SpatialUtil.hasBlocksNearby(center, xRange, yRange, zRange);
+        if (blocksFound) {
+            System.out.println("Non-air blocks exist within the specified range around center (" + center.getBlockX() + ", " + center.getBlockY() + ", " + center.getBlockZ() + ").");
+        } else {
+            System.out.println("No non-air blocks found within the specified range around center (" + center.getBlockX() + ", " + center.getBlockY() + ", " + center.getBlockZ() + ").");
+        }
+    }
+}
+```

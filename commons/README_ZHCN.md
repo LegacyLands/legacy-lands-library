@@ -566,3 +566,62 @@ public class GenericValidationExample {
 ```
 
 通过组合使用这些方法，`ValidationUtil` 可以帮助您构建健壮且易于理解的校验层，提高代码质量和可维护性。
+
+### [SpatialUtil](src/main/java/net/legacy/library/commons/util/SpatialUtil.java)
+
+`SpatialUtil` 是一个用于处理 Bukkit `Location` 相关空间计算的实用工具类。它提供了一些用于检查位置关系和区域内方块存在性的方法。
+
+* **`isWithinRectangle(Location loc1, Location loc2, Location target)`**:
+    * **功能**: 检查目标位置 `target` 在水平面上（忽略 Y 轴）是否位于由两个角点 `loc1` 和 `loc2` 定义的矩形区域内（包含边界）
+    * **返回值**: 如果目标位置在矩形内，并且所有 `Location` 都在同一个世界且不为 `null`，则返回 `true`；否则返回 `false`
+    * **复杂度**: O(1)
+
+```java
+public class RectangleCheckExample {
+    public static void main(String[] args) {
+        // 假设 loc1, loc2, target 是有效的 Location 对象且在同一世界
+        Location corner1 = new Location(world, 10, 64, 20);
+        Location corner2 = new Location(world, 30, 64, 40);
+        Location insideTarget = new Location(world, 15, 70, 25); // Y 轴被忽略
+        Location outsideTarget = new Location(world, 5, 64, 30);
+
+        if (SpatialUtil.isWithinRectangle(corner1, corner2, insideTarget)) {
+            System.out.println("insideTarget 在矩形内"); // 输出
+        } else {
+            System.out.println("insideTarget 不在矩形内");
+        }
+
+        if (SpatialUtil.isWithinRectangle(corner1, corner2, outsideTarget)) {
+            System.out.println("outsideTarget 在矩形内");
+        } else {
+            System.out.println("outsideTarget 不在矩形内"); // 输出
+        }
+    }
+}
+```
+
+* **`hasBlocksNearby(Location center, int xRange, int yRange, int zRange)`**:
+    * **功能**: 检查以 `center` 为中心的指定范围的长方体区域内，是否存在任何非空气方块（`AIR`, `CAVE_AIR`,
+      `VOID_AIR`）。参数 `xRange`, `yRange`, `zRange` 定义了各轴上的大致总范围；实际检查范围是从中心方块坐标向正负方向各延伸 `range / 2` 格。
+      该方法使用 `ChunkSnapshot` 以提高效率，尤其是在检查范围跨越多个区块时。
+    * **警告**: 检查非常大的范围会消耗大量服务器资源（CPU、内存），因为它需要迭代检查范围内的所有方块，并可能加载/创建区块快照。
+
+```java
+public class BlockCheckExample {
+    public void checkArea(Location center) {
+        // 检查以 center 为中心的指定范围内的方块
+        // 轴范围为 10 表示从中心方块向正负方向各检查 5 格。
+        // 例如，xRange=10 会检查 X 坐标从 center.X - 5 到 center.X + 5 (包含边界，如果xRange是偶数，则覆盖11格)
+        int xRange = 10;
+        int yRange = 10;
+        int zRange = 10;
+
+        boolean blocksFound = SpatialUtil.hasBlocksNearby(center, xRange, yRange, zRange);
+        if (blocksFound) {
+            System.out.println("中心点 (" + center.getBlockX() + ", " + center.getBlockY() + ", " + center.getBlockZ() + ") 周围的指定范围内存在非空气方块。");
+        } else {
+            System.out.println("中心点 (" + center.getBlockX() + ", " + center.getBlockY() + ", " + center.getBlockZ() + ") 周围的指定范围内没有非空气方块。");
+        }
+    }
+}
+```
