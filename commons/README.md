@@ -616,32 +616,39 @@ quality and maintainability.
 `SpatialUtil` is a utility class for handling spatial calculations related to Bukkit `Location`. It provides methods for
 checking positional relationships and the existence of blocks within an area.
 
-* **`isWithinRectangle(Location loc1, Location loc2, Location target)`**:
-    * **Function**: Checks if the target location `target` is horizontally (ignoring the Y-axis) within the rectangular
-      area defined by two corner points `loc1` and `loc2` (inclusive).
-    * **Return Value**: Returns `true` if the target location is within the rectangle and all `Location` objects are in
+* **`isWithinCuboid(Location loc1, Location loc2, Location target)`**:
+    * **Function**: Checks if the target location `target` is within the cuboid (rectangular prism) defined by two diagonal
+      corner points `loc1` and `loc2` (inclusive).
+    * **Return Value**: Returns `true` if the target location is within the cuboid and all `Location` objects are in
       the same world and not `null`; otherwise returns `false`.
     * **Complexity**: O(1)
 
 ```java
-public class RectangleCheckExample {
+public class CuboidCheckExample {
     public static void main(String[] args) {
-        // Assume loc1, loc2, target are valid Location objects in the same world
-        Location corner1 = new Location(world, 10, 64, 20);
-        Location corner2 = new Location(world, 30, 64, 40);
-        Location insideTarget = new Location(world, 15, 70, 25); // Y-axis is ignored
-        Location outsideTarget = new Location(world, 5, 64, 30);
+        Location corner1 = new Location(world, 10, 60, 20);
+        Location corner2 = new Location(world, 30, 70, 40);
+        
+        Location insideTarget = new Location(world, 15, 65, 25); // Target within X, Y, Z bounds
+        Location outsideTargetY = new Location(world, 15, 75, 25); // Target outside Y bounds
+        Location outsideTargetX = new Location(world, 5, 65, 30);  // Target outside X bounds
 
-        if (SpatialUtil.isWithinRectangle(corner1, corner2, insideTarget)) {
-            System.out.println("insideTarget is within the rectangle"); // Output
+        if (SpatialUtil.isWithinCuboid(corner1, corner2, insideTarget)) {
+            System.out.println("insideTarget is within the cuboid");
         } else {
-            System.out.println("insideTarget is not within the rectangle");
+            System.out.println("insideTarget is not within the cuboid");
         }
 
-        if (SpatialUtil.isWithinRectangle(corner1, corner2, outsideTarget)) {
-            System.out.println("outsideTarget is within the rectangle");
+        if (SpatialUtil.isWithinCuboid(corner1, corner2, outsideTargetY)) {
+            System.out.println("outsideTargetY is within the cuboid");
         } else {
-            System.out.println("outsideTarget is not within the rectangle"); // Output
+            System.out.println("outsideTargetY is not within the cuboid");
+        }
+
+        if (SpatialUtil.isWithinCuboid(corner1, corner2, outsideTargetX)) {
+            System.out.println("outsideTargetX is within the cuboid");
+        } else {
+            System.out.println("outsideTargetX is not within the cuboid");
         }
     }
 }

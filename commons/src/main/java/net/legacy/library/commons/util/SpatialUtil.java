@@ -15,41 +15,48 @@ import org.bukkit.World;
 @UtilityClass
 public class SpatialUtil {
     /**
-     * Checks if a target location is horizontally within the rectangle defined by two corner locations (ignores Y-axis).
+     * Checks if a target location is within the cuboid (rectangular prism) defined by two diagonal corner locations.
      *
      * <p>The time complexity of this method is O(1).
      *
-     * @param loc1   the first corner of the rectangle
-     * @param loc2   the second corner of the rectangle
+     * @param loc1   the first corner of the cuboid
+     * @param loc2   the second corner of the cuboid
      * @param target the location to check
-     * @return {@code true} if the target location is within the rectangle (inclusive of boundaries), {@code false} otherwise.
+     * @return {@code true} if the target location is within the cuboid (inclusive of boundaries), {@code false} otherwise.
      * Also returns {@code false} if any location is null or if the locations are not in the same world
      */
-    public static boolean isWithinRectangle(Location loc1, Location loc2, Location target) {
+    public static boolean isWithinCuboid(Location loc1, Location loc2, Location target) {
         if (loc1 == null || loc2 == null || target == null) {
             return false;
         }
 
         World loc1World = loc1.getWorld();
 
-        if (!loc1World.equals(loc2.getWorld()) || !loc1World.equals(target.getWorld())) {
+        if (loc1World == null || !loc1World.equals(loc2.getWorld()) || !loc1World.equals(target.getWorld())) {
             return false;
         }
 
         double x1 = loc1.getX();
+        double y1 = loc1.getY();
         double z1 = loc1.getZ();
         double x2 = loc2.getX();
+        double y2 = loc2.getY();
         double z2 = loc2.getZ();
 
         double minX = Math.min(x1, x2);
         double maxX = Math.max(x1, x2);
+        double minY = Math.min(y1, y2);
+        double maxY = Math.max(y1, y2);
         double minZ = Math.min(z1, z2);
         double maxZ = Math.max(z1, z2);
 
         double targetX = target.getX();
+        double targetY = target.getY();
         double targetZ = target.getZ();
 
-        return targetX >= minX && targetX <= maxX && targetZ >= minZ && targetZ <= maxZ;
+        return targetX >= minX && targetX <= maxX &&
+               targetY >= minY && targetY <= maxY &&
+               targetZ >= minZ && targetZ <= maxZ;
     }
 
     /**

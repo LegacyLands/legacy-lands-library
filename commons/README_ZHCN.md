@@ -571,30 +571,37 @@ public class GenericValidationExample {
 
 `SpatialUtil` 是一个用于处理 Bukkit `Location` 相关空间计算的实用工具类。它提供了一些用于检查位置关系和区域内方块存在性的方法。
 
-* **`isWithinRectangle(Location loc1, Location loc2, Location target)`**:
-    * **功能**: 检查目标位置 `target` 在水平面上（忽略 Y 轴）是否位于由两个角点 `loc1` 和 `loc2` 定义的矩形区域内（包含边界）
-    * **返回值**: 如果目标位置在矩形内，并且所有 `Location` 都在同一个世界且不为 `null`，则返回 `true`；否则返回 `false`
+* **`isWithinCuboid(Location loc1, Location loc2, Location target)`**:
+    * **功能**: 检查目标位置 `target` 是否位于由两个对角点 `loc1` 和 `loc2` 定义的长方体区域内（包含边界）
+    * **返回值**: 如果目标位置在长方体内，并且所有 `Location` 都在同一个世界且不为 `null`，则返回 `true`；否则返回 `false`
     * **复杂度**: O(1)
 
 ```java
-public class RectangleCheckExample {
+public class CuboidCheckExample {
     public static void main(String[] args) {
-        // 假设 loc1, loc2, target 是有效的 Location 对象且在同一世界
-        Location corner1 = new Location(world, 10, 64, 20);
-        Location corner2 = new Location(world, 30, 64, 40);
-        Location insideTarget = new Location(world, 15, 70, 25); // Y 轴被忽略
-        Location outsideTarget = new Location(world, 5, 64, 30);
+        Location corner1 = new Location(world, 10, 60, 20);
+        Location corner2 = new Location(world, 30, 70, 40);
+        
+        Location insideTarget = new Location(world, 15, 65, 25); // 目标在 X, Y, Z 边界内
+        Location outsideTargetY = new Location(world, 15, 75, 25); // 目标在 Y 边界外
+        Location outsideTargetX = new Location(world, 5, 65, 30);  // 目标在 X 边界外
 
-        if (SpatialUtil.isWithinRectangle(corner1, corner2, insideTarget)) {
-            System.out.println("insideTarget 在矩形内"); // 输出
+        if (SpatialUtil.isWithinCuboid(corner1, corner2, insideTarget)) {
+            System.out.println("insideTarget 在长方体内");
         } else {
-            System.out.println("insideTarget 不在矩形内");
+            System.out.println("insideTarget 不在长方体内");
         }
 
-        if (SpatialUtil.isWithinRectangle(corner1, corner2, outsideTarget)) {
-            System.out.println("outsideTarget 在矩形内");
+        if (SpatialUtil.isWithinCuboid(corner1, corner2, outsideTargetY)) {
+            System.out.println("outsideTargetY 在长方体内");
         } else {
-            System.out.println("outsideTarget 不在矩形内"); // 输出
+            System.out.println("outsideTargetY 不在长方体内");
+        }
+
+        if (SpatialUtil.isWithinCuboid(corner1, corner2, outsideTargetX)) {
+            System.out.println("outsideTargetX 在长方体内");
+        } else {
+            System.out.println("outsideTargetX 不在长方体内");
         }
     }
 }
@@ -603,8 +610,8 @@ public class RectangleCheckExample {
 * **`hasBlocksNearby(Location center, int xRange, int yRange, int zRange)`**:
     * **功能**: 检查以 `center` 为中心的指定范围的长方体区域内，是否存在任何非空气方块（`AIR`, `CAVE_AIR`,
       `VOID_AIR`）。参数 `xRange`, `yRange`, `zRange` 定义了各轴上的大致总范围；实际检查范围是从中心方块坐标向正负方向各延伸 `range / 2` 格。
-      该方法使用 `ChunkSnapshot` 以提高效率，尤其是在检查范围跨越多个区块时。
-    * **警告**: 检查非常大的范围会消耗大量服务器资源（CPU、内存），因为它需要迭代检查范围内的所有方块，并可能加载/创建区块快照。
+      该方法使用 `ChunkSnapshot` 以提高效率，尤其是在检查范围跨越多个区块时
+    * **警告**: 检查非常大的范围会消耗大量服务器资源（CPU、内存），因为它需要迭代检查范围内的所有方块，并可能加载/创建区块快照
 
 ```java
 public class BlockCheckExample {
