@@ -173,13 +173,14 @@ public interface TaskInterface<R> {
      * @param task  the task to be executed
      * @param delay the delay before execution
      * @param unit  the time unit of the delay parameter
-     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     * @return a {@link VirtualThreadScheduledFuture} representing the pending completion of the task
      */
-    default ScheduledFuture<?> scheduleWithVirtualThread(Runnable task, long delay, TimeUnit unit) {
-        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
-            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
-            return scheduler.schedule(() -> virtualThreadExecutor.execute(task), delay, unit);
-        }
+    default VirtualThreadScheduledFuture scheduleWithVirtualThread(Runnable task, long delay, TimeUnit unit) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+        ScheduledFuture<?> scheduledFuture =
+                scheduler.schedule(() -> virtualThreadExecutor.execute(task), delay, unit);
+        return new VirtualThreadScheduledFuture(scheduledFuture, scheduler);
     }
 
     /**
@@ -189,13 +190,14 @@ public interface TaskInterface<R> {
      * @param task  the task to be executed
      * @param delay the delay before execution
      * @param unit  the time unit of the delay parameter
-     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     * @return a {@link VirtualThreadScheduledFuture} representing the pending completion of the task
      */
-    default <T> ScheduledFuture<T> scheduleWithVirtualThread(Callable<T> task, long delay, TimeUnit unit) {
-        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
-            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
-            return scheduler.schedule(() -> virtualThreadExecutor.submit(task).get(), delay, unit);
-        }
+    default <T> VirtualThreadScheduledFuture scheduleWithVirtualThread(Callable<T> task, long delay, TimeUnit unit) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+        ScheduledFuture<T> scheduledFuture =
+                scheduler.schedule(() -> virtualThreadExecutor.submit(task).get(), delay, unit);
+        return new VirtualThreadScheduledFuture(scheduledFuture, scheduler);
     }
 
     /**
@@ -206,13 +208,14 @@ public interface TaskInterface<R> {
      * @param initialDelay the delay before the first execution
      * @param period       the period between successive executions
      * @param unit         the time unit for initialDelay and period
-     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     * @return a {@link VirtualThreadScheduledFuture} representing the pending completion of the task
      */
-    default ScheduledFuture<?> scheduleAtFixedRateWithVirtualThread(Runnable task, long initialDelay, long period, TimeUnit unit) {
-        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
-            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
-            return scheduler.scheduleAtFixedRate(() -> virtualThreadExecutor.execute(task), initialDelay, period, unit);
-        }
+    default VirtualThreadScheduledFuture scheduleAtFixedRateWithVirtualThread(Runnable task, long initialDelay, long period, TimeUnit unit) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+        ScheduledFuture<?> scheduledFuture =
+                scheduler.scheduleAtFixedRate(() -> virtualThreadExecutor.execute(task), initialDelay, period, unit);
+        return new VirtualThreadScheduledFuture(scheduledFuture, scheduler);
     }
 
     /**
@@ -224,13 +227,14 @@ public interface TaskInterface<R> {
      * @param initialDelay the delay before the first execution
      * @param delay        the delay between the end of one execution and the start of the next
      * @param unit         the time unit for initialDelay and delay
-     * @return a {@link ScheduledFuture} representing the pending completion of the task
+     * @return a {@link VirtualThreadScheduledFuture} representing the pending completion of the task
      */
-    default ScheduledFuture<?> scheduleWithFixedDelayWithVirtualThread(Runnable task, long initialDelay, long delay, TimeUnit unit) {
-        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
-            ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
-            return scheduler.scheduleWithFixedDelay(() -> virtualThreadExecutor.execute(task), initialDelay, delay, unit);
-        }
+    default VirtualThreadScheduledFuture scheduleWithFixedDelayWithVirtualThread(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        ExecutorService virtualThreadExecutor = getVirtualThreadPerTaskExecutor();
+        ScheduledFuture<?> scheduledFuture =
+                scheduler.scheduleWithFixedDelay(() -> virtualThreadExecutor.execute(task), initialDelay, delay, unit);
+        return new VirtualThreadScheduledFuture(scheduledFuture, scheduler);
     }
 
     /**
