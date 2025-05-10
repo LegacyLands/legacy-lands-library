@@ -14,6 +14,7 @@ import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.multi.FlexibleMultiLevelCacheService;
 import net.legacy.library.cache.service.multi.TieredCacheLevel;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
+import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.model.LegacyEntityData;
 import net.legacy.library.player.model.RelationshipCriteria;
@@ -47,7 +48,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -87,8 +87,8 @@ public class LegacyEntityDataService {
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
-    private final ScheduledFuture<?> entityDataPersistenceTimerTask;
-    private final ScheduledFuture<?> redisStreamAcceptTask;
+    private final VirtualThreadScheduledFuture entityDataPersistenceTimerTask;
+    private final VirtualThreadScheduledFuture redisStreamAcceptTask;
 
     /**
      * Constructs a new {@link LegacyEntityDataService}.

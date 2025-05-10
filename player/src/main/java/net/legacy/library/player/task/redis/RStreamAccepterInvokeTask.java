@@ -8,6 +8,7 @@ import net.legacy.library.annotation.util.AnnotationScanner;
 import net.legacy.library.annotation.util.ReflectUtil;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
+import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.player.annotation.RStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
@@ -23,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2025-01-04 20:06
  */
 @Getter
-public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<?>> {
+public class RStreamAccepterInvokeTask implements TaskInterface<VirtualThreadScheduledFuture> {
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -129,7 +129,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface<ScheduledFuture<
      * @return {@inheritDoc}
      */
     @Override
-    public ScheduledFuture<?> start() {
+    public VirtualThreadScheduledFuture start() {
         Runnable runnable = () -> {
             RedisCacheServiceInterface redisCacheService = legacyPlayerDataService.getL2Cache();
             RedissonClient redissonClient = redisCacheService.getResource();

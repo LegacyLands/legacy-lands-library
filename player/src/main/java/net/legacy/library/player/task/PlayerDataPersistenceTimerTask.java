@@ -3,10 +3,10 @@ package net.legacy.library.player.task;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.commons.task.TaskInterface;
+import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 
 import java.time.Duration;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2025-01-04 12:53
  */
 @RequiredArgsConstructor
-public class PlayerDataPersistenceTimerTask implements TaskInterface<ScheduledFuture<?>> {
+public class PlayerDataPersistenceTimerTask implements TaskInterface<VirtualThreadScheduledFuture> {
     private final Duration delay;
     private final Duration interval;
     private final LockSettings lockSettings;
@@ -61,7 +61,7 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface<ScheduledFu
      * @return {@inheritDoc}
      */
     @Override
-    public ScheduledFuture<?> start() {
+    public VirtualThreadScheduledFuture start() {
         return scheduleAtFixedRateWithVirtualThread(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService, ttl).start(),
                 delay.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
     }
