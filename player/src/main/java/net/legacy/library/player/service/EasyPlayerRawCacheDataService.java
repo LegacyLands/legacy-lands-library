@@ -67,7 +67,7 @@ public class EasyPlayerRawCacheDataService {
      * @return a new instance of {@link EasyPlayerRawCacheDataService}
      * @throws IllegalStateException if a service with the same name already exists
      */
-    public EasyPlayerRawCacheDataService of(String name) {
+    public static EasyPlayerRawCacheDataService of(String name) {
         return new EasyPlayerRawCacheDataService(name);
     }
 
