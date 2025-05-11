@@ -96,4 +96,15 @@ public class EasyPlayerRawCacheDataService {
 
         return Optional.of(data);
     }
+
+    /**
+     * Retrieves the {@link EasyPlayerRawCacheData} for the specified UUID.
+     *
+     * @param uuid              the unique identifier of the player
+     * @return an {@link EasyPlayerRawCacheData} if found or created
+     */
+    public EasyPlayerRawCacheData get(UUID uuid) {
+        // noinspection OptionalGetWithoutIsPresent
+        return get(uuid, true).get(); // 100% not empty
+    }
 }
