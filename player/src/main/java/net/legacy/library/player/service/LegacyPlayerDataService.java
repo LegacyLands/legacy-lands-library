@@ -91,6 +91,15 @@ public class LegacyPlayerDataService {
                                    List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl
 
     ) {
+        // Record all LegacyPlayerDataService first
+        Cache<String, LegacyPlayerDataService> cache = LEGACY_PLAYER_DATA_SERVICES.getResource();
+
+        if (cache.getIfPresent(name) != null) {
+            throw new IllegalStateException("LegacyPlayerDataService with name " + name + " already exists");
+        }
+
+        cache.put(name, this);
+
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
@@ -107,15 +116,6 @@ public class LegacyPlayerDataService {
                 TieredCacheLevel.of(1, cacheStringCacheServiceInterface),
                 TieredCacheLevel.of(2, redisCacheServiceInterface)
         ));
-
-        // Record all LegacyPlayerDataService
-        Cache<String, LegacyPlayerDataService> cache = LEGACY_PLAYER_DATA_SERVICES.getResource();
-
-        if (cache.getIfPresent(name) != null) {
-            throw new IllegalStateException("LegacyPlayerDataService with name " + name + " already exists");
-        }
-
-        cache.put(name, this);
 
         // Auto save task
         this.playerDataPersistenceTimerTask =

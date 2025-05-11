@@ -105,6 +105,15 @@ public class LegacyEntityDataService {
     public LegacyEntityDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
                                    Config config, Duration autoSaveInterval, List<String> basePackages,
                                    List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl) {
+        // Record all LegacyEntityDataService instances first
+        Cache<String, LegacyEntityDataService> cache = LEGACY_ENTITY_DATA_SERVICES.getResource();
+
+        if (cache.getIfPresent(name) != null) {
+            throw new IllegalStateException("LegacyEntityDataService with name " + name + " already exists");
+        }
+
+        cache.put(name, this);
+
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
 
@@ -121,15 +130,6 @@ public class LegacyEntityDataService {
                 TieredCacheLevel.of(1, cacheStringCacheServiceInterface),
                 TieredCacheLevel.of(2, redisCacheServiceInterface)
         ));
-
-        // Record all LegacyEntityDataService instances
-        Cache<String, LegacyEntityDataService> cache = LEGACY_ENTITY_DATA_SERVICES.getResource();
-
-        if (cache.getIfPresent(name) != null) {
-            throw new IllegalStateException("LegacyEntityDataService with name " + name + " already exists");
-        }
-
-        cache.put(name, this);
 
         // Auto save task
         this.entityDataPersistenceTimerTask =

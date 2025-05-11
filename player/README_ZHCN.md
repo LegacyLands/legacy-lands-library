@@ -165,10 +165,81 @@ public class PlayerDataExample {
 
         // 6. 删除属性
         playerData.removeData("temporaryBuff");  // 移除单个属性
+    }
+}
+```
 
-        // 7. 使用临时缓存（不持久化到数据库）
-        playerData.getRawCache().getResource().put("combatCooldown", "1000");
-        String cooldown = playerData.getRawCache().getResource().getIfPresent("combatCooldown");
+### 仅存在于单端的热数据
+
+```java
+public class EasyPlayerRawCacheExample {
+    public void singleServerHotDataUsage() {
+        // 1. 创建 EasyPlayerRawCacheDataService 实例
+        EasyPlayerRawCacheDataService cacheService = new EasyPlayerRawCacheDataService("game-session-cache");
+
+        // 2. 获取玩家的临时数据缓存（get 方法传入布尔值，意为若不存在则创建）
+        UUID playerUuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        EasyPlayerRawCacheData playerCache = cacheService.get(playerUuid, true).orElseThrow();
+
+        // 3. 存储临时会话数据（这些数据只存在于当前服务器的内存中，不会持久化）
+        playerCache.getRawCache().getResource().put("lastClickTime", String.valueOf(System.currentTimeMillis()));
+        playerCache.getRawCache().getResource().put("currentZone", "pvp_arena_5");
+        playerCache.getRawCache().getResource().put("temporaryBuffs", "speed:30,strength:15");
+
+        // 4. 读取临时会话数据
+        String lastClickTime = playerCache.getRawCache().getResource().getIfPresent("lastClickTime");
+        String currentZone = playerCache.getRawCache().getResource().getIfPresent("currentZone");
+
+        // 5. 为特定功能创建自定义缓存（例如：玩家当前会话击杀记录）
+        CacheServiceInterface<Cache<UUID, Integer>, Integer> killCountCache =
+                CacheServiceFactory.createCaffeineCache();
+        playerCache.addCustomRawCache("killCount", killCountCache);
+
+        // 使用自定义缓存
+        Cache<UUID, Integer> killCounts = playerCache.getCustomRawCache("killCount").getResource();
+
+        // 记录玩家击杀
+        UUID victimId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+        killCounts.put(victimId, 1);
+
+        // 检查玩家是否有特定击杀记录
+        boolean hasKilled = killCounts.getIfPresent(victimId) != null;
+
+        // 增加击杀计数
+        Integer currentKills = killCounts.getIfPresent(victimId);
+        if (currentKills != null) {
+            killCounts.put(victimId, currentKills + 1);
+        }
+
+        // 6. 检查玩家是否有特定类型的自定义缓存
+        boolean hasInventoryCache = playerCache.hasCustomRawCache("tempInventory");
+
+        // 7. 从另一个服务获取相同缓存服务
+        EasyPlayerRawCacheDataService sameService =
+                EasyPlayerRawCacheDataService.EASY_PLAYER_RAW_CACHE_DATA_SERVICES
+                        .getResource()
+                        .getIfPresent("game-session-cache");
+
+        // 8. 使用场景示例：存储玩家当前会话的临时排行榜数据
+        CacheServiceInterface<Cache<String, Long>, Long> scoreCache =
+                CacheServiceFactory.createCaffeineCache();
+        playerCache.addCustomRawCache("sessionScores", scoreCache);
+
+        Cache<String, Long> scores = playerCache.getCustomRawCache("sessionScores").getResource();
+        scores.put("kills", 15L);
+        scores.put("deaths", 3L);
+        scores.put("assists", 7L);
+        scores.put("flagCaptures", 2L);
+
+        // 计算临时KDA比率（只计算当前游戏会话，不影响持久数据）
+        Long kills = scores.getIfPresent("kills");
+        Long deaths = scores.getIfPresent("deaths");
+        Long assists = scores.getIfPresent("assists");
+
+        if (kills != null && deaths != null && assists != null && deaths > 0) {
+            double kda = (kills + assists) / (double) deaths;
+            scores.put("kda", Double.doubleToRawLongBits(kda));
+        }
     }
 }
 ```

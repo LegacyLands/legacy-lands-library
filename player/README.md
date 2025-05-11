@@ -180,10 +180,81 @@ public class PlayerDataExample {
 
         // 6. Remove attribute
         playerData.removeData("temporaryBuff");  // Remove single attribute
+    }
+}
+```
 
-        // 7. Using temporary cache (not persisted to database)
-        playerData.getRawCache().getResource().put("combatCooldown", "1000");
-        String cooldown = playerData.getRawCache().getResource().getIfPresent("combatCooldown");
+### Single-Server Hot Data
+
+```java
+public class EasyPlayerRawCacheExample {
+    public void singleServerHotDataUsage() {
+        // 1. Create an EasyPlayerRawCacheDataService instance
+        EasyPlayerRawCacheDataService cacheService = new EasyPlayerRawCacheDataService("game-session-cache");
+
+        // 2. Get the player's temporary data cache (the boolean parameter in get method means create if not exists)
+        UUID playerUuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        EasyPlayerRawCacheData playerCache = cacheService.get(playerUuid, true).orElseThrow();
+
+        // 3. Store temporary session data (this data only exists in the current server's memory, not persisted)
+        playerCache.getRawCache().getResource().put("lastClickTime", String.valueOf(System.currentTimeMillis()));
+        playerCache.getRawCache().getResource().put("currentZone", "pvp_arena_5");
+        playerCache.getRawCache().getResource().put("temporaryBuffs", "speed:30,strength:15");
+
+        // 4. Read temporary session data
+        String lastClickTime = playerCache.getRawCache().getResource().getIfPresent("lastClickTime");
+        String currentZone = playerCache.getRawCache().getResource().getIfPresent("currentZone");
+
+        // 5. Create custom cache for specific functionality (e.g., player's current session kill records)
+        CacheServiceInterface<Cache<UUID, Integer>, Integer> killCountCache =
+                CacheServiceFactory.createCaffeineCache();
+        playerCache.addCustomRawCache("killCount", killCountCache);
+
+        // Use custom cache
+        Cache<UUID, Integer> killCounts = playerCache.getCustomRawCache("killCount").getResource();
+
+        // Record player kill
+        UUID victimId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+        killCounts.put(victimId, 1);
+
+        // Check if player has specific kill record
+        boolean hasKilled = killCounts.getIfPresent(victimId) != null;
+
+        // Increase kill count
+        Integer currentKills = killCounts.getIfPresent(victimId);
+        if (currentKills != null) {
+            killCounts.put(victimId, currentKills + 1);
+        }
+
+        // 6. Check if player has a specific type of custom cache
+        boolean hasInventoryCache = playerCache.hasCustomRawCache("tempInventory");
+
+        // 7. Get the same cache service from another service
+        EasyPlayerRawCacheDataService sameService =
+                EasyPlayerRawCacheDataService.EASY_PLAYER_RAW_CACHE_DATA_SERVICES
+                        .getResource()
+                        .getIfPresent("game-session-cache");
+
+        // 8. Usage scenario: Store temporary leaderboard data for player's current session
+        CacheServiceInterface<Cache<String, Long>, Long> scoreCache =
+                CacheServiceFactory.createCaffeineCache();
+        playerCache.addCustomRawCache("sessionScores", scoreCache);
+
+        Cache<String, Long> scores = playerCache.getCustomRawCache("sessionScores").getResource();
+        scores.put("kills", 15L);
+        scores.put("deaths", 3L);
+        scores.put("assists", 7L);
+        scores.put("flagCaptures", 2L);
+
+        // Calculate temporary KDA ratio (only calculates for current game session, doesn't affect persistent data)
+        Long kills = scores.getIfPresent("kills");
+        Long deaths = scores.getIfPresent("deaths");
+        Long assists = scores.getIfPresent("assists");
+
+        if (kills != null && deaths != null && assists != null && deaths > 0) {
+            double kda = (kills + assists) / (double) deaths;
+            scores.put("kda", Double.doubleToRawLongBits(kda));
+        }
     }
 }
 ```
