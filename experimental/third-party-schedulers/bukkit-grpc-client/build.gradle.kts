@@ -67,8 +67,8 @@ dependencies {
     implementation("io.grpc:grpc-stub:1.72.0")
 
     // Google Protobuf
-    implementation("com.google.protobuf:protobuf-java:4.30.2")
-    implementation("com.google.protobuf:protobuf-java-util:4.30.2")
+    implementation("com.google.protobuf:protobuf-java:4.31.0")
+    implementation("com.google.protobuf:protobuf-java-util:4.31.0")
 
     // Guava for immutable collections
     implementation("com.google.guava:guava:33.4.8-jre")
