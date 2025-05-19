@@ -13,6 +13,7 @@ import io.fairyproject.log.Log;
 import lombok.Getter;
 import net.legacy.library.script.exception.ScriptException;
 import net.legacy.library.script.scope.ScriptScope;
+import org.apache.commons.lang3.Validate;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -60,6 +61,8 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
             Log.warn("ScriptScope is not supported and was passed with a non-null value. It will be ignored.");
         }
 
+        Validate.notNull(v8, "V8 is not initialized.");
+
         try {
             return v8.executeScript(script);
         } catch (V8ScriptExecutionException | V8ScriptCompilationException exception) {
@@ -82,6 +85,8 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
         if (scriptScope != null) {
             Log.warn("ScriptScope is not supported and was passed with a non-null value. It will be ignored.");
         }
+
+        Validate.notNull(v8, "V8 is not initialized.");
 
         try {
             v8.executeVoidScript(script);

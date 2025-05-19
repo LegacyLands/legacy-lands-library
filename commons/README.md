@@ -684,3 +684,7 @@ public class BlockCheckExample {
     }
 }
 ```
+
+### [AnvilGUI](https://github.com/WesJD/AnvilGUI)
+
+`AnvilGUI` (`net.legacy.library.libs.anvilgui`) is only packaged as a dependency and relocated, just to facilitate some repeated development.

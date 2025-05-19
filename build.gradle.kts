@@ -8,7 +8,6 @@ val isGitHubActions = project.hasProperty("isGitHubActions") && project.property
 
 group = properties("group")
 version = properties("version")
-val modules = rootProject.subprojects.map { it.name }
 
 plugins {
     // Java plugin
@@ -102,6 +101,11 @@ subprojects {
         relocate("io.github.retrooper.packetevents", "io.fairyproject.libs.packetevents")
         relocate("io.fairyproject.bukkit.menu", "${properties("package")}.fairy.menu")
 
+        // Relocate
+        relocate("de.leonhard.storage", "${properties("package")}.libs.simplixstorage")
+        relocate("org.reflections", "${properties("package")}.libs.reflections")
+        relocate("net.wesjd.anvilgui", "${properties("package")}.libs.anvilgui")
+
         archiveClassifier.set("plugin")
         mergeServiceFiles()
         exclude("META-INF/maven/**")
@@ -135,7 +139,6 @@ subprojects {
     tasks.register("allJar") {
         dependsOn("shadowJar", "sourcesJar", "javadocJar")
     }
-
 }
 
 publishing {

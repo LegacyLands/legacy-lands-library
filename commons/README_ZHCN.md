@@ -632,3 +632,7 @@ public class BlockCheckExample {
     }
 }
 ```
+
+### [AnvilGUI](https://github.com/WesJD/AnvilGUI)
+
+`AnvilGUI` (`net.legacy.library.libs.anvilgui`) 只是作为一个依赖项被打包进来，并且进行了重定位，这只是为了方便一些重复开发。
