@@ -72,7 +72,6 @@ public class NashornScriptEngine implements ScriptEngineInterface {
      */
     @Override
     public Object invokeFunction(String script, String functionName, ScriptScope scriptScope, Object... args) throws ScriptException {
-        // noinspection DuplicatedCode
         Validate.notNull(scriptEngine, "Nashorn engine is not initialized.");
 
         if (!(scriptEngine instanceof Invocable invocable)) {
@@ -160,7 +159,6 @@ public class NashornScriptEngine implements ScriptEngineInterface {
      */
     @Override
     public Object invokeCompiledFunction(Object compiledScript, String functionName, ScriptScope scriptScope, Object... args) throws ScriptException {
-        // noinspection DuplicatedCode
         Validate.notNull(scriptEngine, "Nashorn engine is not initialized.");
 
         if (!(scriptEngine instanceof Invocable invocable)) {

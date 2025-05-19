@@ -31,7 +31,7 @@ fairy {
 // Protobuf configuration
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.30.2"
+        artifact = "com.google.protobuf:protoc:4.31.0"
     }
     plugins {
         create("grpc") {
@@ -67,7 +67,7 @@ dependencies {
     implementation("io.grpc:grpc-stub:1.72.0")
 
     // Google Protobuf
-    implementation("com.google.protobuf:protobuf-java:4.30.2")
+    implementation("com.google.protobuf:protobuf-java:4.31.0")
     implementation("com.google.protobuf:protobuf-java-util:4.31.0")
 
     // Guava for immutable collections

@@ -31,6 +31,9 @@ public class EasyPlayerRawCacheData {
     private final CacheServiceInterface<Cache<String, String>, String> rawCache =
             CacheServiceFactory.createCaffeineCache();
 
+    /**
+     * Custom raw cache.
+     */
     private final Map<String, CacheServiceInterface<Cache<?, ?>, ?>> customRawCache =
             new ConcurrentHashMap<>();
 
