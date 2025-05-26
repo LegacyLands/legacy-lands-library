@@ -52,9 +52,11 @@ public interface TaskInterface<R> {
      * {@link MCScheduler} provided by {@link #getMCScheduler()}. This method could, for example,
      * schedule periodic tasks or a single one-time task.
      *
-     * @return an object representing the started task
+     * @return an object representing the started task or {@code null}
      */
-    R start();
+    default R start() {
+        return null;
+    }
 
     /**
      * Provides the {@link MCScheduler} instance used for scheduling tasks.

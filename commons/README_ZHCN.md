@@ -112,6 +112,251 @@ public class Example implements TaskInterface<ScheduledTask<?>> {
 
 至于如何在您自己的插件上使注解处理器工作，请参阅 [annotation](../annotation/README.md) 模块。更多方法请详细阅读 JavaDoc。
 
+### [TaskChain](src/main/java/net/legacy/library/commons/task/TaskChain.java)
+
+`TaskChain` 提供了一个强大的流式 API，用于链式构建和执行任务。它支持多种执行模式，包括虚拟线程、定时任务和异步操作，同时提供完善的结果管理和错误处理机制。
+
+#### 基本用法
+
+```java
+public class TaskChainExample {
+    public static void main(String[] args) {
+        // 创建任务链并执行多个任务
+        TaskChain taskChain = TaskChain.builder()
+                // 定义第一个任务的执行模式并立即执行
+                .withMode((taskInterface, task) -> {
+                    Log.info("执行任务: " + task);
+                    return "结果: " + task;
+                })
+                // withMode 方法 task 字段为：任务1（可以为 null）
+                .execute("任务1")
+
+                // 继续添加第二个任务
+                .then()
+                .withMode((taskInterface, task) -> {
+                    Log.info("执行任务: " + task);
+                    return "结果: " + task;
+                })
+                .run("任务2") // run 与 execute 等价，只是更直观的命名
+
+                // 添加命名任务以便后续访问
+                .then()
+                .withMode((taskInterface, task) -> // 此处的 task 即为下方 execute 的第二个传参
+                        CompletableFuture.supplyAsync(() -> {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return "计算完成: " + Math.random();
+                        }))
+                // 该任务名称为：计算任务，其上方 withMode 方法 task 字段即为：异步计算（可以为 null）
+                .execute("计算任务", "异步计算")
+
+                // 构建最终的任务链
+                .build();
+
+        // 等待所有任务完成
+        taskChain.join().get(5, TimeUnit.SECONDS);
+
+        // 通过名称获取结果
+        String result = taskChain.getResult("计算任务");
+        System.out.println("计算结果: " + result);
+
+        // 通过索引获取结果
+        String indexResult = taskChain.getResult(2);
+        System.out.println("索引2的结果: " + indexResult);
+
+        System.out.println("任务链包含 " + taskChain.size() + " 个任务");
+    }
+}
+```
+
+#### 虚拟线程
+
+```java
+public class VirtualThreadExample {
+    public static void main(String[] args) {
+        AtomicInteger counter = new AtomicInteger(0);
+
+        TaskChain taskChain = TaskChain.builder()
+                // 使用虚拟线程执行 I/O 密集型任务
+                .withMode((taskInterface, task) ->
+                        taskInterface.submitWithVirtualThreadAsync(() -> {
+                            counter.incrementAndGet();
+                            try {
+                                Thread.sleep(500); // 模拟网络请求或 I/O 操作
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return "虚拟线程任务完成: " + task;
+                        }))
+                .run("虚拟线程任务", "VT任务")
+                .then()
+                // 添加另一个虚拟线程任务
+                .withMode((taskInterface, task) ->
+                        taskInterface.submitWithVirtualThreadAsync(() -> {
+                            counter.incrementAndGet();
+                            Thread.sleep(100);
+                            return "虚拟线程任务完成: " + task;
+                        }))
+                .execute("VT任务2")
+                .build();
+
+        taskChain.join().get(5, TimeUnit.SECONDS);
+
+        String result1 = taskChain.getResult("虚拟线程任务");
+        String result2 = taskChain.getResult(1);
+        System.out.println("虚拟线程结果1: " + result1);
+        System.out.println("虚拟线程结果2: " + result2);
+    }
+}
+```
+
+#### 定时任务链
+
+```java
+public class ScheduledTaskExample {
+    public static void main(String[] args) {
+        long startTime = System.currentTimeMillis();
+
+        TaskChain taskChain = TaskChain.builder()
+                // 立即执行的任务
+                .withMode((taskInterface, task) -> {
+                    Log.info("立即执行: " + System.currentTimeMillis());
+                    return "立即执行结果";
+                })
+                .execute("立即任务")
+
+                // 延迟1秒执行的任务
+                .then()
+                .withMode((taskInterface, task) ->
+                        taskInterface.schedule(() -> {
+                            Log.info("延迟任务执行: " + task);
+                        }, 20L)) // 延迟1秒 (20 ticks)
+                .execute("延迟任务", "延迟任务")
+
+                // 虚拟线程延迟任务
+                .then()
+                .withMode((taskInterface, task) ->
+                        taskInterface.scheduleWithVirtualThread(() -> {
+                            Log.info("虚拟线程延迟任务执行: " + task);
+                        }, 100, TimeUnit.MILLISECONDS))
+                .run("虚拟线程延迟", "虚拟线程延迟任务")
+
+                .build();
+
+        // 等待所有任务完成
+        taskChain.join().get(10, TimeUnit.SECONDS);
+
+        // 可以获取原始的 Mode 返回值进行高级控制
+        ScheduledTask<?> scheduledTask = taskChain.getModeResult("延迟任务");
+        Object vtScheduledFuture = taskChain.getModeResult("虚拟线程延迟");
+
+        long executionTime = System.currentTimeMillis() - startTime;
+        System.out.println("总执行时间: " + executionTime + "ms");
+    }
+}
+```
+
+#### 结果管理和错误处理
+
+```java
+public class ResultManagementExample {
+    public static void main(String[] args) {
+        TaskChain taskChain = TaskChain.builder()
+                // 成功的任务
+                .withMode((taskInterface, task) ->
+                        CompletableFuture.supplyAsync(() -> "成功结果"))
+                .execute("成功任务", "同步任务")
+
+                // 可能失败的任务
+                .then()
+                .withMode((taskInterface, task) ->
+                        CompletableFuture.supplyAsync(() -> {
+                            if (Math.random() > 0.5) {
+                                throw new RuntimeException("随机失败");
+                            }
+                            return "风险任务成功";
+                        }))
+                .execute("风险任务", "异步任务")
+
+                .build();
+
+        try {
+            // 带超时的结果获取
+            String result1 = taskChain.getResult("成功任务", 5, TimeUnit.SECONDS);
+            System.out.println("成功任务结果: " + result1);
+
+            // 检查任务是否存在
+            if (taskChain.hasTask("风险任务")) {
+                String result2 = taskChain.getResult("风险任务");
+                System.out.println("风险任务结果: " + result2);
+            }
+
+        } catch (RuntimeException exception) {
+            System.err.println("任务执行失败: " + exception.getMessage());
+        }
+
+        // 获取所有原始 Mode 结果
+        List<Object> modeResults = taskChain.getAllModeResults();
+        System.out.println("Mode 结果数量: " + modeResults.size());
+
+        // 获取名称到索引的映射
+        Map<String, Integer> nameMapping = taskChain.getNameToIndexMap();
+        System.out.println("命名任务: " + nameMapping.keySet());
+
+        // 测试超时处理
+        TaskChain timeoutChain = TaskChain.builder()
+                .withMode((taskInterface, task) ->
+                        CompletableFuture.supplyAsync(() -> {
+                            try {
+                                Thread.sleep(2000); // 2秒延迟
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return "超时任务完成";
+                        }))
+                .execute("超时任务")
+                .build();
+
+        try {
+            timeoutChain.getResult(0, 500, TimeUnit.MILLISECONDS);
+        } catch (RuntimeException e) {
+            System.err.println("超时处理: " + e.getMessage());
+        }
+    }
+}
+```
+
+#### 自定义 TaskInterface
+
+```java
+public class CustomTaskInterfaceExample {
+    public static void main(String[] args) {
+        // 创建自定义的 TaskInterface
+        TaskInterface<?> customTaskInterface = new TaskInterface<>() {
+            @Override
+            public void execute(Runnable task) {
+                Log.info("使用自定义TaskInterface执行任务");
+                task.run();
+            }
+        };
+
+        TaskChain taskChain = TaskChain.builder(customTaskInterface)
+                .withMode((taskInterface, task) -> {
+                    taskInterface.execute(() -> Log.info("自定义执行: " + task));
+                    return "自定义结果";
+                })
+                .execute("自定义任务")
+                .build();
+
+        String result = taskChain.getResult(0);
+        System.out.println("自定义结果: " + result);
+    }
+}
+```
+
 ### [GsonUtil](src/main/java/net/legacy/library/commons/util/GsonUtil.java)
 
 `GsonUtil` 提供了一种线程安全的方式来管理和自定义共享的 `Gson` 实例。它允许在您的应用程序中保持一致的 `Gson`
@@ -581,7 +826,7 @@ public class CuboidCheckExample {
     public static void main(String[] args) {
         Location corner1 = new Location(world, 10, 60, 20);
         Location corner2 = new Location(world, 30, 70, 40);
-        
+
         Location insideTarget = new Location(world, 15, 65, 25); // 目标在 X, Y, Z 边界内
         Location outsideTargetY = new Location(world, 15, 75, 25); // 目标在 Y 边界外
         Location outsideTargetX = new Location(world, 5, 65, 30);  // 目标在 X 边界外
@@ -609,7 +854,8 @@ public class CuboidCheckExample {
 
 * **`hasBlocksNearby(Location center, int xRange, int yRange, int zRange)`**:
     * **功能**: 检查以 `center` 为中心的指定范围的长方体区域内，是否存在任何非空气方块（`AIR`, `CAVE_AIR`,
-      `VOID_AIR`）。参数 `xRange`, `yRange`, `zRange` 定义了各轴上的大致总范围；实际检查范围是从中心方块坐标向正负方向各延伸 `range / 2` 格。
+      `VOID_AIR`）。参数 `xRange`, `yRange`, `zRange` 定义了各轴上的大致总范围；实际检查范围是从中心方块坐标向正负方向各延伸
+      `range / 2` 格。
       该方法使用 `ChunkSnapshot` 以提高效率，尤其是在检查范围跨越多个区块时
     * **警告**: 检查非常大的范围会消耗大量服务器资源（CPU、内存），因为它需要迭代检查范围内的所有方块，并可能加载/创建区块快照
 

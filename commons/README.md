@@ -119,6 +119,253 @@ public class Example implements TaskInterface<ScheduledTask<?>> {
 As for how to make annotation processors work on your own plugins, please see the [annotation](../annotation/README.md)
 module.
 
+### [TaskChain](src/main/java/net/legacy/library/commons/task/TaskChain.java)
+
+`TaskChain` provides a powerful fluent API for building and executing task chains. It supports multiple execution modes,
+including virtual threads, scheduled tasks, and asynchronous operations, while offering comprehensive result management
+and error handling mechanisms.
+
+#### Basic Usage
+
+```java
+public class TaskChainExample {
+    public static void main(String[] args) {
+        // Create task chain and execute multiple tasks
+        TaskChain taskChain = TaskChain.builder()
+                // Define the execution mode for the first task and execute immediately
+                .withMode((taskInterface, task) -> {
+                    Log.info("Executing task: " + task);
+                    return "Result: " + task;
+                })
+                // the task field in withMode method is: Task1 (can be null)
+                .execute("Task1")
+
+                // Continue adding the second task
+                .then()
+                .withMode((taskInterface, task) -> {
+                    Log.info("Executing task: " + task);
+                    return "Result: " + task;
+                })
+                .run("Task2") // run is equivalent to execute, just more intuitive naming
+
+                // Add named task for later access
+                .then()
+                .withMode((taskInterface, task) -> // task here is the second parameter of execute below
+                        CompletableFuture.supplyAsync(() -> {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return "Calculation complete: " + Math.random();
+                        }))
+                // Task name: CalculationTask, the task field in withMode method above is: AsyncCalculation (can be null)
+                .execute("CalculationTask", "AsyncCalculation")
+
+                // Build the final task chain
+                .build();
+
+        // Wait for all tasks to complete
+        taskChain.join().get(5, TimeUnit.SECONDS);
+
+        // Get result by name
+        String result = taskChain.getResult("CalculationTask");
+        System.out.println("Calculation result: " + result);
+
+        // Get result by index
+        String indexResult = taskChain.getResult(2);
+        System.out.println("Index 2 result: " + indexResult);
+
+        System.out.println("Task chain contains " + taskChain.size() + " tasks");
+    }
+}
+```
+
+#### Virtual Threads
+
+```java
+public class VirtualThreadExample {
+    public static void main(String[] args) {
+        AtomicInteger counter = new AtomicInteger(0);
+
+        TaskChain taskChain = TaskChain.builder()
+                // Use virtual threads for I/O intensive tasks
+                .withMode((taskInterface, task) ->
+                        taskInterface.submitWithVirtualThreadAsync(() -> {
+                            counter.incrementAndGet();
+                            try {
+                                Thread.sleep(500); // Simulate network request or I/O operation
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return "Virtual thread task complete: " + task;
+                        }))
+                .run("VirtualThreadTask", "VTTask")
+                .then()
+                // Add another virtual thread task
+                .withMode((taskInterface, task) ->
+                        taskInterface.submitWithVirtualThreadAsync(() -> {
+                            counter.incrementAndGet();
+                            Thread.sleep(100);
+                            return "Virtual thread task complete: " + task;
+                        }))
+                .execute("VTTask2")
+                .build();
+
+        taskChain.join().get(5, TimeUnit.SECONDS);
+
+        String result1 = taskChain.getResult("VirtualThreadTask");
+        String result2 = taskChain.getResult(1);
+        System.out.println("Virtual thread result 1: " + result1);
+        System.out.println("Virtual thread result 2: " + result2);
+    }
+}
+```
+
+#### Scheduled Task Chains
+
+```java
+public class ScheduledTaskExample {
+    public static void main(String[] args) {
+        long startTime = System.currentTimeMillis();
+
+        TaskChain taskChain = TaskChain.builder()
+                // Immediate execution task
+                .withMode((taskInterface, task) -> {
+                    Log.info("Immediate execution: " + System.currentTimeMillis());
+                    return "Immediate execution result";
+                })
+                .execute("ImmediateTask")
+
+                // Task with 1-second delay
+                .then()
+                .withMode((taskInterface, task) ->
+                        taskInterface.schedule(() -> {
+                            Log.info("Delayed task execution: " + task);
+                        }, 20L)) // 1 seconds delay (20 ticks)
+                .execute("DelayedTask", "DelayedTask")
+
+                // Virtual thread scheduled task
+                .then()
+                .withMode((taskInterface, task) ->
+                        taskInterface.scheduleWithVirtualThread(() -> {
+                            Log.info("Virtual thread delayed task execution: " + task);
+                        }, 100, TimeUnit.MILLISECONDS))
+                .run("VirtualThreadDelayed", "VirtualThreadDelayedTask")
+
+                .build();
+
+        // Wait for all tasks to complete
+        taskChain.join().get(10, TimeUnit.SECONDS);
+
+        // You can get the original Mode return values for advanced control
+        ScheduledTask<?> scheduledTask = taskChain.getModeResult("DelayedTask");
+        Object vtScheduledFuture = taskChain.getModeResult("VirtualThreadDelayed");
+
+        long executionTime = System.currentTimeMillis() - startTime;
+        System.out.println("Total execution time: " + executionTime + "ms");
+    }
+}
+```
+
+#### Result Management and Error Handling
+
+```java
+public class ResultManagementExample {
+    public static void main(String[] args) {
+        TaskChain taskChain = TaskChain.builder()
+                // Successful task
+                .withMode((taskInterface, task) ->
+                        CompletableFuture.supplyAsync(() -> "Success result"))
+                .execute("SuccessTask", "SyncTask")
+
+                // Potentially failing task
+                .then()
+                .withMode((taskInterface, task) ->
+                        CompletableFuture.supplyAsync(() -> {
+                            if (Math.random() > 0.5) {
+                                throw new RuntimeException("Random failure");
+                            }
+                            return "Risky task succeeded";
+                        }))
+                .execute("RiskyTask", "AsyncTask")
+
+                .build();
+
+        try {
+            // Get result with timeout
+            String result1 = taskChain.getResult("SuccessTask", 5, TimeUnit.SECONDS);
+            System.out.println("Success task result: " + result1);
+
+            // Check if task exists
+            if (taskChain.hasTask("RiskyTask")) {
+                String result2 = taskChain.getResult("RiskyTask");
+                System.out.println("Risky task result: " + result2);
+            }
+
+        } catch (RuntimeException exception) {
+            System.err.println("Task execution failed: " + exception.getMessage());
+        }
+
+        // Get all original Mode results
+        List<Object> modeResults = taskChain.getAllModeResults();
+        System.out.println("Mode results count: " + modeResults.size());
+
+        // Get name to index mapping
+        Map<String, Integer> nameMapping = taskChain.getNameToIndexMap();
+        System.out.println("Named tasks: " + nameMapping.keySet());
+
+        // Test timeout handling
+        TaskChain timeoutChain = TaskChain.builder()
+                .withMode((taskInterface, task) ->
+                        CompletableFuture.supplyAsync(() -> {
+                            try {
+                                Thread.sleep(2000); // 2 seconds delay
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return "Timeout task complete";
+                        }))
+                .execute("TimeoutTask")
+                .build();
+
+        try {
+            timeoutChain.getResult(0, 500, TimeUnit.MILLISECONDS);
+        } catch (RuntimeException e) {
+            System.err.println("Timeout handling: " + e.getMessage());
+        }
+    }
+}
+```
+
+#### Custom TaskInterface
+
+```java
+public class CustomTaskInterfaceExample {
+    public static void main(String[] args) {
+        // Create custom TaskInterface
+        TaskInterface<?> customTaskInterface = new TaskInterface<>() {
+            @Override
+            public void execute(Runnable task) {
+                Log.info("Using custom TaskInterface to execute task");
+                task.run();
+            }
+        };
+
+        TaskChain taskChain = TaskChain.builder(customTaskInterface)
+                .withMode((taskInterface, task) -> {
+                    taskInterface.execute(() -> Log.info("Custom execution: " + task));
+                    return "Custom result";
+                })
+                .execute("CustomTask")
+                .build();
+
+        String result = taskChain.getResult(0);
+        System.out.println("Custom result: " + result);
+    }
+}
+```
+
 ### [GsonUtil](src/main/java/net/legacy/library/commons/util/GsonUtil.java)
 
 `GsonUtil` provides a thread-safe way to manage and customize a shared `Gson` instance. It allows for consistent `Gson`
@@ -617,7 +864,8 @@ quality and maintainability.
 checking positional relationships and the existence of blocks within an area.
 
 * **`isWithinCuboid(Location loc1, Location loc2, Location target)`**:
-    * **Function**: Checks if the target location `target` is within the cuboid (rectangular prism) defined by two diagonal
+    * **Function**: Checks if the target location `target` is within the cuboid (rectangular prism) defined by two
+      diagonal
       corner points `loc1` and `loc2` (inclusive).
     * **Return Value**: Returns `true` if the target location is within the cuboid and all `Location` objects are in
       the same world and not `null`; otherwise returns `false`.
@@ -628,7 +876,7 @@ public class CuboidCheckExample {
     public static void main(String[] args) {
         Location corner1 = new Location(world, 10, 60, 20);
         Location corner2 = new Location(world, 30, 70, 40);
-        
+
         Location insideTarget = new Location(world, 15, 65, 25); // Target within X, Y, Z bounds
         Location outsideTargetY = new Location(world, 15, 75, 25); // Target outside Y bounds
         Location outsideTargetX = new Location(world, 5, 65, 30);  // Target outside X bounds
@@ -656,8 +904,10 @@ public class CuboidCheckExample {
 
 * **`hasBlocksNearby(Location center, int xRange, int yRange, int zRange)`**:
     * **Function**: Checks if there are any non-air blocks (`AIR`, `CAVE_AIR`, `VOID_AIR`) within the cuboid region
-      centered at `center`. The parameters `xRange`, `yRange`, and `zRange` define the approximate total size along each axis;
-      the actual check range extends `range / 2` blocks in both positive and negative directions from the center block's coordinates.
+      centered at `center`. The parameters `xRange`, `yRange`, and `zRange` define the approximate total size along each
+      axis;
+      the actual check range extends `range / 2` blocks in both positive and negative directions from the center block's
+      coordinates.
       This method uses `ChunkSnapshot` for efficiency, especially when the check range spans multiple chunks.
     * **Warning**: Checking very large ranges consumes significant server resources (CPU, memory) as it needs to iterate
       through all blocks in the range and potentially load/create chunk snapshots. **It is strongly recommended to
@@ -687,4 +937,5 @@ public class BlockCheckExample {
 
 ### [AnvilGUI](https://github.com/WesJD/AnvilGUI)
 
-`AnvilGUI` (`net.legacy.library.libs.anvilgui`) is only packaged as a dependency and relocated, just to facilitate some repeated development.
+`AnvilGUI` (`net.legacy.library.libs.anvilgui`) is only packaged as a dependency and relocated, just to facilitate some
+repeated development.
