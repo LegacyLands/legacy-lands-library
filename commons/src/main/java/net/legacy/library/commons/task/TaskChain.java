@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Provides a fluent API for chaining and executing tasks with comprehensive result management.
- * Supports multiple execution modes including virtual threads, scheduled tasks, and asynchronous operations
+ *
+ * <p>Supports multiple execution modes including virtual threads, scheduled tasks, and asynchronous operations
  * while maintaining both indexed and named access to results for each step in the chain.
  *
  * <p>Tasks execute immediately upon calling {@link ExecutionBuilder#execute(Object)} or {@link ExecutionBuilder#run(Object)}, not during
@@ -29,10 +30,6 @@ public class TaskChain {
     private final List<Object> modeResults;
     private final Map<String, Integer> nameToIndexMap;
 
-    /**
-     * Package-private constructor for creating TaskChain instances.
-     * Restricted access to builder package components only.
-     */
     public TaskChain(List<CompletableFuture<Object>> futures, List<Object> modeResults,
                      Map<String, Integer> nameToIndexMap, TaskInterface<?> taskInterface) {
         this.futures = new ArrayList<>(futures);
@@ -44,8 +41,8 @@ public class TaskChain {
 
     /**
      * Creates a new TaskChain builder with default TaskInterface.
-     * The default TaskInterface uses {@link io.fairyproject.mc.scheduler.MCSchedulers#getAsyncScheduler()}
-     * for task execution.
+     *
+     * <p>The default TaskInterface uses {@link io.fairyproject.mc.scheduler.MCSchedulers#getAsyncScheduler()} for task execution.
      *
      * @return new {@link TaskChainBuilder} instance
      */
@@ -55,7 +52,8 @@ public class TaskChain {
 
     /**
      * Creates a new TaskChain builder with the specified TaskInterface.
-     * Allows customization of task execution behavior within the chain.
+     *
+     * <p>Allows customization of task execution behavior within the chain.
      *
      * @param taskInterface the TaskInterface to use for task execution,
      *                      or null to use the default implementation
@@ -67,7 +65,8 @@ public class TaskChain {
 
     /**
      * Waits for all tasks in the chain to complete.
-     * Since tasks execute immediately when {@link ExecutionBuilder#execute(Object)} or
+     *
+     * <p>Since tasks execute immediately when {@link ExecutionBuilder#execute(Object)} or
      * {@link ExecutionBuilder#run(Object)} is called, this method waits for all previously
      * started tasks to finish.
      *
@@ -80,7 +79,8 @@ public class TaskChain {
 
     /**
      * Retrieves the final execution result of the task at the specified index.
-     * Blocks until the task completes and returns the actual result value,
+     *
+     * <p>Blocks until the task completes and returns the actual result value,
      * not wrapper objects ({@link Future}, {@link CompletableFuture}, etc.).
      *
      * @param index zero-based index of the task in execution order
@@ -104,7 +104,8 @@ public class TaskChain {
 
     /**
      * Retrieves the final execution result of the task at the specified index with timeout.
-     * Blocks for up to the specified duration waiting for task completion.
+     *
+     * <p>Blocks for up to the specified duration waiting for task completion.
      *
      * @param index   zero-based index of the task in execution order
      * @param timeout maximum time to wait for task completion
@@ -130,7 +131,8 @@ public class TaskChain {
 
     /**
      * Retrieves the final execution result of the task with the specified name.
-     * Blocks until the named task completes and returns the actual result value.
+     *
+     * <p>Blocks until the named task completes and returns the actual result value.
      *
      * @param name task name as specified when calling {@link ExecutionBuilder#execute(String, Object)}
      *             or {@link ExecutionBuilder#run(String, Object)}
@@ -149,7 +151,8 @@ public class TaskChain {
 
     /**
      * Retrieves the final execution result of the task with the specified name with timeout.
-     * Blocks for up to the specified duration waiting for the named task to complete.
+     *
+     * <p>Blocks for up to the specified duration waiting for the named task to complete.
      *
      * @param name    task name as specified when calling {@link ExecutionBuilder#execute(String, Object)}
      *                or {@link ExecutionBuilder#run(String, Object)}
@@ -171,7 +174,8 @@ public class TaskChain {
 
     /**
      * Retrieves the original object returned by the mode function at the specified index.
-     * Returns the raw object before any conversion (e.g., {@link Future}, {@link CompletableFuture},
+     *
+     * <p>Returns the raw object before any conversion (e.g., {@link Future}, {@link CompletableFuture},
      * VirtualThreadScheduledFuture, ScheduledTask). Enables advanced control over execution objects.
      *
      * @param index zero-based index of the task in execution order
@@ -189,7 +193,8 @@ public class TaskChain {
 
     /**
      * Retrieves the original object returned by the mode function for the specified named task.
-     * Returns the raw object before any conversion.
+     *
+     * <p>Returns the raw object before any conversion.
      *
      * @param name task name as specified when calling {@link ExecutionBuilder#execute(String, Object)}
      *             or {@link ExecutionBuilder#run(String, Object)}
@@ -207,7 +212,8 @@ public class TaskChain {
 
     /**
      * Retrieves all original objects returned by the mode functions.
-     * Returns raw objects in execution order, which may include various types
+     *
+     * <p>Returns raw objects in execution order, which may include various types
      * like {@link Future}, {@link CompletableFuture}, ScheduledTask, etc.
      *
      * @return immutable copy of the list containing all original mode results
@@ -218,9 +224,10 @@ public class TaskChain {
 
     /**
      * Retrieves all {@link CompletableFuture}s representing the tasks in the chain.
-     * These futures are the normalized representation of all tasks, regardless of their
-     * original return type from mode functions. Enables unified handling
-     * of task completion, exception handling, and result retrieval.
+     *
+     * <p>These futures are the normalized representation of all tasks, regardless of their
+     * original return type from mode functions. Enables unified handling of task completion,
+     * exception handling, and result retrieval.
      *
      * @return immutable copy of the list containing all task futures
      */
@@ -241,7 +248,8 @@ public class TaskChain {
 
     /**
      * Returns a map of task names to their corresponding indices.
-     * Only includes tasks assigned names when calling {@link ExecutionBuilder#execute(String, Object)}
+     *
+     * <p>Only includes tasks assigned names when calling {@link ExecutionBuilder#execute(String, Object)}
      * or {@link ExecutionBuilder#run(String, Object)}.
      *
      * @return immutable copy of the name-to-index mapping

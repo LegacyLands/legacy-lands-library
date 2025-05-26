@@ -6,8 +6,9 @@ import java.util.function.BiFunction;
 
 /**
  * Builder for executing a task with a previously defined execution mode.
- * Returned by {@link TaskChainBuilder#withMode(BiFunction)} to specify the actual task parameter
- * and immediately execute it.
+ *
+ * <p>Returned by {@link TaskChainBuilder#withMode(BiFunction)} to specify
+ * the actual task parameter and immediately execute it.
  *
  * @param <T> task parameter type
  * @param <R> result type returned by the mode function

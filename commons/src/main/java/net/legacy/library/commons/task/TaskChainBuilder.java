@@ -13,7 +13,8 @@ import java.util.function.BiFunction;
 /**
  * Builder for constructing TaskChain instances with fluent API.
  * Provides methods to define execution modes and build task chains.
- * Tasks execute immediately when {@link ExecutionBuilder#execute(Object)} or
+ *
+ * <p>Tasks execute immediately when {@link ExecutionBuilder#execute(Object)} or
  * {@link ExecutionBuilder#run(Object)} is called, not when {@link #build()} is called.
  *
  * @author qwq-dev
@@ -48,7 +49,8 @@ public class TaskChainBuilder {
 
     /**
      * Defines the execution mode for the next task.
-     * The mode function determines how the task will be executed (sync, async, virtual thread, etc.).
+     *
+     * <p>The mode function determines how the task will be executed (sync, async, virtual thread, etc.).
      * This method only defines the execution strategy without executing anything.
      *
      * @param executionMode execution mode function that takes TaskInterface and task parameter,
@@ -63,7 +65,8 @@ public class TaskChainBuilder {
 
     /**
      * Sets a custom TaskInterface for this chain.
-     * Allows customization of how tasks are scheduled and executed.
+     *
+     * <p>Allows customization of how tasks are scheduled and executed.
      *
      * @param taskInterface TaskInterface to use for task execution,
      *                      or null to use the default implementation
@@ -77,7 +80,8 @@ public class TaskChainBuilder {
 
     /**
      * Builds the TaskChain with all configured tasks and execution modes.
-     * All tasks will have been started immediately when {@link ExecutionBuilder#execute(Object)}
+     *
+     * <p>All tasks will have been started immediately when {@link ExecutionBuilder#execute(Object)}
      * or {@link ExecutionBuilder#run(Object)} was called.
      *
      * @return constructed {@link TaskChain} instance
@@ -92,7 +96,8 @@ public class TaskChainBuilder {
 
     /**
      * Executes the task with the specified mode and adds the result to the chain.
-     * This method is called immediately when {@link ExecutionBuilder#execute(Object)}
+     *
+     * <p>This method is called immediately when {@link ExecutionBuilder#execute(Object)}
      * or {@link ExecutionBuilder#run(Object)} is invoked.
      *
      * @param mode execution mode function
@@ -126,7 +131,8 @@ public class TaskChainBuilder {
 
     /**
      * Converts various result types to CompletableFuture for unified handling.
-     * Handles {@link CompletableFuture}, {@link Future}, and synchronous results.
+     *
+     * <p>Handles {@link CompletableFuture}, {@link Future}, and synchronous results.
      *
      * @param result result object to convert
      * @return {@link CompletableFuture} wrapping the result

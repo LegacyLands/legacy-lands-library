@@ -4,7 +4,8 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Builder for continuing the task chain or finalizing TaskChain construction.
- * Returned after task execution to enable adding more tasks or building the final TaskChain.
+ *
+ * <p>Returned after task execution to enable adding more tasks or building the final TaskChain.
  *
  * @author qwq-dev
  * @since 2025-05-26 14:41
@@ -15,7 +16,8 @@ public class ChainContinuation {
 
     /**
      * Continues the chain to add another task.
-     * Since all previous tasks have already been executed immediately when
+     *
+     * <p>Since all previous tasks have already been executed immediately when
      * {@link ExecutionBuilder#execute(Object)} was called, this returns the builder
      * to configure the next task's execution mode.
      *
@@ -27,7 +29,8 @@ public class ChainContinuation {
 
     /**
      * Continues the chain to add another task.
-     * Alias for {@link #andThen()} to maintain familiar fluent API style.
+     *
+     * <p>Alias for {@link #andThen()} to maintain familiar fluent API style.
      *
      * @return {@link TaskChainBuilder} for defining the next task's execution mode
      */
@@ -37,7 +40,8 @@ public class ChainContinuation {
 
     /**
      * Builds the final TaskChain with all configured and executed tasks.
-     * All tasks will have been started immediately when their respective
+     *
+     * <p>All tasks will have been started immediately when their respective
      * {@link ExecutionBuilder#execute(Object)} calls were made.
      *
      * @return constructed {@link TaskChain} instance
@@ -49,7 +53,8 @@ public class ChainContinuation {
 
     /**
      * Finalizes and builds the TaskChain.
-     * Alias for {@link #build()} with more descriptive naming.
+     *
+     * <p>Alias for {@link #build()} with more descriptive naming.
      *
      * @return constructed {@link TaskChain} instance
      */
