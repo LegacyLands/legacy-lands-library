@@ -62,7 +62,7 @@ dependencies {
     compileOnly(project(":commons"))
 
     // gRPC
-    implementation("io.grpc:grpc-netty-shaded:1.72.0")
+    implementation("io.grpc:grpc-netty-shaded:1.73.0")
     implementation("io.grpc:grpc-protobuf:1.72.0")
     implementation("io.grpc:grpc-stub:1.72.0")
 
