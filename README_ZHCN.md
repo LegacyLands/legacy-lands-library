@@ -68,10 +68,6 @@ dependencies {
 }
 ```
 
-### Jenkins
-
-[项目链接](http://129.226.219.222:8080/job/legacy-lands-library/)
-
 ## 社区
 
 - [English Version](README.md)
