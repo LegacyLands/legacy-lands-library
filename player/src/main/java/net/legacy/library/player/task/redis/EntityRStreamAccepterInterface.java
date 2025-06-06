@@ -82,26 +82,23 @@ public interface EntityRStreamAccepterInterface {
      * <p><b>Note:</b> This method is not exclusive, meaning multiple connections or servers
      * may attempt to process the same task concurrently unless additional controls are in place.
      *
-     * @param stream  the {@link RStream} object representing the Redis stream containing the task
-     * @param id      the {@link StreamMessageId} object representing the unique ID of the task
-     * @param service the {@link LegacyEntityDataService} object representing the service for handling entity data
-     * @param data    the data contained in the task
+     * @param rStream                 the {@link RStream} object representing the Redis stream containing the task
+     * @param streamMessageId         the {@link StreamMessageId} object representing the unique ID of the task
+     * @param legacyEntityDataService the {@link LegacyEntityDataService} object representing the service for handling entity data
+     * @param data                    the data contained in the task
      */
-    void accept(RStream<Object, Object> stream,
-                StreamMessageId id,
-                LegacyEntityDataService service,
-                String data);
+    void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId, LegacyEntityDataService legacyEntityDataService, String data);
 
     /**
      * Acknowledges the task after it has been successfully processed.
      *
      * <p>This method removes the task from the Redis stream, indicating that it has been handled.
      *
-     * @param stream the {@link RStream} object representing the Redis stream containing the task
-     * @param id     the {@link StreamMessageId} object representing the unique ID of the task
+     * @param rStream         the {@link RStream} object representing the Redis stream containing the task
+     * @param streamMessageId the {@link StreamMessageId} object representing the unique ID of the task
      */
-    default void ack(RStream<Object, Object> stream, StreamMessageId id) {
-        stream.remove(id);
+    default void ack(RStream<Object, Object> rStream, StreamMessageId streamMessageId) {
+        rStream.remove(streamMessageId);
     }
 
     /**

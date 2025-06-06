@@ -126,14 +126,14 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
      *   <li>If versions match, timestamps are used to determine the most recent update.</li>
      * </ul>
      *
-     * @param stream  {@inheritDoc}
-     * @param id      {@inheritDoc}
-     * @param service {@inheritDoc}
-     * @param data    {@inheritDoc}
+     * @param rStream                 {@inheritDoc}
+     * @param streamMessageId         {@inheritDoc}
+     * @param legacyEntityDataService {@inheritDoc}
+     * @param data                    {@inheritDoc}
      */
     @Override
-    public void accept(RStream<Object, Object> stream, StreamMessageId id,
-                       LegacyEntityDataService service, String data) {
+    public void accept(RStream<Object, Object> rStream, StreamMessageId streamMessageId,
+                       LegacyEntityDataService legacyEntityDataService, String data) {
         try {
             //Try to parse as Triple first (new format with version)
             Pair<String, Map<String, String>> pairData = null;
@@ -172,11 +172,11 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
             UUID uuid = UUID.fromString(uuidString);
 
             // Get entity data from local cache
-            LegacyEntityData localEntity = service.getEntityData(uuid);
+            LegacyEntityData localEntity = legacyEntityDataService.getEntityData(uuid);
             if (localEntity == null) {
                 // Entity doesn't exist locally, no conflict to resolve
                 Log.warn("Received update for non-existent entity: " + uuid);
-                ack(stream, id);
+                ack(rStream, streamMessageId);
                 return;
             }
 
@@ -221,20 +221,20 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
              */
             if (needsRepublish) {
                 // Avoid infinite loops in the synchronization process
-                service.saveEntityWithoutRepublish(localEntity);
+                legacyEntityDataService.saveEntityWithoutRepublish(localEntity);
 
                 // Manually publish the merged entity update
-                service.pubEntityRStreamTask(createRStreamTask(
+                legacyEntityDataService.pubEntityRStreamTask(createRStreamTask(
                         uuid,
                         localEntity.getAttributes(),
                         localEntity.getVersion(),
                         Duration.ofMinutes(5)
                 ));
             } else {
-                service.saveEntity(localEntity);
+                legacyEntityDataService.saveEntity(localEntity);
             }
 
-            ack(stream, id);
+            ack(rStream, streamMessageId);
         } catch (Exception exception) {
             Log.error("Error processing entity data update task.", exception);
         }

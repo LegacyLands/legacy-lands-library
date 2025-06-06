@@ -71,15 +71,15 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
     /**
      * {@inheritDoc}
      *
-     * @param stream  {@inheritDoc}
-     * @param id      {@inheritDoc}
-     * @param service {@inheritDoc}
-     * @param data    {@inheritDoc}
+     * @param rStream                 {@inheritDoc}
+     * @param streamMessageId         {@inheritDoc}
+     * @param legacyEntityDataService {@inheritDoc}
+     * @param data                    {@inheritDoc}
      */
     @Override
-    public void accept(RStream<Object, Object> stream,
-                       StreamMessageId id,
-                       LegacyEntityDataService service,
+    public void accept(RStream<Object, Object> rStream,
+                       StreamMessageId streamMessageId,
+                       LegacyEntityDataService legacyEntityDataService,
                        String data) {
         try {
             // Parse the data using commons' GsonUtil
@@ -92,7 +92,7 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
             boolean remove = jsonObject.has("remove") && jsonObject.get("remove").getAsBoolean();
 
             // Get the source entity
-            LegacyEntityData sourceEntity = service.getEntityData(sourceEntityUuid);
+            LegacyEntityData sourceEntity = legacyEntityDataService.getEntityData(sourceEntityUuid);
             if (sourceEntity == null) {
                 return;
             }
@@ -105,9 +105,9 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
             }
 
             // Save the updated entity without republishing to avoid infinite loops
-            service.saveEntityWithoutRepublish(sourceEntity);
+            legacyEntityDataService.saveEntityWithoutRepublish(sourceEntity);
 
-            ack(stream, id);
+            ack(rStream, streamMessageId);
         } catch (Exception exception) {
             Log.error(exception);
         }
