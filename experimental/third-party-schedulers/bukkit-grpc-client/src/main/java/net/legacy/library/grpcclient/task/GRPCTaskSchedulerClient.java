@@ -358,7 +358,7 @@ public class GRPCTaskSchedulerClient {
                     case PENDING:
                         pollingAttempts++;
                         if (pollingAttempts > maxRetries) {
-                            Log.warn("Task {} still PENDING after {} polling attempts, stopping polling.", taskId, maxRetries);
+                            Log.warn("Task %s still PENDING after %s polling attempts, stopping polling.", taskId, maxRetries);
                             throw new TaskSchedulerException("Task still PENDING after max retries: " + taskId);
                         }
                         try {
@@ -370,18 +370,18 @@ public class GRPCTaskSchedulerClient {
                         backoffMillis = Math.min(backoffMillis * 2, timeoutMs);
                         break;
                     case FAILED:
-                        Log.error("Task {} failed on server according to GetResult: {}", taskId, response.getResult());
+                        Log.error("Task %s failed on server according to GetResult: %s", taskId, response.getResult());
                         throw new TaskSchedulerException("Task failed on server (reported by GetResult): " + response.getResult());
                     case UNRECOGNIZED:
                     default:
-                        Log.error("GetResult received unrecognized status for task {}: {}", taskId, status);
+                        Log.error("GetResult received unrecognized status for task %s: %s", taskId, status);
                         throw new TaskSchedulerException("GetResult received unrecognized status from server: " + status);
                 }
             } catch (Exception exception) {
                 if (exception instanceof TaskSchedulerException) {
                     throw (TaskSchedulerException) exception;
                 } else {
-                    Log.error("Unexpected exception during GetResult polling for task {}.", taskId, exception);
+                    Log.error("Unexpected exception during GetResult polling for task %s.", taskId, exception);
                     throw new TaskSchedulerException("Unexpected error during GetResult polling for task " + taskId, exception);
                 }
             }
@@ -422,7 +422,7 @@ public class GRPCTaskSchedulerClient {
                 Status status = exception.getStatus();
                 if (isRetryable(status) && attempts < maxRetries) {
                     attempts++;
-                    Log.warn("{} gRPC call failed with retryable status: {} (Attempt {}/{}). Retrying in {}ms...",
+                    Log.warn("%s gRPC call failed with retryable status: %s (Attempt %s/%s). Retrying in %sms...",
                             callDescription, status, attempts, maxRetries + 1, backoffMillis, exception);
                     try {
                         TimeUnit.MILLISECONDS.sleep(backoffMillis);
@@ -432,11 +432,11 @@ public class GRPCTaskSchedulerClient {
                     }
                     backoffMillis = Math.min(backoffMillis * 2, 2000);
                 } else {
-                    Log.error("{} gRPC call failed with non-retryable status: {} or max retries ({}) reached.", callDescription, status, maxRetries + 1, exception);
+                    Log.error("%s gRPC call failed with non-retryable status: %s or max retries (%s) reached.", callDescription, status, maxRetries + 1, exception);
                     throw new TaskSchedulerException(callDescription + " gRPC call failed: " + status, exception);
                 }
             } catch (Exception exception) {
-                Log.error("Unexpected exception during {} gRPC call execution.", callDescription, exception);
+                Log.error("Unexpected exception during %s gRPC call execution.", callDescription, exception);
                 throw new TaskSchedulerException("Unexpected error during " + callDescription + " gRPC call", exception);
             }
         }

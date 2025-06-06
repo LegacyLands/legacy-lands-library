@@ -430,6 +430,115 @@ The above example is for `LegacyPlayerData`.
 If you want to create it for `LegacyEntityData`, you only need to use `EntityRStreamAccepterRegister` and
 `EntityRStreamAccepterInterface`.
 
+## Stream Accepter Resilience Framework
+
+For handling failures in Redis Stream accepter operations, traditional manual exception handling lacks standardization
+and makes it difficult to ensure system consistency. To address this, we provide a comprehensive resilience framework
+with configurable retry policies, exception type recognition, compensation mechanisms, and monitoring support while
+maintaining full backward compatibility.
+
+### Basic Usage
+
+```java
+public class ResilienceExample {
+    public void basicResilience(LegacyPlayerDataService playerService) {
+        // Enable resilience for all discovered stream accepters
+        List<String> basePackages = List.of("your.package", "net.legacy.library.player");
+        List<ClassLoader> classLoaders = List.of(PlayerLauncher.class.getClassLoader());
+
+        // Create resilient task with default settings (3 retries, exponential backoff)
+        ResilientRStreamAccepterInvokeTask resilientTask =
+                ResilientRStreamAccepterInvokeTask.ofResilient(
+                        playerService, basePackages, classLoaders, Duration.ofSeconds(5)
+                );
+        resilientTask.start();
+    }
+}
+```
+
+### Custom Resilience Strategies
+
+```java
+public class CustomResilienceExample {
+    public void customStrategies() {
+        // Strategy 1: Retry only network errors
+        ResilientRStreamAccepter networkResilient = ResilienceFactory.createForNetworkErrors(originalAccepter);
+
+        // Strategy 2: Fast retry (more attempts, shorter delays)
+        ResilientRStreamAccepter fastRetry = ResilienceFactory.createFastRetry(originalAccepter);
+
+        // Strategy 3: Conservative retry (fewer attempts, longer delays)
+        ResilientRStreamAccepter conservativeRetry = ResilienceFactory.createConservativeRetry(originalAccepter);
+
+        // Strategy 4: Custom policy with specific compensation
+        RetryPolicy customPolicy = RetryPolicy.builder()
+                .maxAttempts(5)
+                .baseDelay(Duration.ofSeconds(2))
+                .exponentialBackoff(true)
+                .retryCondition(ex -> ex instanceof IOException)
+                .build();
+
+        CompensationAction customCompensation = context -> {
+            // Custom cleanup logic
+            Log.error("Failed after %s attempts: %s",
+                    context.getAttemptNumber(), context.getException().getMessage());
+            context.getStream().remove(context.getMessageId());
+        };
+
+        ResilientRStreamAccepter customResilient = ResilienceFactory.createCustom(
+                originalAccepter, customPolicy, customCompensation
+        );
+    }
+}
+```
+
+### Monitoring and Management
+
+```java
+public class ResilienceMonitoringExample {
+    public void monitorResilience(ResilientRStreamAccepter resilientAccepter) {
+        // Monitor retry statistics
+        StreamMessageId messageId = new StreamMessageId(System.currentTimeMillis(), 0);
+        int retryCount = resilientAccepter.getRetryCount(messageId);
+        int totalTracked = resilientAccepter.getTrackedMessageCount();
+
+        Log.info("Message %s has been retried %s times", messageId, retryCount);
+        Log.info("Currently tracking %s messages for retries", totalTracked);
+
+        // Clear retry tracking for completed messages
+        resilientAccepter.clearRetryTracking(messageId);
+    }
+}
+```
+
+### Failure Handling Patterns
+
+```java
+public class FailureHandlingPatternsExample {
+    public void handleNetworkErrors(RStreamAccepterInterface accepter) {
+        // Retry network errors with exponential backoff
+        ResilientRStreamAccepter networkResilient = ResilienceFactory.createForNetworkErrors(accepter);
+    }
+
+    public void handleDataValidationErrors(RStreamAccepterInterface accepter) {
+        // Don't retry validation errors, just log and remove
+        RetryPolicy noRetryPolicy = RetryPolicy.noRetry();
+        CompensationAction logAndRemove = CompensationAction.composite(
+                CompensationAction.LOG_FAILURE,
+                CompensationAction.REMOVE_MESSAGE
+        );
+        ResilientRStreamAccepter validationResilient = ResilienceFactory.createCustom(
+                accepter, noRetryPolicy, logAndRemove
+        );
+    }
+
+    public void handleResourceContention(RStreamAccepterInterface accepter) {
+        // Conservative retry with longer delays
+        ResilientRStreamAccepter conservativeResilient = ResilienceFactory.createConservativeRetry(accepter);
+    }
+}
+```
+
 ### Entity Data Management System
 
 In addition to player data, we also provide a flexible entity data management system suitable for any game objects that

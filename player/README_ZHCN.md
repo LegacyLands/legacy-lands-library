@@ -413,6 +413,112 @@ public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface
 上述实例为 `LegacyPlayerData`，若想为 `LegacyEntityData` 创建，
 则只需要使用 `EntityRStreamAccepterRegister` 与 `EntityRStreamAccepterInterface` 即可。
 
+## Stream Accepter 弹性处理框架
+
+针对 Redis Stream accepter 操作中的失败情况，传统的手动异常处理缺乏标准化且难以保证系统一致性。为此提供了一个全面的弹性处理框架，具有可配置重试策略、异常类型识别、补偿机制和监控支持，同时保持完全向后兼容。
+
+### 基本用法
+
+```java
+public class ResilienceExample {
+    public void basicResilience(LegacyPlayerDataService playerService) {
+        // 为所有发现的流接收器启用弹性处理
+        List<String> basePackages = List.of("your.package", "net.legacy.library.player");
+        List<ClassLoader> classLoaders = List.of(PlayerLauncher.class.getClassLoader());
+
+        // 创建具有默认设置的弹性任务（3次重试，指数退避）
+        ResilientRStreamAccepterInvokeTask resilientTask =
+                ResilientRStreamAccepterInvokeTask.ofResilient(
+                        playerService, basePackages, classLoaders, Duration.ofSeconds(5)
+                );
+        resilientTask.start();
+    }
+}
+```
+
+### 自定义弹性策略
+
+```java
+public class CustomResilienceExample {
+    public void customStrategies() {
+        // 策略1：仅重试网络错误
+        ResilientRStreamAccepter networkResilient = ResilienceFactory.createForNetworkErrors(originalAccepter);
+
+        // 策略2：快速重试（更多次数，更短延迟）
+        ResilientRStreamAccepter fastRetry = ResilienceFactory.createFastRetry(originalAccepter);
+
+        // 策略3：保守重试（更少次数，更长延迟）
+        ResilientRStreamAccepter conservativeRetry = ResilienceFactory.createConservativeRetry(originalAccepter);
+
+        // 策略4：自定义策略与特定补偿
+        RetryPolicy customPolicy = RetryPolicy.builder()
+                .maxAttempts(5)
+                .baseDelay(Duration.ofSeconds(2))
+                .exponentialBackoff(true)
+                .retryCondition(ex -> ex instanceof IOException)
+                .build();
+
+        CompensationAction customCompensation = context -> {
+            // 自定义清理逻辑
+            Log.error("{}次尝试后失败: {}",
+                    context.getAttemptNumber(), context.getException().getMessage());
+            context.getStream().remove(context.getMessageId());
+        };
+
+        ResilientRStreamAccepter customResilient = ResilienceFactory.createCustom(
+                originalAccepter, customPolicy, customCompensation
+        );
+    }
+}
+```
+
+### 监控和管理
+
+```java
+public class ResilienceMonitoringExample {
+    public void monitorResilience(ResilientRStreamAccepter resilientAccepter) {
+        // 监控重试统计
+        StreamMessageId messageId = new StreamMessageId(System.currentTimeMillis(), 0);
+        int retryCount = resilientAccepter.getRetryCount(messageId);
+        int totalTracked = resilientAccepter.getTrackedMessageCount();
+
+        Log.info("消息 {} 已重试 {} 次", messageId, retryCount);
+        Log.info("当前正在跟踪 {} 条消息的重试", totalTracked);
+
+        // 清除已完成消息的重试跟踪
+        resilientAccepter.clearRetryTracking(messageId);
+    }
+}
+```
+
+### 失败处理模式
+
+```java
+public class FailureHandlingPatternsExample {
+    public void handleNetworkErrors(RStreamAccepterInterface accepter) {
+        // 使用指数退避重试网络错误
+        ResilientRStreamAccepter networkResilient = ResilienceFactory.createForNetworkErrors(accepter);
+    }
+
+    public void handleDataValidationErrors(RStreamAccepterInterface accepter) {
+        // 不重试验证错误，仅记录日志并移除
+        RetryPolicy noRetryPolicy = RetryPolicy.noRetry();
+        CompensationAction logAndRemove = CompensationAction.composite(
+                CompensationAction.LOG_FAILURE,
+                CompensationAction.REMOVE_MESSAGE
+        );
+        ResilientRStreamAccepter validationResilient = ResilienceFactory.createCustom(
+                accepter, noRetryPolicy, logAndRemove
+        );
+    }
+
+    public void handleResourceContention(RStreamAccepterInterface accepter) {
+        // 使用更长延迟的保守重试
+        ResilientRStreamAccepter conservativeResilient = ResilienceFactory.createConservativeRetry(accepter);
+    }
+}
+```
+
 ### 实体数据管理系统
 
 除了玩家数据外，我们还提供了灵活的实体数据管理系统，适用于任何需要持久化存储的游戏对象，如公会等。
