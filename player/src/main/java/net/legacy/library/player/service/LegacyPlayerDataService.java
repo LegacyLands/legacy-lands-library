@@ -396,7 +396,7 @@ public class LegacyPlayerDataService {
                 return false;
             }
 
-            return TTLUtil.setReliableTTL(bucket, ttl);
+            return TTLUtil.setReliableTTL(redissonClient, playerKey, ttl.getSeconds());
         } catch (Exception exception) {
             Log.error("Failed to set TTL for player " + uuid, exception);
             return false;
@@ -430,8 +430,7 @@ public class LegacyPlayerDataService {
             KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(pattern);
 
             for (String key : keys.getKeys(keysScanOptions)) {
-                RBucket<Object> bucket = redissonClient.getBucket(key);
-                if (TTLUtil.processBucketTTL(bucket, DEFAULT_TTL_DURATION)) {
+                if (TTLUtil.processBucketTTL(redissonClient, key, DEFAULT_TTL_DURATION.getSeconds())) {
                     count++;
                 }
             }

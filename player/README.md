@@ -437,6 +437,8 @@ and makes it difficult to ensure system consistency. To address this, we provide
 with configurable retry policies, exception type recognition, compensation mechanisms, and monitoring support while
 maintaining full backward compatibility.
 
+It also provides an enterprise-grade hybrid retry counter system for distributed stream operations, providing precise retry control across multiple servers with both local and distributed counting strategies.
+
 ### Basic Usage
 
 ```java
@@ -535,6 +537,341 @@ public class FailureHandlingPatternsExample {
     public void handleResourceContention(RStreamAccepterInterface accepter) {
         // Conservative retry with longer delays
         ResilientRStreamAccepter conservativeResilient = ResilienceFactory.createConservativeRetry(accepter);
+    }
+}
+```
+
+### Basic Retry Counter Usage
+
+```java
+public class RetryCounterExample {
+    public void basicRetryCounters(RedissonClient redissonClient) {
+        // 1. Local retry counter (in-memory, high performance)
+        RetryCounter localCounter = LocalRetryCounter.create();
+        
+        // 2. Distributed retry counter (Redis-based, globally consistent)
+        RetryCounter distributedCounter = DistributedRetryCounter.create(redissonClient);
+        
+        // 3. Hybrid retry counter (intelligent selection)
+        RetryCounter hybridCounter = HybridRetryCounter.create(
+            redissonClient,
+            key -> key.startsWith("critical:") // Use distributed for critical operations
+        );
+        
+        // Basic operations (all methods return CompletableFuture)
+        CompletableFuture<Integer> count = localCounter.increment("operation:123");
+        CompletableFuture<Integer> countWithTTL = localCounter.increment("operation:123", Duration.ofMinutes(5));
+        CompletableFuture<Integer> currentCount = localCounter.get("operation:123");
+        CompletableFuture<Boolean> exists = localCounter.exists("operation:123");
+        CompletableFuture<Void> reset = localCounter.reset("operation:123");
+    }
+}
+```
+
+### Resilience Framework Configuration
+
+```java
+public class ResilienceConfigurationExample {
+    public void configureResilience(LegacyPlayerDataService playerService) {
+        // 1. Basic resilient stream accepter with default settings
+        List<String> basePackages = List.of("your.package", "net.legacy.library.player");
+        List<ClassLoader> classLoaders = List.of(PlayerLauncher.class.getClassLoader());
+        
+        ResilientRStreamAccepterInvokeTask resilientTask = 
+            ResilientRStreamAccepterInvokeTask.ofResilient(
+                playerService, basePackages, classLoaders, Duration.ofSeconds(5)
+            );
+        resilientTask.start();
+        
+        // 2. Custom retry policy with hybrid counting
+        RetryPolicy hybridPolicy = RetryPolicy.builder()
+            .maxAttempts(5)
+            .baseDelay(Duration.ofSeconds(1))
+            .exponentialBackoff(true)
+            .retryCounterType(RetryCounterType.HYBRID)
+            .distributedKeyPattern("critical:.*")
+            .retryCondition(ex -> ex instanceof IOException || ex instanceof ConnectException)
+            .build();
+        
+        // 3. Custom failure handler with compensation
+        FailureHandler customHandler = FailureHandler.withPolicy(
+            hybridPolicy,
+            CompensationAction.composite(
+                CompensationAction.LOG_FAILURE,
+                CompensationAction.REMOVE_MESSAGE
+            )
+        );
+        
+        // 4. Create resilient accepter with custom configuration
+        RStreamAccepterInterface originalAccepter = new YourCustomAccepter();
+        ResilientRStreamAccepter resilientAccepter = new ResilientRStreamAccepter(
+            originalAccepter, customHandler, redissonClient
+        );
+    }
+}
+```
+
+### Retry Policy Patterns
+
+```java
+public class RetryPolicyPatternsExample {
+    public void demonstratePolicyPatterns() {
+        // 1. Network error retry (exponential backoff for IO operations)
+        RetryPolicy networkPolicy = RetryPolicy.forExceptionTypes(
+            IOException.class, ConnectException.class, SocketTimeoutException.class
+        );
+        
+        // 2. Conservative retry (fewer attempts, longer delays)
+        RetryPolicy conservativePolicy = RetryPolicy.builder()
+            .maxAttempts(2)
+            .baseDelay(Duration.ofSeconds(5))
+            .exponentialBackoff(true)
+            .maxDelay(Duration.ofMinutes(2))
+            .build();
+        
+        // 3. Fast retry (more attempts, shorter delays)
+        RetryPolicy fastPolicy = RetryPolicy.builder()
+            .maxAttempts(5)
+            .baseDelay(Duration.ofMillis(500))
+            .exponentialBackoff(true)
+            .maxDelay(Duration.ofSeconds(10))
+            .build();
+        
+        // 4. Hybrid counting with distributed coordination
+        RetryPolicy hybridPolicy = RetryPolicy.withHybridCounting("payment:.*|inventory:.*");
+        
+        // 5. Distributed counting for all operations
+        RetryPolicy distributedPolicy = RetryPolicy.withDistributedCounting();
+        
+        // 6. No retry policy (fail fast)
+        RetryPolicy noRetryPolicy = RetryPolicy.noRetry();
+    }
+}
+```
+
+### Advanced Resilience Factory Usage
+
+```java
+public class AdvancedResilienceExample {
+    public void advancedResiliencePatterns(RStreamAccepterInterface originalAccepter) {
+        // 1. Pre-configured resilience strategies
+        ResilientRStreamAccepter networkResilient = 
+            ResilienceFactory.createForNetworkErrors(originalAccepter);
+        
+        ResilientRStreamAccepter fastRetry = 
+            ResilienceFactory.createFastRetry(originalAccepter);
+        
+        ResilientRStreamAccepter conservativeRetry = 
+            ResilienceFactory.createConservativeRetry(originalAccepter);
+        
+        // 2. Custom resilience with specific requirements
+        RetryPolicy customPolicy = RetryPolicy.builder()
+            .maxAttempts(3)
+            .baseDelay(Duration.ofSeconds(2))
+            .retryCounterType(RetryCounterType.DISTRIBUTED)
+            .retryCondition(exception -> {
+                // Custom retry logic
+                if (exception instanceof ValidationException) {
+                    return false; // Don't retry validation errors
+                }
+                if (exception instanceof TransientException) {
+                    return true; // Always retry transient errors
+                }
+                return exception.getMessage().contains("timeout");
+            })
+            .build();
+        
+        CompensationAction customCompensation = context -> {
+            // Custom compensation logic
+            Log.error("Operation failed after {} attempts: {}", 
+                context.getAttemptNumber(), context.getException().getMessage());
+            
+            // Custom cleanup
+            if (context.getException() instanceof DataCorruptionException) {
+                // Perform data recovery
+                performDataRecovery(context);
+            }
+            
+            // Remove message from stream
+            context.getStream().remove(context.getMessageId());
+        };
+        
+        ResilientRStreamAccepter customResilient = ResilienceFactory.createCustom(
+            originalAccepter, customPolicy, customCompensation
+        );
+        
+        // 3. Monitoring retry statistics
+        StreamMessageId messageId = new StreamMessageId(System.currentTimeMillis(), 0);
+        int retryCount = customResilient.getRetryCount(messageId);
+        int totalTracked = customResilient.getTrackedMessageCount();
+        
+        Log.info("Message {} has been retried {} times", messageId, retryCount);
+        Log.info("Currently tracking {} messages for retries", totalTracked);
+        
+        // Clean up completed message tracking
+        customResilient.clearRetryTracking(messageId);
+    }
+    
+    private void performDataRecovery(FailureContext context) {
+        // Implementation for data recovery
+    }
+}
+```
+
+### Virtual Thread Integration
+
+```java
+public class VirtualThreadExample {
+    public void virtualThreadIntegration(RedissonClient redissonClient) {
+        // 1. Create TaskInterface for virtual thread execution
+        TaskInterface<?> taskInterface = new TaskInterface<Object>() {};
+        
+        // 2. Create distributed retry counter with virtual threads
+        DistributedRetryCounter virtualThreadCounter = DistributedRetryCounter.create(
+            redissonClient, 
+            "vthread:counter:", 
+            taskInterface
+        );
+        
+        // 3. All operations now use virtual threads for I/O operations
+        CompletableFuture<Integer> asyncIncrement = virtualThreadCounter.increment("key:123");
+        CompletableFuture<Integer> asyncIncrementWithTTL = virtualThreadCounter.increment(
+            "key:123", Duration.ofMinutes(10)
+        );
+        
+        // 4. Chain virtual thread operations
+        virtualThreadCounter.increment("operation:abc")
+            .thenCompose(count -> {
+                if (count > 3) {
+                    return virtualThreadCounter.reset("operation:abc");
+                }
+                return CompletableFuture.completedFuture(null);
+            })
+            .thenRun(() -> Log.info("Operation completed"))
+            .exceptionally(throwable -> {
+                Log.error("Operation failed", throwable);
+                return null;
+            });
+        
+        // 5. Batch operations with virtual threads
+        List<CompletableFuture<Integer>> futures = IntStream.range(0, 100)
+            .mapToObj(i -> virtualThreadCounter.increment("batch:operation:" + i))
+            .collect(Collectors.toList());
+        
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenRun(() -> Log.info("All batch operations completed"));
+    }
+}
+```
+
+### Complete Integration Example
+
+```java
+public class CompleteIntegrationExample {
+    public void completeStreamResilienceSetup(
+            LegacyPlayerDataService playerService,
+            RedissonClient redissonClient) {
+        
+        // 1. Configure retry policy with hybrid counting
+        RetryPolicy hybridPolicy = RetryPolicy.builder()
+            .maxAttempts(5)
+            .baseDelay(Duration.ofSeconds(1))
+            .exponentialBackoff(true)
+            .retryCounterType(RetryCounterType.HYBRID)
+            .distributedKeyPattern("critical:.*|payment:.*|inventory:.*")
+            .useDistributedPredicate(key -> {
+                // Custom logic for distributed vs local counting
+                return key.contains("critical") || 
+                       key.contains("payment") || 
+                       key.contains("transaction");
+            })
+            .retryCondition(exception -> {
+                // Comprehensive retry condition
+                return exception instanceof IOException ||
+                       exception instanceof ConnectException ||
+                       exception instanceof RedisCommandTimeoutException ||
+                       (exception instanceof RuntimeException && 
+                        exception.getCause() instanceof SocketTimeoutException);
+            })
+            .build();
+        
+        // 2. Create failure handler with monitoring
+        FailureHandler monitoringHandler = context -> {
+            RetryPolicy policy = RetryPolicy.defaultPolicy();
+            
+            if (context.getAttemptNumber() <= policy.getMaxAttempts() &&
+                policy.shouldRetry(context.getException())) {
+                
+                // Log retry attempt
+                Log.warn("Retrying operation (attempt {}/{}): {}", 
+                    context.getAttemptNumber(), 
+                    policy.getMaxAttempts(), 
+                    context.getException().getMessage());
+                
+                return FailureHandlingResult.retry(
+                    policy.calculateDelay(context.getAttemptNumber())
+                );
+            }
+            
+            // Log final failure and compensate
+            Log.error("Operation failed permanently after {} attempts", 
+                context.getAttemptNumber(), context.getException());
+            
+            return FailureHandlingResult.giveUp(
+                CompensationAction.composite(
+                    CompensationAction.LOG_FAILURE,
+                    CompensationAction.REMOVE_MESSAGE,
+                    customNotificationAction(context)
+                )
+            );
+        };
+        
+        // 3. Create resilient task with virtual threads
+        TaskInterface<?> virtualThreadInterface = new TaskInterface<Object>() {};
+        
+        ResilientRStreamAccepterInvokeTask resilientTask = 
+            ResilientRStreamAccepterInvokeTask.create(
+                playerService,
+                List.of("your.package", "net.legacy.library.player"),
+                List.of(PlayerLauncher.class.getClassLoader()),
+                Duration.ofSeconds(2),
+                monitoringHandler,
+                virtualThreadInterface
+            );
+        
+        // 4. Start the resilient processing
+        resilientTask.start();
+        
+        // 5. Monitor the system
+        CompletableFuture.runAsync(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(30000); // Check every 30 seconds
+                    
+                    // Monitor retry counters if needed
+                    Log.info("Resilient stream processing is running");
+                    
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+    }
+    
+    private CompensationAction customNotificationAction(FailureContext context) {
+        return ctx -> {
+            // Send notification to monitoring system
+            notifyOperationFailure(
+                ctx.getMessageId().toString(),
+                ctx.getException().getClass().getSimpleName(),
+                ctx.getAttemptNumber()
+            );
+        };
+    }
+    
+    private void notifyOperationFailure(String messageId, String errorType, int attempts) {
+        // Implementation for failure notification
     }
 }
 ```
@@ -816,6 +1153,29 @@ public class TTLManagementExample {
 
         // Set default TTL for all players without TTL
         int playersUpdated = playerService.setDefaultTTLForAllPlayers();
+    }
+}
+```
+
+### TTL Utility Integration
+
+```java
+public class TTLUtilityExample {
+    public void atomicTTLOperations(RedissonClient redissonClient) {
+        // 1. Atomic increment with TTL (replaces unsafe get->set operations)
+        Long newCount = TTLUtil.incrementWithTTL(redissonClient, "counter:key", 300); // 5 minutes TTL
+        
+        // 2. Atomic TTL setting for existing keys
+        boolean ttlSet = TTLUtil.setTTLIfExistsAtomic(redissonClient, "existing:key", 600); // 10 minutes
+        
+        // 3. Safe TTL setting only if missing
+        boolean ttlSetIfMissing = TTLUtil.setTTLIfMissing(redissonClient, "some:key", 900); // 15 minutes
+        
+        // 4. Bulk TTL processing with atomic operations
+        boolean processed = TTLUtil.processBucketTTL(redissonClient, "bulk:key", 1200); // 20 minutes
+        
+        // 5. Reliable TTL setting with fallback
+        boolean reliable = TTLUtil.setReliableTTL(redissonClient, "important:key", 1800); // 30 minutes
     }
 }
 ```

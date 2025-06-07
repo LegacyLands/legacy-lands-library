@@ -160,8 +160,8 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
 
                             bucket.set(serialized, Duration.ofMillis(ttlToApply.toMillis()));
 
-                            if (bucket.remainTimeToLive() <= 0) {
-                                TTLUtil.setReliableTTL(bucket, ttlToApply);
+                            if (bucket.remainTimeToLive() == -1) {
+                                TTLUtil.setReliableTTL(redissonClient, entityKey, ttlToApply.getSeconds());
                             }
 
                             return null;

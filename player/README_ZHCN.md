@@ -415,7 +415,10 @@ public class PlayerAchievementUpdateAccepter implements RStreamAccepterInterface
 
 ## Stream Accepter 弹性处理框架
 
-针对 Redis Stream accepter 操作中的失败情况，传统的手动异常处理缺乏标准化且难以保证系统一致性。为此提供了一个全面的弹性处理框架，具有可配置重试策略、异常类型识别、补偿机制和监控支持，同时保持完全向后兼容。
+针对 Redis Stream accepter 操作中的失败情况，传统的手动异常处理缺乏标准化且难以保证系统一致性。
+为此提供了一个全面的弹性处理框架，具有可配置重试策略、异常类型识别、补偿机制和监控支持，同时保持完全向后兼容。
+
+并同时提供企业级混合重试计数器系统，用于分布式流操作，提供跨多个服务器的精确重试控制，支持本地和分布式计数策略。
 
 ### 基本用法
 
@@ -426,7 +429,7 @@ public class ResilienceExample {
         List<String> basePackages = List.of("your.package", "net.legacy.library.player");
         List<ClassLoader> classLoaders = List.of(PlayerLauncher.class.getClassLoader());
 
-        // 创建具有默认设置的弹性任务（3次重试，指数退避）
+        // 创建具有默认设置的弹性任务（3 次重试，指数退避）
         ResilientRStreamAccepterInvokeTask resilientTask =
                 ResilientRStreamAccepterInvokeTask.ofResilient(
                         playerService, basePackages, classLoaders, Duration.ofSeconds(5)
@@ -515,6 +518,341 @@ public class FailureHandlingPatternsExample {
     public void handleResourceContention(RStreamAccepterInterface accepter) {
         // 使用更长延迟的保守重试
         ResilientRStreamAccepter conservativeResilient = ResilienceFactory.createConservativeRetry(accepter);
+    }
+}
+```
+
+### 基本重试计数器用法
+
+```java
+public class RetryCounterExample {
+    public void basicRetryCounters(RedissonClient redissonClient) {
+        // 1. 本地重试计数器（内存中，高性能）
+        RetryCounter localCounter = LocalRetryCounter.create();
+        
+        // 2. 分布式重试计数器（基于Redis，全局一致）
+        RetryCounter distributedCounter = DistributedRetryCounter.create(redissonClient);
+        
+        // 3. 混合重试计数器（智能选择）
+        RetryCounter hybridCounter = HybridRetryCounter.create(
+            redissonClient,
+            key -> key.startsWith("critical:") // 对关键操作使用分布式
+        );
+        
+        // 基本操作（所有方法返回 CompletableFuture）
+        CompletableFuture<Integer> count = localCounter.increment("operation:123");
+        CompletableFuture<Integer> countWithTTL = localCounter.increment("operation:123", Duration.ofMinutes(5));
+        CompletableFuture<Integer> currentCount = localCounter.get("operation:123");
+        CompletableFuture<Boolean> exists = localCounter.exists("operation:123");
+        CompletableFuture<Void> reset = localCounter.reset("operation:123");
+    }
+}
+```
+
+### 弹性框架配置
+
+```java
+public class ResilienceConfigurationExample {
+    public void configureResilience(LegacyPlayerDataService playerService) {
+        // 1. 具有默认设置的基本弹性流接收器
+        List<String> basePackages = List.of("your.package", "net.legacy.library.player");
+        List<ClassLoader> classLoaders = List.of(PlayerLauncher.class.getClassLoader());
+        
+        ResilientRStreamAccepterInvokeTask resilientTask = 
+            ResilientRStreamAccepterInvokeTask.ofResilient(
+                playerService, basePackages, classLoaders, Duration.ofSeconds(5)
+            );
+        resilientTask.start();
+        
+        // 2. 具有混合计数的自定义重试策略
+        RetryPolicy hybridPolicy = RetryPolicy.builder()
+            .maxAttempts(5)
+            .baseDelay(Duration.ofSeconds(1))
+            .exponentialBackoff(true)
+            .retryCounterType(RetryCounterType.HYBRID)
+            .distributedKeyPattern("critical:.*")
+            .retryCondition(ex -> ex instanceof IOException || ex instanceof ConnectException)
+            .build();
+        
+        // 3. 具有补偿的自定义失败处理器
+        FailureHandler customHandler = FailureHandler.withPolicy(
+            hybridPolicy,
+            CompensationAction.composite(
+                CompensationAction.LOG_FAILURE,
+                CompensationAction.REMOVE_MESSAGE
+            )
+        );
+        
+        // 4. 使用自定义配置创建弹性接收器
+        RStreamAccepterInterface originalAccepter = new YourCustomAccepter();
+        ResilientRStreamAccepter resilientAccepter = new ResilientRStreamAccepter(
+            originalAccepter, customHandler, redissonClient
+        );
+    }
+}
+```
+
+### 重试策略模式
+
+```java
+public class RetryPolicyPatternsExample {
+    public void demonstratePolicyPatterns() {
+        // 1. 网络错误重试（IO 操作的指数退避）
+        RetryPolicy networkPolicy = RetryPolicy.forExceptionTypes(
+            IOException.class, ConnectException.class, SocketTimeoutException.class
+        );
+        
+        // 2. 保守重试（更少次数，更长延迟）
+        RetryPolicy conservativePolicy = RetryPolicy.builder()
+            .maxAttempts(2)
+            .baseDelay(Duration.ofSeconds(5))
+            .exponentialBackoff(true)
+            .maxDelay(Duration.ofMinutes(2))
+            .build();
+        
+        // 3. 快速重试（更多次数，更短延迟）
+        RetryPolicy fastPolicy = RetryPolicy.builder()
+            .maxAttempts(5)
+            .baseDelay(Duration.ofMillis(500))
+            .exponentialBackoff(true)
+            .maxDelay(Duration.ofSeconds(10))
+            .build();
+        
+        // 4. 具有分布式协调的混合计数
+        RetryPolicy hybridPolicy = RetryPolicy.withHybridCounting("payment:.*|inventory:.*");
+        
+        // 5. 所有操作的分布式计数
+        RetryPolicy distributedPolicy = RetryPolicy.withDistributedCounting();
+        
+        // 6. 无重试策略（快速失败）
+        RetryPolicy noRetryPolicy = RetryPolicy.noRetry();
+    }
+}
+```
+
+### 高级弹性工厂用法
+
+```java
+public class AdvancedResilienceExample {
+    public void advancedResiliencePatterns(RStreamAccepterInterface originalAccepter) {
+        // 1. 预配置的弹性策略
+        ResilientRStreamAccepter networkResilient = 
+            ResilienceFactory.createForNetworkErrors(originalAccepter);
+        
+        ResilientRStreamAccepter fastRetry = 
+            ResilienceFactory.createFastRetry(originalAccepter);
+        
+        ResilientRStreamAccepter conservativeRetry = 
+            ResilienceFactory.createConservativeRetry(originalAccepter);
+        
+        // 2. 具有特定要求的自定义弹性
+        RetryPolicy customPolicy = RetryPolicy.builder()
+            .maxAttempts(3)
+            .baseDelay(Duration.ofSeconds(2))
+            .retryCounterType(RetryCounterType.DISTRIBUTED)
+            .retryCondition(exception -> {
+                // 自定义重试逻辑
+                if (exception instanceof ValidationException) {
+                    return false; // 不重试验证错误
+                }
+                if (exception instanceof TransientException) {
+                    return true; // 总是重试临时错误
+                }
+                return exception.getMessage().contains("timeout");
+            })
+            .build();
+        
+        CompensationAction customCompensation = context -> {
+            // 自定义补偿逻辑
+            Log.error("操作在 {} 次尝试后失败: {}", 
+                context.getAttemptNumber(), context.getException().getMessage());
+            
+            // 自定义清理
+            if (context.getException() instanceof DataCorruptionException) {
+                // 执行数据恢复
+                performDataRecovery(context);
+            }
+            
+            // 从流中移除消息
+            context.getStream().remove(context.getMessageId());
+        };
+        
+        ResilientRStreamAccepter customResilient = ResilienceFactory.createCustom(
+            originalAccepter, customPolicy, customCompensation
+        );
+        
+        // 3. 监控重试统计
+        StreamMessageId messageId = new StreamMessageId(System.currentTimeMillis(), 0);
+        int retryCount = customResilient.getRetryCount(messageId);
+        int totalTracked = customResilient.getTrackedMessageCount();
+        
+        Log.info("消息 {} 已重试 {} 次", messageId, retryCount);
+        Log.info("当前正在跟踪 {} 条消息的重试", totalTracked);
+        
+        // 清理已完成消息的跟踪
+        customResilient.clearRetryTracking(messageId);
+    }
+    
+    private void performDataRecovery(FailureContext context) {
+        // 数据恢复的实现
+    }
+}
+```
+
+### 虚拟线程集成
+
+```java
+public class VirtualThreadExample {
+    public void virtualThreadIntegration(RedissonClient redissonClient) {
+        // 1. 创建用于虚拟线程执行的 TaskInterface
+        TaskInterface<?> taskInterface = new TaskInterface<Object>() {};
+        
+        // 2. 使用虚拟线程创建分布式重试计数器
+        DistributedRetryCounter virtualThreadCounter = DistributedRetryCounter.create(
+            redissonClient, 
+            "vthread:counter:", 
+            taskInterface
+        );
+        
+        // 3. 所有操作现在都使用虚拟线程进行 I/O 操作
+        CompletableFuture<Integer> asyncIncrement = virtualThreadCounter.increment("key:123");
+        CompletableFuture<Integer> asyncIncrementWithTTL = virtualThreadCounter.increment(
+            "key:123", Duration.ofMinutes(10)
+        );
+        
+        // 4. 链接虚拟线程操作
+        virtualThreadCounter.increment("operation:abc")
+            .thenCompose(count -> {
+                if (count > 3) {
+                    return virtualThreadCounter.reset("operation:abc");
+                }
+                return CompletableFuture.completedFuture(null);
+            })
+            .thenRun(() -> Log.info("操作完成"))
+            .exceptionally(throwable -> {
+                Log.error("操作失败", throwable);
+                return null;
+            });
+        
+        // 5. 使用虚拟线程的批量操作
+        List<CompletableFuture<Integer>> futures = IntStream.range(0, 100)
+            .mapToObj(i -> virtualThreadCounter.increment("batch:operation:" + i))
+            .collect(Collectors.toList());
+        
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .thenRun(() -> Log.info("所有批量操作完成"));
+    }
+}
+```
+
+### 完整集成示例
+
+```java
+public class CompleteIntegrationExample {
+    public void completeStreamResilienceSetup(
+            LegacyPlayerDataService playerService,
+            RedissonClient redissonClient) {
+        
+        // 1. 配置具有混合计数的重试策略
+        RetryPolicy hybridPolicy = RetryPolicy.builder()
+            .maxAttempts(5)
+            .baseDelay(Duration.ofSeconds(1))
+            .exponentialBackoff(true)
+            .retryCounterType(RetryCounterType.HYBRID)
+            .distributedKeyPattern("critical:.*|payment:.*|inventory:.*")
+            .useDistributedPredicate(key -> {
+                // 分布式 vs 本地计数的自定义逻辑
+                return key.contains("critical") || 
+                       key.contains("payment") || 
+                       key.contains("transaction");
+            })
+            .retryCondition(exception -> {
+                // 综合重试条件
+                return exception instanceof IOException ||
+                       exception instanceof ConnectException ||
+                       exception instanceof RedisCommandTimeoutException ||
+                       (exception instanceof RuntimeException && 
+                        exception.getCause() instanceof SocketTimeoutException);
+            })
+            .build();
+        
+        // 2. 创建带监控的失败处理器
+        FailureHandler monitoringHandler = context -> {
+            RetryPolicy policy = RetryPolicy.defaultPolicy();
+            
+            if (context.getAttemptNumber() <= policy.getMaxAttempts() &&
+                policy.shouldRetry(context.getException())) {
+                
+                // 记录重试尝试
+                Log.warn("重试操作 (尝试 {}/{}): {}", 
+                    context.getAttemptNumber(), 
+                    policy.getMaxAttempts(), 
+                    context.getException().getMessage());
+                
+                return FailureHandlingResult.retry(
+                    policy.calculateDelay(context.getAttemptNumber())
+                );
+            }
+            
+            // 记录最终失败并补偿
+            Log.error("操作在 {} 次尝试后永久失败", 
+                context.getAttemptNumber(), context.getException());
+            
+            return FailureHandlingResult.giveUp(
+                CompensationAction.composite(
+                    CompensationAction.LOG_FAILURE,
+                    CompensationAction.REMOVE_MESSAGE,
+                    customNotificationAction(context)
+                )
+            );
+        };
+        
+        // 3. 使用虚拟线程创建弹性任务
+        TaskInterface<?> virtualThreadInterface = new TaskInterface<Object>() {};
+        
+        ResilientRStreamAccepterInvokeTask resilientTask = 
+            ResilientRStreamAccepterInvokeTask.create(
+                playerService,
+                List.of("your.package", "net.legacy.library.player"),
+                List.of(PlayerLauncher.class.getClassLoader()),
+                Duration.ofSeconds(2),
+                monitoringHandler,
+                virtualThreadInterface
+            );
+        
+        // 4. 启动弹性处理
+        resilientTask.start();
+        
+        // 5. 监控系统
+        CompletableFuture.runAsync(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(30000); // 每30秒检查一次
+                    
+                    // 如果需要，监控重试计数器
+                    Log.info("弹性流处理正在运行");
+                    
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+    }
+    
+    private CompensationAction customNotificationAction(FailureContext context) {
+        return ctx -> {
+            // 向监控系统发送通知
+            notifyOperationFailure(
+                ctx.getMessageId().toString(),
+                ctx.getException().getClass().getSimpleName(),
+                ctx.getAttemptNumber()
+            );
+        };
+    }
+    
+    private void notifyOperationFailure(String messageId, String errorType, int attempts) {
+        // 失败通知的实现
     }
 }
 ```
@@ -790,6 +1128,29 @@ public class TTLManagementExample {
 
         // 为所有没有 TTL 的玩家设置默认 TTL
         int playersUpdated = playerService.setDefaultTTLForAllPlayers();
+    }
+}
+```
+
+### TTL 工具集成
+
+```java
+public class TTLUtilityExample {
+    public void atomicTTLOperations(RedissonClient redissonClient) {
+        // 1. 原子递增带 TTL（替换不安全的 get -> set 操作）
+        Long newCount = TTLUtil.incrementWithTTL(redissonClient, "counter:key", 300); // 5分钟TTL
+        
+        // 2. 为现有键原子设置 TTL
+        boolean ttlSet = TTLUtil.setTTLIfExistsAtomic(redissonClient, "existing:key", 600); // 10分钟
+        
+        // 3. 仅在缺失时安全设置 TTL
+        boolean ttlSetIfMissing = TTLUtil.setTTLIfMissing(redissonClient, "some:key", 900); // 15分钟
+        
+        // 4. 使用原子操作的批量 TTL 处理
+        boolean processed = TTLUtil.processBucketTTL(redissonClient, "bulk:key", 1200); // 20分钟
+        
+        // 5. 带回退的可靠 TTL 设置
+        boolean reliable = TTLUtil.setReliableTTL(redissonClient, "important:key", 1800); // 30分钟
     }
 }
 ```

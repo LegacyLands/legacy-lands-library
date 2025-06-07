@@ -2,6 +2,7 @@ package net.legacy.library.player.task.redis.resilience;
 
 import net.legacy.library.player.task.redis.EntityRStreamAccepterInterface;
 import net.legacy.library.player.task.redis.RStreamAccepterInterface;
+import org.redisson.api.RedissonClient;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -307,4 +308,83 @@ public class ResilienceFactory {
     public static void shutdown() {
         DEFAULT_SCHEDULER.shutdown();
     }
+
+    /**
+     * Creates a resilient wrapper with distributed retry counting for critical operations.
+     *
+     * <p>This configuration uses Redis to track retry attempts globally across all
+     * server instances. It's ideal for critical operations where exact retry limits
+     * must be enforced even in the face of server failures.
+     *
+     * <p>Features:
+     * <ul>
+     *   <li>Global retry tracking across all servers</li>
+     *   <li>Survives server restarts and failovers</li>
+     *   <li>Conservative retry policy (2 attempts, longer delays)</li>
+     *   <li>Automatic message removal on final failure</li>
+     * </ul>
+     *
+     * @param accepter       the original stream accepter to wrap
+     * @param redissonClient the Redis client for distributed counting
+     * @return a new {@link ResilientRStreamAccepter} with distributed retry counting
+     */
+    public static ResilientRStreamAccepter createWithDistributedCounting(
+            RStreamAccepterInterface accepter,
+            RedissonClient redissonClient) {
+        RetryPolicy policy = RetryPolicy.builder()
+                .maxAttempts(2)
+                .baseDelay(Duration.ofSeconds(2))
+                .maxDelay(Duration.ofSeconds(30))
+                .retryCounterType(RetryCounterType.DISTRIBUTED)
+                .exponentialBackoff(true)
+                .build();
+        RetryCounter counter = RetryCounterFactory.createDistributed(redissonClient);
+
+        FailureHandler handler = FailureHandler.withPolicy(policy,
+                CompensationAction.composite(
+                        CompensationAction.LOG_FAILURE,
+                        CompensationAction.REMOVE_MESSAGE
+                ));
+
+        return new ResilientRStreamAccepter(accepter, handler, DEFAULT_SCHEDULER, counter);
+    }
+
+    /**
+     * Creates a resilient wrapper with hybrid retry counting for mixed workloads.
+     *
+     * <p>This configuration intelligently selects between local and distributed
+     * counting based on the operation key. Critical operations use distributed
+     * counting while non-critical operations use local counting for performance.
+     *
+     * <p>Default behavior:
+     * <ul>
+     *   <li>Keys starting with "payment:", "inventory:", or "critical:" use distributed counting</li>
+     *   <li>All other keys use local counting</li>
+     *   <li>Standard retry configuration (3 attempts, 1s base delay)</li>
+     * </ul>
+     *
+     * @param accepter       the original stream accepter to wrap
+     * @param redissonClient the Redis client for distributed counting
+     * @return a new {@link ResilientRStreamAccepter} with hybrid retry counting
+     */
+    public static ResilientRStreamAccepter createWithHybridCounting(
+            RStreamAccepterInterface accepter,
+            RedissonClient redissonClient) {
+        RetryPolicy policy = RetryPolicy.withHybridCounting(
+                "^(payment:|inventory:|critical:).*"
+        );
+        RetryCounter counter = RetryCounterFactory.createHybridWithPrefixes(
+                redissonClient,
+                "payment:", "inventory:", "critical:"
+        );
+
+        FailureHandler handler = FailureHandler.withPolicy(policy,
+                CompensationAction.composite(
+                        CompensationAction.LOG_FAILURE,
+                        CompensationAction.REMOVE_MESSAGE
+                ));
+
+        return new ResilientRStreamAccepter(accepter, handler, DEFAULT_SCHEDULER, counter);
+    }
+
 }

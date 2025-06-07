@@ -133,3 +133,6 @@ logs/
 # third-party-schedulers rust libraries
 libraries/
 disabled_plugins/
+
+# PromptX
+.promptx/

@@ -65,34 +65,6 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
     }
 
     /**
-     * Creates a new {@link EntityRStreamTask} for updating entity data (legacy format without version).
-     *
-     * @param uuid           the {@link UUID} of the entity
-     * @param entityData     the map of data to be updated
-     * @param expirationTime the duration after which the task expires
-     * @return a {@link EntityRStreamTask} instance for updating data by entity UUID
-     * @deprecated Use {@link #createRStreamTask(UUID, Map, long, Duration)} instead
-     */
-    @Deprecated
-    public static EntityRStreamTask createRStreamTask(UUID uuid, Map<String, String> entityData, Duration expirationTime) {
-        return createRStreamTask(uuid, entityData, 0, expirationTime);
-    }
-
-    /**
-     * Creates a new {@link EntityRStreamTask} for updating entity data (legacy format without version).
-     *
-     * @param uuid           the string representation of the entity's UUID
-     * @param entityData     the map of data to be updated
-     * @param expirationTime the duration after which the task expires
-     * @return a {@link EntityRStreamTask} instance for updating data by entity UUID (string)
-     * @deprecated Use {@link #createRStreamTask(String, Map, long, Duration)} instead
-     */
-    @Deprecated
-    public static EntityRStreamTask createRStreamTask(String uuid, Map<String, String> entityData, Duration expirationTime) {
-        return createRStreamTask(uuid, entityData, 0, expirationTime);
-    }
-
-    /**
      * {@inheritDoc}
      *
      * @return {@inheritDoc}

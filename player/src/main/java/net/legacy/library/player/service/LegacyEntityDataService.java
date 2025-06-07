@@ -1038,7 +1038,7 @@ public class LegacyEntityDataService {
                 return false;
             }
 
-            return TTLUtil.setReliableTTL(bucket, ttl);
+            return TTLUtil.setReliableTTL(redissonClient, entityKey, ttl.getSeconds());
         } catch (Exception exception) {
             Log.error("Failed to set TTL for entity " + uuid, exception);
             return false;
@@ -1072,8 +1072,7 @@ public class LegacyEntityDataService {
             KeysScanOptions keysScanOptions = KeysScanOptions.defaults().pattern(pattern);
 
             for (String key : keys.getKeys(keysScanOptions)) {
-                RBucket<Object> bucket = redissonClient.getBucket(key);
-                if (TTLUtil.processBucketTTL(bucket, DEFAULT_TTL_DURATION)) {
+                if (TTLUtil.processBucketTTL(redissonClient, key, DEFAULT_TTL_DURATION.getSeconds())) {
                     count++;
                 }
             }

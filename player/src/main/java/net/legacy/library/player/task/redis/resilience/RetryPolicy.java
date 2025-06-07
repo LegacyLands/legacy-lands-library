@@ -13,27 +13,10 @@ import java.util.function.Predicate;
  * including retry limits, delay calculations, and conditions for retrying specific
  * exception types. It supports both fixed and exponential backoff strategies.
  *
- * <p>Key features:
- * <ul>
- *   <li><strong>Configurable retry limits:</strong> Maximum number of retry attempts</li>
- *   <li><strong>Flexible delay strategies:</strong> Fixed delay or exponential backoff</li>
- *   <li><strong>Exception filtering:</strong> Retry only specific exception types</li>
- *   <li><strong>Delay bounds:</strong> Minimum and maximum delay limits</li>
- * </ul>
- *
- * <p>Example usage:
- * <pre>{@code
- * RetryPolicy policy = RetryPolicy.builder()
- *     .maxAttempts(3)
- *     .baseDelay(Duration.ofSeconds(1))
- *     .exponentialBackoff(true)
- *     .retryCondition(ex -> ex instanceof IOException)
- *     .build();
- * }</pre>
- *
  * @author qwq-dev
  * @see FailureHandler
  * @see FailureContext
+ * @see RetryCounterType
  * @since 2025-06-06 16:30
  */
 @Getter
@@ -74,6 +57,24 @@ public class RetryPolicy {
      */
     @Builder.Default
     private final Predicate<Exception> retryCondition = exception -> true;
+
+    /**
+     * Type of retry counter to use for tracking attempts
+     */
+    @Builder.Default
+    private final RetryCounterType retryCounterType = RetryCounterType.LOCAL;
+
+    /**
+     * Pattern for keys that require distributed counting in HYBRID mode
+     */
+    @Builder.Default
+    private final String distributedKeyPattern = "critical:.*";
+
+    /**
+     * Predicate for custom distributed counter selection in HYBRID mode
+     */
+    @Builder.Default
+    private final Predicate<String> useDistributedPredicate = key -> key.matches("critical:.*");
 
     /**
      * Creates a default retry policy with sensible defaults.
@@ -132,6 +133,46 @@ public class RetryPolicy {
     }
 
     /**
+     * Creates a retry policy with hybrid counting for mixed workloads.
+     *
+     * <p>This policy intelligently selects between local and distributed counting
+     * based on the operation key. It's ideal for applications with both critical
+     * and non-critical operations.
+     *
+     * <p>Default behavior:
+     * <ul>
+     *   <li>Uses distributed counting for keys matching the provided pattern</li>
+     *   <li>Uses local counting for all other keys</li>
+     *   <li>Standard retry configuration (3 attempts, 1s base delay)</li>
+     * </ul>
+     *
+     * @param criticalKeyPattern regex pattern for operations requiring distributed counting
+     * @return a new {@link RetryPolicy} with hybrid counting
+     */
+    public static RetryPolicy withHybridCounting(String criticalKeyPattern) {
+        return RetryPolicy.builder()
+                .retryCounterType(RetryCounterType.HYBRID)
+                .distributedKeyPattern(criticalKeyPattern)
+                .useDistributedPredicate(key -> key.matches(criticalKeyPattern))
+                .build();
+    }
+
+    /**
+     * Creates a retry policy with distributed counting for all operations.
+     *
+     * <p>This policy ensures globally consistent retry tracking across all
+     * server instances. Use this when retry count accuracy is more important
+     * than the slight performance overhead of distributed counting.
+     *
+     * @return a new {@link RetryPolicy} with distributed counting
+     */
+    public static RetryPolicy withDistributedCounting() {
+        return RetryPolicy.builder()
+                .retryCounterType(RetryCounterType.DISTRIBUTED)
+                .build();
+    }
+
+    /**
      * Calculates the delay for a specific attempt number.
      *
      * <p>If exponential backoff is disabled, returns the base delay.
@@ -167,5 +208,18 @@ public class RetryPolicy {
      */
     public boolean shouldRetry(Exception exception) {
         return retryCondition.test(exception);
+    }
+
+    /**
+     * Checks if this policy requires Redis for retry counting.
+     *
+     * <p>This is useful for initialization logic to ensure Redis is available
+     * when needed for distributed or hybrid counting.
+     *
+     * @return {@code true} if the policy uses distributed or hybrid counting
+     */
+    public boolean requiresRedis() {
+        return retryCounterType == RetryCounterType.DISTRIBUTED ||
+                retryCounterType == RetryCounterType.HYBRID;
     }
 }

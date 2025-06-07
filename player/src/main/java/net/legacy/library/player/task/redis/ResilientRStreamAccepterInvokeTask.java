@@ -11,8 +11,12 @@ import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.player.annotation.RStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyPlayerDataService;
-import net.legacy.library.player.task.redis.resilience.ResilienceFactory;
+import net.legacy.library.player.task.redis.resilience.CompensationAction;
+import net.legacy.library.player.task.redis.resilience.FailureHandler;
+import net.legacy.library.player.task.redis.resilience.LocalRetryCounter;
 import net.legacy.library.player.task.redis.resilience.ResilientRStreamAccepter;
+import net.legacy.library.player.task.redis.resilience.RetryCounter;
+import net.legacy.library.player.task.redis.resilience.RetryPolicy;
 import net.legacy.library.player.util.RKeyUtil;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
@@ -25,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -45,6 +50,8 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
     private final List<ClassLoader> classLoaders;
     private final Duration interval;
     private final boolean enableResilience;
+    private final RetryPolicy retryPolicy;
+    private final RetryCounter retryCounter;
 
     private final Set<Class<?>> annotatedClasses;
     private final Set<RStreamAccepterInterface> accepters;
@@ -58,17 +65,23 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
      * @param classLoaders            the list of class loaders to use for scanning
      * @param interval                the interval at which to invoke the task processing
      * @param enableResilience        whether to wrap accepters with resilience capabilities
+     * @param retryPolicy             the retry policy to use (nullable, defaults to local counting)
+     * @param retryCounter            the retry counter to use (nullable, defaults to local counter)
      */
     public ResilientRStreamAccepterInvokeTask(LegacyPlayerDataService legacyPlayerDataService,
                                               List<String> basePackages,
                                               List<ClassLoader> classLoaders,
                                               Duration interval,
-                                              boolean enableResilience) {
+                                              boolean enableResilience,
+                                              RetryPolicy retryPolicy,
+                                              RetryCounter retryCounter) {
         this.legacyPlayerDataService = legacyPlayerDataService;
         this.basePackages = basePackages;
         this.classLoaders = classLoaders;
         this.interval = interval;
         this.enableResilience = enableResilience;
+        this.retryPolicy = retryPolicy != null ? retryPolicy : RetryPolicy.defaultPolicy();
+        this.retryCounter = retryCounter != null ? retryCounter : LocalRetryCounter.create();
         this.annotatedClasses = Sets.newConcurrentHashSet();
         this.accepters = Sets.newConcurrentHashSet();
         this.acceptedId = Sets.newConcurrentHashSet();
@@ -90,7 +103,8 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
                                                         List<ClassLoader> classLoaders,
                                                         Duration interval,
                                                         boolean enableResilience) {
-        return new ResilientRStreamAccepterInvokeTask(legacyPlayerDataService, basePackages, classLoaders, interval, enableResilience);
+        return new ResilientRStreamAccepterInvokeTask(legacyPlayerDataService, basePackages, classLoaders,
+                interval, enableResilience, null, null);
     }
 
     /**
@@ -111,6 +125,30 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
                                                                  List<ClassLoader> classLoaders,
                                                                  Duration interval) {
         return of(legacyPlayerDataService, basePackages, classLoaders, interval, true);
+    }
+
+    /**
+     * Factory method to create a resilient task with custom retry policy and counter.
+     *
+     * <p>This method provides full control over the retry behavior and counting strategy.
+     * Use this when you need specific retry policies for different types of operations.
+     *
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance to be used
+     * @param basePackages            the list of base packages to scan for annotated accepters
+     * @param classLoaders            the list of class loaders to use for scanning
+     * @param interval                the interval at which to invoke the task processing
+     * @param retryPolicy             the custom retry policy to use
+     * @param retryCounter            the custom retry counter to use
+     * @return a new instance of {@link ResilientRStreamAccepterInvokeTask} with custom configuration
+     */
+    public static ResilientRStreamAccepterInvokeTask ofCustom(LegacyPlayerDataService legacyPlayerDataService,
+                                                              List<String> basePackages,
+                                                              List<ClassLoader> classLoaders,
+                                                              Duration interval,
+                                                              RetryPolicy retryPolicy,
+                                                              RetryCounter retryCounter) {
+        return new ResilientRStreamAccepterInvokeTask(legacyPlayerDataService, basePackages, classLoaders,
+                interval, true, retryPolicy, retryCounter);
     }
 
     /**
@@ -153,10 +191,25 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
                 RStreamAccepterInterface accepter = (RStreamAccepterInterface) clazz.getDeclaredConstructor().newInstance();
 
                 if (enableResilience) {
-                    // Wrap with resilience capabilities
-                    ResilientRStreamAccepter resilientAccepter = ResilienceFactory.createDefault(accepter);
+                    // Wrap with resilience capabilities using configured policy and counter
+                    FailureHandler handler = FailureHandler.withPolicy(retryPolicy,
+                            CompensationAction.composite(
+                                    CompensationAction.LOG_FAILURE,
+                                    CompensationAction.REMOVE_MESSAGE
+                            ));
+                    ResilientRStreamAccepter resilientAccepter = ResilientRStreamAccepter.wrapWithCounter(
+                            accepter, handler,
+                            Executors.newSingleThreadScheduledExecutor(runnable -> {
+                                Thread thread = new Thread(runnable);
+                                thread.setName("resilient-" + clazz.getSimpleName());
+                                thread.setDaemon(true);
+                                return thread;
+                            }),
+                            retryCounter
+                    );
                     accepters.add(resilientAccepter);
-                    Log.info("Wrapped RStreamAccepter %s with resilience capabilities", clazz.getSimpleName());
+                    Log.info("Wrapped RStreamAccepter %s with resilience capabilities (counter type: %s)",
+                            clazz.getSimpleName(), retryCounter.getType());
                 } else {
                     // Use original accepter
                     accepters.add(accepter);
@@ -174,6 +227,7 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
      * @return {@inheritDoc}
      */
     @Override
+    @SuppressWarnings("DuplicatedCode")
     public VirtualThreadScheduledFuture start() {
         Runnable runnable = () -> {
             try {

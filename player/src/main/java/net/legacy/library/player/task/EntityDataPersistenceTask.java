@@ -11,7 +11,6 @@ import net.legacy.library.player.model.LegacyEntityData;
 import net.legacy.library.player.service.LegacyEntityDataService;
 import net.legacy.library.player.util.EntityRKeyUtil;
 import net.legacy.library.player.util.TTLUtil;
-import org.redisson.api.RBucket;
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
 import org.redisson.api.RType;
@@ -189,19 +188,17 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
 
             if (entityDataString.isEmpty()) {
                 Log.error("The key value is not expected to be null, this should not happen!! key: " + key);
-                return;
+                continue;
             }
 
             // Save to database
             datastore.save(SimplixSerializer.deserialize(entityDataString, LegacyEntityData.class));
 
             // Update TTL
-            RBucket<Object> bucket = redissonClient.getBucket(key);
-
             if (ttl != null) {
-                TTLUtil.setTTLIfMissing(bucket, ttl);
+                TTLUtil.setTTLIfMissing(redissonClient, key, ttl.getSeconds());
             } else {
-                TTLUtil.setTTLIfMissing(bucket, LegacyEntityDataService.DEFAULT_TTL_DURATION);
+                TTLUtil.setTTLIfMissing(redissonClient, key, LegacyEntityDataService.DEFAULT_TTL_DURATION.getSeconds());
             }
         }
     }

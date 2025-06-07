@@ -2,6 +2,7 @@ package net.legacy.library.player.task.redis.resilience;
 
 import io.fairyproject.log.Log;
 import io.fairyproject.mc.scheduler.MCScheduler;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.task.redis.RStreamAccepterInterface;
@@ -9,8 +10,6 @@ import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
 import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,36 +24,35 @@ import java.util.concurrent.TimeUnit;
  * @author qwq-dev
  * @since 2025-06-06 16:30
  */
+@Getter
 @RequiredArgsConstructor
 public class ResilientRStreamAccepter implements RStreamAccepterInterface {
     private final RStreamAccepterInterface delegate;
     private final FailureHandler failureHandler;
     private final ScheduledExecutorService scheduler;
-
-    /**
-     * Map to track retry attempts for each message
-     */
-    private final ConcurrentMap<StreamMessageId, Integer> retryAttempts = new ConcurrentHashMap<>();
+    private final RetryCounter retryCounter;
 
     /**
      * Creates a resilient wrapper with default failure handling.
      *
      * <p>Uses {@link FailureHandler#RETRY_ALWAYS} which implements a standard
      * retry policy with exponential backoff and logging compensation action.
+     * Uses local retry counting by default.
      *
      * @param accepter  the original stream accepter to wrap with resilience
      * @param scheduler the scheduler service to use for delayed retry execution
      * @return a new {@link ResilientRStreamAccepter} with default failure handling
      */
     public static ResilientRStreamAccepter wrap(RStreamAccepterInterface accepter, ScheduledExecutorService scheduler) {
-        return new ResilientRStreamAccepter(accepter, FailureHandler.RETRY_ALWAYS, scheduler);
+        return new ResilientRStreamAccepter(accepter, FailureHandler.RETRY_ALWAYS, scheduler,
+                LocalRetryCounter.create());
     }
 
     /**
      * Creates a resilient wrapper with custom failure handling.
      *
      * <p>Allows full control over retry behavior and compensation actions
-     * through the provided failure handler.
+     * through the provided failure handler. Uses local retry counting by default.
      *
      * @param accepter       the original stream accepter to wrap with resilience
      * @param failureHandler the failure handler that defines retry and compensation behavior
@@ -64,7 +62,29 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
     public static ResilientRStreamAccepter wrap(RStreamAccepterInterface accepter,
                                                 FailureHandler failureHandler,
                                                 ScheduledExecutorService scheduler) {
-        return new ResilientRStreamAccepter(accepter, failureHandler, scheduler);
+        return new ResilientRStreamAccepter(accepter, failureHandler, scheduler,
+                LocalRetryCounter.create());
+    }
+
+    /**
+     * Creates a resilient wrapper with a custom retry counter.
+     *
+     * <p>This factory method provides full control over retry counting strategy,
+     * allowing the use of distributed, local, or hybrid counters based on
+     * application requirements.
+     *
+     * @param accepter       the original stream accepter to wrap with resilience
+     * @param failureHandler the failure handler that defines retry and compensation behavior
+     * @param scheduler      the scheduler service to use for delayed retry execution
+     * @param retryCounter   the retry counter implementation to use
+     * @return a new {@link ResilientRStreamAccepter} with custom retry counting
+     */
+    public static ResilientRStreamAccepter wrapWithCounter(
+            RStreamAccepterInterface accepter,
+            FailureHandler failureHandler,
+            ScheduledExecutorService scheduler,
+            RetryCounter retryCounter) {
+        return new ResilientRStreamAccepter(accepter, failureHandler, scheduler, retryCounter);
     }
 
     /**
@@ -141,7 +161,8 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
             delegate.accept(rStream, streamMessageId, legacyPlayerDataService, data);
 
             // Success - clear any retry tracking
-            retryAttempts.remove(streamMessageId);
+            String retryKey = generateRetryKey(streamMessageId, data);
+            retryCounter.reset(retryKey);
         } catch (Exception exception) {
             handleFailure(exception, rStream, streamMessageId, legacyPlayerDataService, data);
         }
@@ -150,9 +171,25 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
     private void handleFailure(Exception exception, RStream<Object, Object> rStream,
                                StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService,
                                String data) {
-        int currentAttempt = retryAttempts.compute(streamMessageId, (id, attempts) ->
-                attempts == null ? 1 : attempts + 1
-        );
+        // Generate a unique key for this message
+        String retryKey = generateRetryKey(streamMessageId, data);
+
+        // Use the configured retry counter asynchronously
+        retryCounter.increment(retryKey).whenComplete((currentAttempt, throwable) -> {
+            if (throwable != null) {
+                Log.error("Failed to increment retry counter for key: " + retryKey, throwable);
+                // Fallback to local counter logic
+                currentAttempt = 1;
+            }
+
+            processRetryDecision(exception, rStream, streamMessageId, legacyPlayerDataService,
+                    data, retryKey, currentAttempt);
+        });
+    }
+
+    private void processRetryDecision(Exception exception, RStream<Object, Object> rStream,
+                                      StreamMessageId streamMessageId, LegacyPlayerDataService legacyPlayerDataService,
+                                      String data, String retryKey, int currentAttempt) {
 
         FailureContext context = FailureContext.builder()
                 .exception(exception)
@@ -161,7 +198,8 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
                 .taskData(data)
                 .actionName(getActionName())
                 .attemptNumber(currentAttempt)
-                .maxAttempts(3) // This could be configurable
+                .maxAttempts(failureHandler.getRetryPolicy() != null ?
+                        failureHandler.getRetryPolicy().getMaxAttempts() : 3)
                 .failureTimestamp(System.currentTimeMillis())
                 .build();
 
@@ -171,7 +209,7 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
             scheduleRetry(result.getRetryDelay(), rStream, streamMessageId, legacyPlayerDataService, data);
         } else {
             // Give up and execute compensation
-            retryAttempts.remove(streamMessageId);
+            retryCounter.reset(retryKey);
             executeCompensation(result.getCompensationAction(), context);
         }
     }
@@ -182,9 +220,7 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
         Log.info("Scheduling retry for message %s after delay of %sms",
                 streamMessageId, delay.toMillis());
 
-        scheduler.schedule(() -> {
-            executeWithResilience(rStream, streamMessageId, legacyPlayerDataService, data);
-        }, delay.toMillis(), TimeUnit.MILLISECONDS);
+        scheduler.schedule(() -> executeWithResilience(rStream, streamMessageId, legacyPlayerDataService, data), delay.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private void executeCompensation(CompensationAction compensation, FailureContext context) {
@@ -201,23 +237,31 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
     }
 
     /**
-     * Gets the current retry count for a message
+     * Generates a unique retry key for the given message.
+     *
+     * <p>The key format includes the action name, message ID, and a hash of the data
+     * to ensure uniqueness even for messages with the same ID but different content.
+     *
+     * @param streamMessageId the message ID from the stream
+     * @param data            the message data
+     * @return a unique key for retry tracking
      */
-    public int getRetryCount(StreamMessageId messageId) {
-        return retryAttempts.getOrDefault(messageId, 0);
+    private String generateRetryKey(StreamMessageId streamMessageId, String data) {
+        String actionName = getActionName() != null ? getActionName() : "default";
+        int dataHash = data != null ? data.hashCode() : 0;
+        return String.format("%s:%s:%d", actionName, streamMessageId.toString(), dataHash);
     }
 
     /**
-     * Clears retry tracking for a specific message
+     * Closes resources associated with this resilient accepter.
+     *
+     * <p>This method should be called during shutdown to clean up resources,
+     * particularly when using distributed retry counters that may hold
+     * connections to external systems.
      */
-    public void clearRetryTracking(StreamMessageId messageId) {
-        retryAttempts.remove(messageId);
-    }
-
-    /**
-     * Gets the total number of messages currently being tracked for retries
-     */
-    public int getTrackedMessageCount() {
-        return retryAttempts.size();
+    public void close() {
+        if (retryCounter != null) {
+            retryCounter.close();
+        }
     }
 }

@@ -11,7 +11,6 @@ import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
 import net.legacy.library.player.util.TTLUtil;
-import org.redisson.api.RBucket;
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
 import org.redisson.api.RType;
@@ -190,11 +189,10 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
             datastore.save(SimplixSerializer.deserialize(playerDataString, LegacyPlayerData.class));
 
             // Update TTL if needed
-            RBucket<Object> bucket = redissonClient.getBucket(key);
             if (ttl != null) {
-                TTLUtil.setTTLIfMissing(bucket, ttl);
+                TTLUtil.setTTLIfMissing(redissonClient, key, ttl.getSeconds());
             } else {
-                TTLUtil.setTTLIfMissing(bucket, LegacyPlayerDataService.DEFAULT_TTL_DURATION);
+                TTLUtil.setTTLIfMissing(redissonClient, key, LegacyPlayerDataService.DEFAULT_TTL_DURATION.getSeconds());
             }
         }
     }
