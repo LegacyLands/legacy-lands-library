@@ -124,13 +124,16 @@ public class AnnotationProcessingService implements AnnotationProcessingServiceI
 
         for (Class<?> aClass : AnnotationScanner.findAnnotatedClasses(urls, annotationClazz)) {
             try {
-                customAnnotationProcessor.after(annotationClazz);
+                customAnnotationProcessor.before(aClass);
                 customAnnotationProcessor.process(aClass);
-                customAnnotationProcessor.before(annotationClazz);
+                customAnnotationProcessor.after(aClass);
             } catch (Exception exception) {
                 customAnnotationProcessor.exception(aClass, exception);
+            } catch (Error error) {
+                // Handle AssertionError and other Error types
+                customAnnotationProcessor.exception(aClass, new RuntimeException("Error occurred: " + error.getMessage(), error));
             } finally {
-                customAnnotationProcessor.finallyAfter(annotationClazz);
+                customAnnotationProcessor.finallyAfter(aClass);
             }
         }
     }
