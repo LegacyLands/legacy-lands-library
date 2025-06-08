@@ -155,13 +155,13 @@ public class RStreamAccepterInvokeTask implements TaskInterface<VirtualThreadSch
 
                 // The message published by RStreamPubTask is definitely a Pair
                 if (value.isEmpty()) {
-                    Log.error("RStream message is empty! StreamMessageId: " + streamMessageId);
+                    Log.error("RStream message is empty! StreamMessageId: %s", streamMessageId);
                     continue;
                 }
 
                 // Greater than 2 because, in addition to the data, there is also an expiration time
                 if (value.size() > 2) {
-                    Log.error("RStream message is not a pair! StreamMessageId: " + streamMessageId);
+                    Log.error("RStream message is not a pair! StreamMessageId: %s", streamMessageId);
                     continue;
                 }
 

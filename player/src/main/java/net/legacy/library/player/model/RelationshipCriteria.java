@@ -1,5 +1,6 @@
 package net.legacy.library.player.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -15,6 +16,7 @@ import java.util.UUID;
  * @since 2025-3-30 23:40
  */
 @Getter
+@AllArgsConstructor
 public class RelationshipCriteria {
     /**
      * The type of relationship to query (e.g., "parent", "child", "member", etc.)
@@ -32,19 +34,6 @@ public class RelationshipCriteria {
      * Whether to negate these criteria (i.e., find entities that do NOT have this relationship).
      */
     private final boolean negated;
-
-    /**
-     * Constructor for creating RelationshipCriteria instances.
-     *
-     * @param relationshipType the type of relationship
-     * @param targetEntityUuid the UUID of the target entity in the relationship
-     * @param negated          whether to negate the criteria
-     */
-    public RelationshipCriteria(String relationshipType, UUID targetEntityUuid, boolean negated) {
-        this.relationshipType = relationshipType;
-        this.targetEntityUuid = targetEntityUuid;
-        this.negated = negated;
-    }
 
     /**
      * Creates a new RelationshipCriteria instance.

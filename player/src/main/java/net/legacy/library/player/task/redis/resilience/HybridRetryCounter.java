@@ -259,8 +259,8 @@ public class HybridRetryCounter implements RetryCounter {
      */
     private void logDistributedFailure(String key, Throwable throwable) {
         Log.error(
-                "Distributed retry counter failed for key: " + key +
-                        ", falling back to local counter",
+                "Distributed retry counter failed for key: %s, falling back to local counter",
+                key,
                 throwable
         );
     }

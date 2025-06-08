@@ -201,7 +201,7 @@ public class ResilientEntityRStreamAccepterInvokeTask implements TaskInterface<V
 
                     // Validate message
                     if (value.isEmpty()) {
-                        Log.error("Entity RStream message is empty! StreamMessageId: " + streamMessageId);
+                        Log.error("Entity RStream message is empty! StreamMessageId: %s", streamMessageId);
                         continue;
                     }
 
@@ -217,7 +217,7 @@ public class ResilientEntityRStreamAccepterInvokeTask implements TaskInterface<V
                     String data = (String) value.get("data");
 
                     if (actionName == null || data == null) {
-                        Log.error("Entity RStream message has invalid format! StreamMessageId: " + streamMessageId);
+                        Log.error("Entity RStream message has invalid format! StreamMessageId: %s", streamMessageId);
                         continue;
                     }
 

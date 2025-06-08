@@ -38,8 +38,8 @@ public abstract class AbstractLockable<R> implements LockableInterface<R> {
      * Static factory method to create a new lockable resource instance.
      *
      * @param resource the underlying resource to be wrapped
+     * @param <R>      the resource type
      * @return a LockableInterface instance wrapping the specified resource
-     * @param <R> the resource type
      */
     public static <R> LockableInterface<R> of(R resource) {
         return new AbstractLockable<>(resource) {

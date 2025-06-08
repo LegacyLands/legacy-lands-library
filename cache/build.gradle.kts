@@ -24,6 +24,9 @@ fairy {
 
 // Dependencies
 dependencies {
+    // Foundation module for testing infrastructure
+    compileOnly(project(":foundation"))
+    
     // https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine
     api("com.github.ben-manes.caffeine:caffeine:3.2.0")
 

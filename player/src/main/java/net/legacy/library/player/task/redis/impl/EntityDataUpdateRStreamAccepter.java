@@ -147,7 +147,7 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
             LegacyEntityData localEntity = legacyEntityDataService.getEntityData(uuid);
             if (localEntity == null) {
                 // Entity doesn't exist locally, no conflict to resolve
-                Log.warn("Received update for non-existent entity: " + uuid);
+                Log.warn("Received update for non-existent entity: %s", uuid);
                 ack(rStream, streamMessageId);
                 return;
             }

@@ -1,5 +1,7 @@
 package net.legacy.library.annotation.test;
 
+import net.legacy.library.foundation.annotation.ModuleTest;
+
 /**
  * Error test class for validating exception handling in annotation processing.
  *
@@ -14,8 +16,16 @@ package net.legacy.library.annotation.test;
  */
 @TestableAnnotation(
         testName = "error-test",
-        expectedResult = "should-fail",  // This will trigger an error
-        validateOrder = false
+        expectedResult = "should-fail"  // This will trigger an error
+)
+@ModuleTest(
+        testName = "error-test",
+        expectedResult = "should-fail",
+        description = "Error test class for validating exception handling in annotation processing",
+        tags = {"annotation", "error", "exception-handling"},
+        priority = 3,
+        timeout = 2000,
+        isolated = true
 )
 public class ErrorTestClass {
     /**

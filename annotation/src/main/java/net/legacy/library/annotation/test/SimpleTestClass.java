@@ -1,5 +1,7 @@
 package net.legacy.library.annotation.test;
 
+import net.legacy.library.foundation.annotation.ModuleTest;
+
 /**
  * Simple test class for validating basic annotation processing functionality.
  *
@@ -12,8 +14,16 @@ package net.legacy.library.annotation.test;
  */
 @TestableAnnotation(
         testName = "simple-test",
-        expectedResult = "processed",
         validateOrder = true
+)
+@ModuleTest(
+        testName = "simple-test",
+        description = "Simple test class for validating basic annotation processing functionality",
+        tags = {"annotation", "simple", "basic"},
+        validateLifecycle = true,
+        priority = 1,
+        timeout = 3000,
+        expectedResult = "SUCCESS"
 )
 public class SimpleTestClass {
     /**

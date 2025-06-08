@@ -55,8 +55,8 @@ public class SpatialUtil {
         double targetZ = target.getZ();
 
         return targetX >= minX && targetX <= maxX &&
-               targetY >= minY && targetY <= maxY &&
-               targetZ >= minZ && targetZ <= maxZ;
+                targetY >= minY && targetY <= maxY &&
+                targetZ >= minZ && targetZ <= maxZ;
     }
 
     /**

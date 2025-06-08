@@ -103,7 +103,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 long newValue = counter.incrementAndGet();
                 return Math.toIntExact(newValue);
             } catch (Exception exception) {
-                Log.error("Failed to increment distributed retry counter for key: " + key, exception);
+                Log.error("Failed to increment distributed retry counter for key: %s", key, exception);
                 throw new RetryCounterException("Failed to increment distributed counter", exception);
             }
         });
@@ -135,7 +135,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 Long result = TTLUtil.incrementWithTTL(redissonClient, buildKey(key), ttl.getSeconds());
                 return Math.toIntExact(result);
             } catch (Exception exception) {
-                Log.error("Failed to increment distributed retry counter with TTL for key: " + key, exception);
+                Log.error("Failed to increment distributed retry counter with TTL for key: %s", key, exception);
                 throw new RetryCounterException("Failed to increment distributed counter with TTL", exception);
             }
         });
@@ -155,7 +155,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 long value = counter.get();
                 return Math.toIntExact(value);
             } catch (Exception exception) {
-                Log.error("Failed to get distributed retry counter for key: " + key, exception);
+                Log.error("Failed to get distributed retry counter for key: %s", key, exception);
                 return 0;
             }
         });
@@ -174,7 +174,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 RBucket<Object> bucket = redissonClient.getBucket(buildKey(key));
                 bucket.delete();
             } catch (Exception exception) {
-                Log.error("Failed to reset distributed retry counter for key: " + key, exception);
+                Log.error("Failed to reset distributed retry counter for key: %s", key, exception);
                 throw new RetryCounterException("Failed to reset distributed counter", exception);
             }
         });
@@ -193,7 +193,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 RBucket<Object> bucket = redissonClient.getBucket(buildKey(key));
                 return bucket.isExists();
             } catch (Exception exception) {
-                Log.error("Failed to check existence of distributed retry counter for key: " + key, exception);
+                Log.error("Failed to check existence of distributed retry counter for key: %s", key, exception);
                 return false;
             }
         });
@@ -244,7 +244,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 RAtomicLong counter = redissonClient.getAtomicLong(buildKey(key));
                 counter.set(value);
             } catch (Exception exception) {
-                Log.error("Failed to set distributed retry counter for key: " + key, exception);
+                Log.error("Failed to set distributed retry counter for key: %s", key, exception);
                 throw new RetryCounterException("Failed to set distributed counter", exception);
             }
         });
@@ -262,7 +262,7 @@ public class DistributedRetryCounter implements RetryCounter {
                 RBucket<Object> bucket = redissonClient.getBucket(buildKey(key));
                 return bucket.remainTimeToLive() / 1000; // Convert to seconds
             } catch (Exception exception) {
-                Log.error("Failed to get TTL for distributed retry counter key: " + key, exception);
+                Log.error("Failed to get TTL for distributed retry counter key: %s", key, exception);
                 return -1L;
             }
         });

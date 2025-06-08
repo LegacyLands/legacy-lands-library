@@ -1,9 +1,14 @@
 package net.legacy.library.annotation.test;
 
 import io.fairyproject.container.Containers;
-import io.fairyproject.log.Log;
+import lombok.Getter;
 import net.legacy.library.annotation.service.AnnotationProcessingService;
 import net.legacy.library.annotation.service.AnnotationProcessingServiceInterface;
+import net.legacy.library.foundation.annotation.TestConfiguration;
+import net.legacy.library.foundation.test.AbstractModuleTestRunner;
+import net.legacy.library.foundation.test.TestResultSummary;
+import net.legacy.library.foundation.util.TestLogger;
+import net.legacy.library.foundation.util.TestTimer;
 
 /**
  * Test runner for validating annotation processing functionality during debug mode.
@@ -14,143 +19,35 @@ import net.legacy.library.annotation.service.AnnotationProcessingServiceInterfac
  *
  * @author qwq-dev
  * @version 1.0
- * @since 2025-06-07 21:30
+ * @since 2025-06-08 16:30
  */
-public class AnnotationTestRunner {
+@TestConfiguration(
+        continueOnFailure = false,
+        verboseLogging = true,
+        debugMode = true,
+        maxConcurrency = 1,
+        testPackages = {"net.legacy.library.annotation.test"},
+        globalTimeout = 30000,
+        enableCaching = true,
+        failFast = true
+)
+public class AnnotationTestRunner extends AbstractModuleTestRunner {
     private static final String TEST_PACKAGE = "net.legacy.library.annotation.test";
-    
+    private static final String MODULE_NAME = "annotation";
+
+    @Getter
     private final AnnotationProcessingServiceInterface annotationProcessingService;
+
+    @Getter
     private final TestableAnnotationProcessor testProcessor;
 
-    /**
-     * Constructor for AnnotationTestRunner.
-     *
-     * @param annotationProcessingService the annotation processing service
-     * @param testProcessor              the test processor instance
-     */
-    public AnnotationTestRunner(AnnotationProcessingServiceInterface annotationProcessingService, 
-                               TestableAnnotationProcessor testProcessor) {
+    private final TestTimer timer = new TestTimer();
+
+    public AnnotationTestRunner(AnnotationProcessingServiceInterface annotationProcessingService,
+                                TestableAnnotationProcessor testProcessor) {
+        super(MODULE_NAME);
         this.annotationProcessingService = annotationProcessingService;
         this.testProcessor = testProcessor;
-    }
-
-    /**
-     * Runs all annotation processing tests and validates results.
-     *
-     * @return the test result summary
-     */
-    public TestResultSummary runTests() {
-        Log.info("[AnnotationTestRunner] Starting annotation processing tests...");
-        
-        // Clear previous test results
-        TestResultRegistry.clearResults();
-        testProcessor.resetCounters();
-        
-        long startTime = System.currentTimeMillis();
-        
-        try {
-            // Run annotation processing on the test package
-            annotationProcessingService.processAnnotations(TEST_PACKAGE, true);
-            
-            // Wait a moment for processing to complete
-            Thread.sleep(200);
-            
-            // Validate results
-            return validateTestResults(startTime);
-            
-        } catch (Exception exception) {
-            Log.error("[AnnotationTestRunner] Unexpected error during test execution", exception);
-            return TestResultSummary.failure("Unexpected error: " + exception.getMessage(), 
-                    System.currentTimeMillis() - startTime);
-        }
-    }
-
-    /**
-     * Validates the test results and generates a summary.
-     *
-     * @param startTime the test start time
-     * @return the test result summary
-     */
-    private TestResultSummary validateTestResults(long startTime) {
-        long duration = System.currentTimeMillis() - startTime;
-        
-        Log.info("[AnnotationTestRunner] Validating test results...");
-        
-        // Check expected successful processing
-        boolean simpleTestSuccess = TestResultRegistry.wasProcessedSuccessfully(SimpleTestClass.class, "simple-test");
-        boolean complexTestSuccess = TestResultRegistry.wasProcessedSuccessfully(ComplexTestClass.class, "complex-test");
-        
-        // Check expected error processing
-        boolean errorTestFailed = TestResultRegistry.wasProcessingFailed(ErrorTestClass.class, "error-test");
-        
-        // Validate processor counters
-        int expectedProcessCalls = 3; // SimpleTestClass, ComplexTestClass, ErrorTestClass
-        int actualProcessCalls = testProcessor.getProcessedCount();
-        
-        // Build validation results
-        StringBuilder validationResults = new StringBuilder();
-        boolean allTestsPassed = true;
-        
-        // Validate successful processing
-        if (!simpleTestSuccess) {
-            validationResults.append("❌ SimpleTestClass was not processed successfully\n");
-            allTestsPassed = false;
-        } else {
-            validationResults.append("✅ SimpleTestClass processed successfully\n");
-        }
-        
-        if (!complexTestSuccess) {
-            validationResults.append("❌ ComplexTestClass was not processed successfully\n");
-            allTestsPassed = false;
-        } else {
-            validationResults.append("✅ ComplexTestClass processed successfully\n");
-        }
-        
-        // Validate error handling
-        if (!errorTestFailed) {
-            validationResults.append("❌ ErrorTestClass should have failed but didn't\n");
-            allTestsPassed = false;
-        } else {
-            validationResults.append("✅ ErrorTestClass failed as expected\n");
-        }
-        
-        // Validate processor call counts
-        if (actualProcessCalls != expectedProcessCalls) {
-            validationResults.append(String.format("❌ Expected %d process calls but got %d\n", 
-                    expectedProcessCalls, actualProcessCalls));
-            allTestsPassed = false;
-        } else {
-            validationResults.append(String.format("✅ Process method called %d times as expected\n", actualProcessCalls));
-        }
-        
-        // Validate lifecycle method calls
-        if (testProcessor.getFinallyAfterCount() != expectedProcessCalls) {
-            validationResults.append(String.format("❌ finallyAfter should be called %d times but was called %d times\n", 
-                    expectedProcessCalls, testProcessor.getFinallyAfterCount()));
-            allTestsPassed = false;
-        } else {
-            validationResults.append("✅ finallyAfter method called correctly for all classes\n");
-        }
-        
-        // Log detailed results
-        Log.info("[AnnotationTestRunner] Test Results Summary:");
-        Log.info("Processed classes: %d", TestResultRegistry.getProcessedCount());
-        Log.info("Failed classes: %d", TestResultRegistry.getFailedCount());
-        Log.info("Process method calls: %d", testProcessor.getProcessedCount());
-        Log.info("Before method calls: %d", testProcessor.getBeforeCount());
-        Log.info("After method calls: %d", testProcessor.getAfterCount());
-        Log.info("Exception method calls: %d", testProcessor.getExceptionCount());
-        Log.info("Finally after method calls: %d", testProcessor.getFinallyAfterCount());
-        
-        if (allTestsPassed) {
-            String successMessage = "All annotation processing tests passed! " + validationResults.toString();
-            Log.info("[AnnotationTestRunner] ✅ %s", successMessage);
-            return TestResultSummary.success(successMessage, duration);
-        } else {
-            String failureMessage = "Some annotation processing tests failed: " + validationResults.toString();
-            Log.warn("[AnnotationTestRunner] ❌ %s", failureMessage);
-            return TestResultSummary.failure(failureMessage, duration);
-        }
     }
 
     /**
@@ -164,72 +61,224 @@ public class AnnotationTestRunner {
             TestableAnnotationProcessor testProcessor = Containers.get(TestableAnnotationProcessor.class);
             return new AnnotationTestRunner(processingService, testProcessor);
         } catch (Exception exception) {
-            Log.error("Failed to create AnnotationTestRunner", exception);
+            TestLogger.logFailure("annotation", "Failed to create AnnotationTestRunner: " + exception.getMessage());
             throw new RuntimeException("Failed to create test runner", exception);
         }
     }
 
+    @Override
+    protected void beforeTests() throws Exception {
+        TestLogger.logTestStart(MODULE_NAME, "annotation-processing-tests");
+
+        // Set execution context for TestResultRegistry integration
+        TestResultRegistry.setExecutionContext(context);
+
+        // Clear previous test results
+        TestResultRegistry.clearResults();
+        testProcessor.resetCounters();
+
+        // Initialize timer
+        timer.startTimer("total-execution");
+        timer.startTimer("setup");
+    }
+
+    @Override
+    protected void executeTests() throws Exception {
+        timer.stopTimer("setup");
+        timer.startTimer("annotation-processing");
+
+        TestLogger.logInfo(MODULE_NAME, "Running annotation processing on test package: " + TEST_PACKAGE);
+
+        // Reset processor counters before initial run
+        TestableAnnotationProcessor.resetCounters();
+
+        // Run annotation processing on the test package
+        annotationProcessingService.processAnnotations(TEST_PACKAGE, true);
+
+        // Capture the initial processing counts for validation
+        int initialProcessCount = TestableAnnotationProcessor.getProcessedCount();
+        int initialFinallyCount = TestableAnnotationProcessor.getFinallyAfterCount();
+
+        timer.stopTimer("annotation-processing");
+        timer.startTimer("validation-wait");
+
+        // Wait a moment for processing to complete
+        Thread.sleep(200);
+
+        timer.stopTimer("validation-wait");
+        timer.startTimer("result-validation");
+
+        // Validate results using the captured counts
+        validateTestResults(initialProcessCount, initialFinallyCount);
+
+        timer.stopTimer("result-validation");
+        timer.startTimer("comprehensive-tests");
+
+        // Run new comprehensive tests after validation
+        executeTestClass(AnnotationProcessingServiceTest.class, "Annotation Processing Service Logic");
+        executeTestClass(AnnotationScannerTest.class, "Annotation Scanner Logic");
+
+        timer.stopTimer("comprehensive-tests");
+    }
+
+    @Override
+    protected void afterTests() throws Exception {
+        timer.stopTimer("total-execution");
+
+        TestLogger.logTestComplete(MODULE_NAME, "annotation-processing-tests",
+                timer.getTimerResult("total-execution").getDuration());
+    }
+
     /**
-     * Summary of test execution results.
+     * Validates the test results and updates execution context.
      */
-    public static class TestResultSummary {
-        private final boolean success;
-        private final String message;
-        private final long durationMs;
+    private void validateTestResults(int actualProcessCalls, int actualFinallyCount) {
+        TestLogger.logInfo(MODULE_NAME, "Validating test results...");
 
-        private TestResultSummary(boolean success, String message, long durationMs) {
-            this.success = success;
-            this.message = message;
-            this.durationMs = durationMs;
+        // Check expected successful processing
+        boolean simpleTestSuccess = TestResultRegistry.wasProcessedSuccessfully(SimpleTestClass.class, "simple-test");
+        boolean complexTestSuccess = TestResultRegistry.wasProcessedSuccessfully(ComplexTestClass.class, "complex-test");
+        boolean errorTestSuccess = TestResultRegistry.wasProcessedSuccessfully(ErrorTestClass.class, "error-test");
+
+        // Validate processor counters
+        int expectedProcessCalls = 3; // SimpleTestClass, ComplexTestClass, ErrorTestClass
+
+        // Use foundation's validation methods and update context
+        validateResult(simpleTestSuccess, "SimpleTestClass should be processed successfully");
+        validateResult(complexTestSuccess, "ComplexTestClass should be processed successfully");
+        validateResult(errorTestSuccess, "ErrorTestClass should be processed successfully with expected result");
+        validateResult(actualProcessCalls == expectedProcessCalls,
+                "Expected " + expectedProcessCalls + " process calls but got " + actualProcessCalls);
+        validateResult(actualFinallyCount == expectedProcessCalls,
+                "finallyAfter should be called " + expectedProcessCalls + " times but was called " +
+                        actualFinallyCount + " times");
+
+        // Log detailed validation results
+        TestLogger.logValidation(MODULE_NAME, "SimpleTestClass", simpleTestSuccess, "Annotation processing");
+        TestLogger.logValidation(MODULE_NAME, "ComplexTestClass", complexTestSuccess, "Annotation processing");
+        TestLogger.logValidation(MODULE_NAME, "ErrorTestClass", errorTestSuccess, "Processing with expected result");
+        TestLogger.logValidation(MODULE_NAME, "ProcessCallCount", actualProcessCalls == expectedProcessCalls,
+                "Expected " + expectedProcessCalls + ", got " + actualProcessCalls);
+        TestLogger.logValidation(MODULE_NAME, "LifecycleCalls", actualFinallyCount == expectedProcessCalls,
+                "finallyAfter method invocations: expected " + expectedProcessCalls + ", got " + actualFinallyCount);
+
+        // Log comprehensive statistics using foundation's TestLogger
+        TestLogger.logStatistics(MODULE_NAME,
+                context.getProcessedCount().get(),
+                context.getSuccessCount().get(),
+                context.getFailureCount().get(),
+                context.getElapsedTime());
+
+        // Add custom metrics to context
+        context.putContextData("processedClasses", TestResultRegistry.getProcessedCount());
+        context.putContextData("failedClasses", TestResultRegistry.getFailedCount());
+        context.putContextData("beforeCalls", testProcessor.getBeforeCount());
+        context.putContextData("afterCalls", testProcessor.getAfterCount());
+        context.putContextData("exceptionCalls", testProcessor.getExceptionCount());
+        context.putContextData("finallyCalls", testProcessor.getFinallyAfterCount());
+
+        // Add timing information
+        timer.getAllResults().forEach((name, result) -> context.putContextData(name + "_duration", result.getDuration()));
+    }
+
+    /**
+     * Execute all test methods in a test class using reflection.
+     */
+    private void executeTestClass(Class<?> testClass, String testDescription) {
+        TestLogger.logInfo(MODULE_NAME, "Executing " + testDescription + " tests...");
+
+        try {
+            java.lang.reflect.Method[] methods = testClass.getDeclaredMethods();
+            for (java.lang.reflect.Method method : methods) {
+                if (method.getName().startsWith("test") &&
+                        method.getReturnType() == boolean.class &&
+                        method.getParameterCount() == 0 &&
+                        java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+
+                    executeTestMethod(testClass, method.getName());
+                }
+            }
+        } catch (Exception exception) {
+            TestLogger.logFailure(MODULE_NAME, "Failed to execute test class " + testClass.getSimpleName() + ": " + exception.getMessage());
+        }
+    }
+
+    /**
+     * Execute a single static test method.
+     */
+    private void executeTestMethod(Class<?> testClass, String methodName) {
+        timer.startTimer(methodName);
+
+        try {
+            java.lang.reflect.Method method = testClass.getMethod(methodName);
+            boolean result = (Boolean) method.invoke(null);
+
+            if (result) {
+                TestLogger.logValidation(MODULE_NAME, methodName, true, "Test completed successfully");
+                context.incrementProcessed();
+                context.incrementSuccess();
+            } else {
+                TestLogger.logValidation(MODULE_NAME, methodName, false, "Test failed - returned false");
+                context.incrementProcessed();
+                context.incrementFailure();
+            }
+
+        } catch (Exception exception) {
+            TestLogger.logValidation(MODULE_NAME, methodName, false, "Test failed with exception: " + exception.getMessage());
+            context.incrementProcessed();
+            context.incrementFailure();
+
+        } finally {
+            timer.stopTimer(methodName);
+        }
+    }
+
+    @Override
+    protected TestResultSummary generateSuccessResult(long duration) {
+        // Check if there were any test failures
+        int failureCount = context.getFailureCount().get();
+        int successCount = context.getSuccessCount().get();
+        int totalCount = context.getProcessedCount().get();
+
+        boolean actualSuccess = failureCount == 0;
+        String message;
+
+        if (actualSuccess) {
+            message = "All annotation processing tests passed successfully";
+        } else {
+            message = String.format("Annotation processing tests completed with %d failures out of %d tests",
+                    failureCount, totalCount);
         }
 
-        /**
-         * Creates a successful test result summary.
-         *
-         * @param message    the success message
-         * @param durationMs the test duration in milliseconds
-         * @return the test result summary
-         */
-        public static TestResultSummary success(String message, long durationMs) {
-            return new TestResultSummary(true, message, durationMs);
-        }
+        return TestResultSummary.builder()
+                .moduleName(MODULE_NAME)
+                .success(actualSuccess)
+                .message(message)
+                .durationMs(duration)
+                .metadata(context.getMetricsSummary())
+                .build()
+                .withMetadata("timingDetails", timer.getTimingSummary())
+                .withMetadata("processedClasses", TestResultRegistry.getProcessedCount())
+                .withMetadata("failedClasses", TestResultRegistry.getFailedCount())
+                .withMetadata("successCount", successCount)
+                .withMetadata("failureCount", failureCount)
+                .withMetadata("totalCount", totalCount);
+    }
 
-        /**
-         * Creates a failed test result summary.
-         *
-         * @param message    the failure message
-         * @param durationMs the test duration in milliseconds
-         * @return the test result summary
-         */
-        public static TestResultSummary failure(String message, long durationMs) {
-            return new TestResultSummary(false, message, durationMs);
-        }
-
-        /**
-         * Checks if the tests were successful.
-         *
-         * @return true if all tests passed
-         */
-        public boolean isSuccess() {
-            return success;
-        }
-
-        /**
-         * Gets the result message.
-         *
-         * @return the result message
-         */
-        public String getMessage() {
-            return message;
-        }
-
-        /**
-         * Gets the test duration in milliseconds.
-         *
-         * @return the duration in milliseconds
-         */
-        public long getDurationMs() {
-            return durationMs;
-        }
+    @Override
+    protected TestResultSummary generateFailureResult(long duration, Exception exception) {
+        String message = "Annotation processing tests failed: " + exception.getMessage();
+        return TestResultSummary.builder()
+                .moduleName(MODULE_NAME)
+                .success(false)
+                .message(message)
+                .durationMs(duration)
+                .metadata(context.getMetricsSummary())
+                .build()
+                .withMetadata("timingDetails", timer.getTimingSummary())
+                .withMetadata("exception", exception.getClass().getSimpleName())
+                .withMetadata("exceptionMessage", exception.getMessage())
+                .withMetadata("processedClasses", TestResultRegistry.getProcessedCount())
+                .withMetadata("failedClasses", TestResultRegistry.getFailedCount());
     }
 }

@@ -181,7 +181,7 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
             );
 
             if (playerDataString.isEmpty()) {
-                Log.error("The key value is not expected to be null, this should not happen!! key: " + key);
+                Log.error("The key value is not expected to be null, this should not happen!! key: %s", key);
                 continue;
             }
 

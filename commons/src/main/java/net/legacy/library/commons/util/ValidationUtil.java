@@ -42,7 +42,7 @@ public class ValidationUtil {
     /**
      * Ensures that the object is not null, throws {@link NullPointerException} if it is null.
      *
-     * @param value object to check
+     * @param value   object to check
      * @param message exception message
      * @throws NullPointerException if the object is null
      */
@@ -55,10 +55,10 @@ public class ValidationUtil {
     /**
      * Ensures that the object is not null, throws a custom exception if it is null.
      *
-     * @param value object to check
+     * @param value             object to check
      * @param exceptionSupplier exception supplier
-     * @param <T> object type
-     * @param <X> exception type
+     * @param <T>               object type
+     * @param <X>               exception type
      * @return non-null object
      * @throws X if the object is null
      */
@@ -108,10 +108,10 @@ public class ValidationUtil {
     /**
      * Ensures that two objects are equal, throws a custom exception if they are not.
      *
-     * @param object1 the first object
-     * @param object2 the second object
+     * @param object1           the first object
+     * @param object2           the second object
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the objects are not equal
      */
     public static <X extends Throwable> void requireEquals(Object object1, Object object2, Supplier<? extends X> exceptionSupplier) throws X {
@@ -164,7 +164,7 @@ public class ValidationUtil {
      * Ensures that the string is not null and not empty (""), throws {@link IllegalArgumentException} otherwise.
      *
      * @param inputString the string to check
-     * @param message exception message
+     * @param message     exception message
      * @throws IllegalArgumentException if the string is null or empty
      */
     public static void requireNotEmpty(String inputString, String message) {
@@ -177,7 +177,7 @@ public class ValidationUtil {
      * Ensures that the string is not null, not empty (""), and does not contain only whitespace, throws {@link IllegalArgumentException} otherwise.
      *
      * @param inputString the string to check
-     * @param message exception message
+     * @param message     exception message
      * @throws IllegalArgumentException if the string is null, empty, or contains only whitespace
      */
     public static void requireNotBlank(String inputString, String message) {
@@ -189,9 +189,9 @@ public class ValidationUtil {
     /**
      * Ensures that the string is not null and not empty (""), throws a custom exception otherwise.
      *
-     * @param inputString the string to check
+     * @param inputString       the string to check
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the string is null or empty
      */
     public static <X extends Throwable> void requireNotEmpty(String inputString, Supplier<? extends X> exceptionSupplier) throws X {
@@ -203,9 +203,9 @@ public class ValidationUtil {
     /**
      * Ensures that the string is not null, not empty (""), and does not contain only whitespace, throws a custom exception otherwise.
      *
-     * @param inputString the string to check
+     * @param inputString       the string to check
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the string is null, empty, or contains only whitespace
      */
     public static <X extends Throwable> void requireNotBlank(String inputString, Supplier<? extends X> exceptionSupplier) throws X {
@@ -218,8 +218,8 @@ public class ValidationUtil {
      * Checks if the string length is within the specified range (inclusive).
      *
      * @param inputString the string to check
-     * @param minLength minimum length (inclusive)
-     * @param maxLength maximum length (inclusive)
+     * @param minLength   minimum length (inclusive)
+     * @param maxLength   maximum length (inclusive)
      * @return true if the string length is within the specified range, false otherwise
      */
     public static boolean lengthBetween(String inputString, int minLength, int maxLength) {
@@ -234,9 +234,9 @@ public class ValidationUtil {
      * Ensures that the string length is within the specified range (inclusive), throws {@link IllegalArgumentException} otherwise.
      *
      * @param inputString the string to check
-     * @param minLength minimum length (inclusive)
-     * @param maxLength maximum length (inclusive)
-     * @param message exception message
+     * @param minLength   minimum length (inclusive)
+     * @param maxLength   maximum length (inclusive)
+     * @param message     exception message
      * @throws IllegalArgumentException if the string length is not within the specified range
      */
     public static void requireLengthBetween(String inputString, int minLength, int maxLength, String message) {
@@ -248,11 +248,11 @@ public class ValidationUtil {
     /**
      * Ensures that the string length is within the specified range (inclusive), throws a custom exception otherwise.
      *
-     * @param inputString the string to check
-     * @param minLength minimum length (inclusive)
-     * @param maxLength maximum length (inclusive)
+     * @param inputString       the string to check
+     * @param minLength         minimum length (inclusive)
+     * @param maxLength         maximum length (inclusive)
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the string length is not within the specified range
      */
     public static <X extends Throwable> void requireLengthBetween(String inputString, int minLength, int maxLength, Supplier<? extends X> exceptionSupplier) throws X {
@@ -265,7 +265,7 @@ public class ValidationUtil {
      * Checks if the string matches the regular expression.
      *
      * @param inputString the string to check
-     * @param regex the regular expression
+     * @param regex       the regular expression
      * @return true if the string matches the regular expression, false otherwise
      */
     public static boolean matches(String inputString, String regex) {
@@ -276,7 +276,7 @@ public class ValidationUtil {
      * Checks if the string matches the regular expression pattern.
      *
      * @param inputString the string to check
-     * @param pattern the regular expression pattern {@link Pattern}
+     * @param pattern     the regular expression pattern {@link Pattern}
      * @return true if the string matches the regular expression pattern, false otherwise
      */
     public static boolean matches(String inputString, Pattern pattern) {
@@ -288,8 +288,8 @@ public class ValidationUtil {
      * Ensures that the string matches the regular expression, throws {@link IllegalArgumentException} otherwise.
      *
      * @param inputString the string to check
-     * @param regex the regular expression
-     * @param message exception message
+     * @param regex       the regular expression
+     * @param message     exception message
      * @throws IllegalArgumentException if the string does not match the regular expression
      */
     public static void requireMatches(String inputString, String regex, String message) {
@@ -302,8 +302,8 @@ public class ValidationUtil {
      * Ensures that the string matches the regular expression pattern, throws {@link IllegalArgumentException} otherwise.
      *
      * @param inputString the string to check
-     * @param pattern the regular expression pattern {@link Pattern}
-     * @param message exception message
+     * @param pattern     the regular expression pattern {@link Pattern}
+     * @param message     exception message
      * @throws IllegalArgumentException if the string does not match the regular expression pattern
      */
     public static void requireMatches(String inputString, Pattern pattern, String message) {
@@ -315,10 +315,10 @@ public class ValidationUtil {
     /**
      * Ensures that the string matches the regular expression, throws a custom exception otherwise.
      *
-     * @param inputString the string to check
-     * @param regex the regular expression
+     * @param inputString       the string to check
+     * @param regex             the regular expression
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the string does not match the regular expression
      */
     public static <X extends Throwable> void requireMatches(String inputString, String regex, Supplier<? extends X> exceptionSupplier) throws X {
@@ -330,10 +330,10 @@ public class ValidationUtil {
     /**
      * Ensures that the string matches the regular expression pattern, throws a custom exception otherwise.
      *
-     * @param inputString the string to check
-     * @param pattern the regular expression pattern {@link Pattern}
+     * @param inputString       the string to check
+     * @param pattern           the regular expression pattern {@link Pattern}
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the string does not match the regular expression pattern
      */
     public static <X extends Throwable> void requireMatches(String inputString, Pattern pattern, Supplier<? extends X> exceptionSupplier) throws X {
@@ -366,7 +366,7 @@ public class ValidationUtil {
      * Ensures that the collection is not null and not empty, throws {@link IllegalArgumentException} otherwise.
      *
      * @param collection the collection to check
-     * @param message exception message
+     * @param message    exception message
      * @throws IllegalArgumentException if the collection is null or empty
      */
     public static void requireNotEmpty(Collection<?> collection, String message) {
@@ -378,9 +378,9 @@ public class ValidationUtil {
     /**
      * Ensures that the collection is not null and not empty, throws a custom exception otherwise.
      *
-     * @param collection the collection to check
+     * @param collection        the collection to check
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the collection is null or empty
      */
     public static <X extends Throwable> void requireNotEmpty(Collection<?> collection, Supplier<? extends X> exceptionSupplier) throws X {
@@ -412,7 +412,7 @@ public class ValidationUtil {
     /**
      * Ensures that the map is not null and not empty, throws {@link IllegalArgumentException} otherwise.
      *
-     * @param map the map to check
+     * @param map     the map to check
      * @param message exception message
      * @throws IllegalArgumentException if the map is null or empty
      */
@@ -425,9 +425,9 @@ public class ValidationUtil {
     /**
      * Ensures that the map is not null and not empty, throws a custom exception otherwise.
      *
-     * @param map the map to check
+     * @param map               the map to check
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the map is null or empty
      */
     public static <X extends Throwable> void requireNotEmpty(Map<?, ?> map, Supplier<? extends X> exceptionSupplier) throws X {
@@ -440,7 +440,7 @@ public class ValidationUtil {
      * Checks if the array is null or empty.
      *
      * @param array the array to check
-     * @param <T> the type of elements in the array
+     * @param <T>   the type of elements in the array
      * @return true if the array is null or empty, false otherwise
      */
     public static <T> boolean isEmpty(T[] array) {
@@ -451,7 +451,7 @@ public class ValidationUtil {
      * Checks if the array is not null and not empty.
      *
      * @param array the array to check
-     * @param <T> the type of elements in the array
+     * @param <T>   the type of elements in the array
      * @return true if the array is not null and not empty, false otherwise
      */
     public static <T> boolean notEmpty(T[] array) {
@@ -461,9 +461,9 @@ public class ValidationUtil {
     /**
      * Ensures that the array is not null and not empty, throws {@link IllegalArgumentException} otherwise.
      *
-     * @param array the array to check
+     * @param array   the array to check
      * @param message exception message
-     * @param <T> the type of elements in the array
+     * @param <T>     the type of elements in the array
      * @throws IllegalArgumentException if the array is null or empty
      */
     public static <T> void requireNotEmpty(T[] array, String message) {
@@ -475,10 +475,10 @@ public class ValidationUtil {
     /**
      * Ensures that the array is not null and not empty, throws a custom exception otherwise.
      *
-     * @param array the array to check
+     * @param array             the array to check
      * @param exceptionSupplier exception supplier
-     * @param <T> the type of elements in the array
-     * @param <X> exception type
+     * @param <T>               the type of elements in the array
+     * @param <X>               exception type
      * @throws X if the array is null or empty
      */
     public static <T, X extends Throwable> void requireNotEmpty(T[] array, Supplier<? extends X> exceptionSupplier) throws X {
@@ -491,7 +491,7 @@ public class ValidationUtil {
      * Checks if the int value is greater than the specified minimum (exclusive).
      *
      * @param value the value to check
-     * @param min the minimum value (exclusive)
+     * @param min   the minimum value (exclusive)
      * @return true if the value is greater than the minimum, false otherwise
      */
     public static boolean isGreaterThan(int value, int min) {
@@ -502,7 +502,7 @@ public class ValidationUtil {
      * Checks if the long value is greater than the specified minimum (exclusive).
      *
      * @param value the value to check
-     * @param min the minimum value (exclusive)
+     * @param min   the minimum value (exclusive)
      * @return true if the value is greater than the minimum, false otherwise
      */
     public static boolean isGreaterThan(long value, long min) {
@@ -513,7 +513,7 @@ public class ValidationUtil {
      * Checks if the int value is greater than or equal to the specified minimum (inclusive).
      *
      * @param value the value to check
-     * @param min the minimum value (inclusive)
+     * @param min   the minimum value (inclusive)
      * @return true if the value is greater than or equal to the minimum, false otherwise
      */
     public static boolean isGreaterThanOrEqual(int value, int min) {
@@ -524,7 +524,7 @@ public class ValidationUtil {
      * Checks if the long value is greater than or equal to the specified minimum (inclusive).
      *
      * @param value the value to check
-     * @param min the minimum value (inclusive)
+     * @param min   the minimum value (inclusive)
      * @return true if the value is greater than or equal to the minimum, false otherwise
      */
     public static boolean isGreaterThanOrEqual(long value, long min) {
@@ -535,7 +535,7 @@ public class ValidationUtil {
      * Checks if the int value is less than the specified maximum (exclusive).
      *
      * @param value the value to check
-     * @param max the maximum value (exclusive)
+     * @param max   the maximum value (exclusive)
      * @return true if the value is less than the maximum, false otherwise
      */
     public static boolean isLessThan(int value, int max) {
@@ -546,7 +546,7 @@ public class ValidationUtil {
      * Checks if the long value is less than the specified maximum (exclusive).
      *
      * @param value the value to check
-     * @param max the maximum value (exclusive)
+     * @param max   the maximum value (exclusive)
      * @return true if the value is less than the maximum, false otherwise
      */
     public static boolean isLessThan(long value, long max) {
@@ -557,7 +557,7 @@ public class ValidationUtil {
      * Checks if the int value is less than or equal to the specified maximum (inclusive).
      *
      * @param value the value to check
-     * @param max the maximum value (inclusive)
+     * @param max   the maximum value (inclusive)
      * @return true if the value is less than or equal to the maximum, false otherwise
      */
     public static boolean isLessThanOrEqual(int value, int max) {
@@ -568,7 +568,7 @@ public class ValidationUtil {
      * Checks if the long value is less than or equal to the specified maximum (inclusive).
      *
      * @param value the value to check
-     * @param max the maximum value (inclusive)
+     * @param max   the maximum value (inclusive)
      * @return true if the value is less than or equal to the maximum, false otherwise
      */
     public static boolean isLessThanOrEqual(long value, long max) {
@@ -579,8 +579,8 @@ public class ValidationUtil {
      * Checks if the int value is within the specified range (inclusive).
      *
      * @param value the value to check
-     * @param min the minimum value (inclusive)
-     * @param max the maximum value (inclusive)
+     * @param min   the minimum value (inclusive)
+     * @param max   the maximum value (inclusive)
      * @return true if the value is within the specified range, false otherwise
      */
     public static boolean isBetween(int value, int min, int max) {
@@ -591,8 +591,8 @@ public class ValidationUtil {
      * Checks if the long value is within the specified range (inclusive).
      *
      * @param value the value to check
-     * @param min the minimum value (inclusive)
-     * @param max the maximum value (inclusive)
+     * @param min   the minimum value (inclusive)
+     * @param max   the maximum value (inclusive)
      * @return true if the value is within the specified range, false otherwise
      */
     public static boolean isBetween(long value, long min, long max) {
@@ -602,8 +602,8 @@ public class ValidationUtil {
     /**
      * Ensures that the int value is greater than the specified minimum (exclusive), throws {@link IllegalArgumentException} otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (exclusive)
+     * @param value   the value to check
+     * @param min     the minimum value (exclusive)
      * @param message exception message
      * @throws IllegalArgumentException if the value is not greater than the minimum
      */
@@ -616,8 +616,8 @@ public class ValidationUtil {
     /**
      * Ensures that the long value is greater than the specified minimum (exclusive), throws {@link IllegalArgumentException} otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (exclusive)
+     * @param value   the value to check
+     * @param min     the minimum value (exclusive)
      * @param message exception message
      * @throws IllegalArgumentException if the value is not greater than the minimum
      */
@@ -630,10 +630,10 @@ public class ValidationUtil {
     /**
      * Ensures that the int value is greater than the specified minimum (exclusive), throws a custom exception otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (exclusive)
+     * @param value             the value to check
+     * @param min               the minimum value (exclusive)
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the value is not greater than the minimum
      */
     public static <X extends Throwable> void requireGreaterThan(int value, int min, Supplier<? extends X> exceptionSupplier) throws X {
@@ -645,10 +645,10 @@ public class ValidationUtil {
     /**
      * Ensures that the long value is greater than the specified minimum (exclusive), throws a custom exception otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (exclusive)
+     * @param value             the value to check
+     * @param min               the minimum value (exclusive)
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the value is not greater than the minimum
      */
     public static <X extends Throwable> void requireGreaterThan(long value, long min, Supplier<? extends X> exceptionSupplier) throws X {
@@ -660,9 +660,9 @@ public class ValidationUtil {
     /**
      * Ensures that the int value is within the specified range (inclusive), throws {@link IllegalArgumentException} otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (inclusive)
-     * @param max the maximum value (inclusive)
+     * @param value   the value to check
+     * @param min     the minimum value (inclusive)
+     * @param max     the maximum value (inclusive)
      * @param message exception message
      * @throws IllegalArgumentException if the value is not within the specified range
      */
@@ -675,9 +675,9 @@ public class ValidationUtil {
     /**
      * Ensures that the long value is within the specified range (inclusive), throws {@link IllegalArgumentException} otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (inclusive)
-     * @param max the maximum value (inclusive)
+     * @param value   the value to check
+     * @param min     the minimum value (inclusive)
+     * @param max     the maximum value (inclusive)
      * @param message exception message
      * @throws IllegalArgumentException if the value is not within the specified range
      */
@@ -690,11 +690,11 @@ public class ValidationUtil {
     /**
      * Ensures that the int value is within the specified range (inclusive), throws a custom exception otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (inclusive)
-     * @param max the maximum value (inclusive)
+     * @param value             the value to check
+     * @param min               the minimum value (inclusive)
+     * @param max               the maximum value (inclusive)
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the value is not within the specified range
      */
     public static <X extends Throwable> void requireBetween(int value, int min, int max, Supplier<? extends X> exceptionSupplier) throws X {
@@ -706,11 +706,11 @@ public class ValidationUtil {
     /**
      * Ensures that the long value is within the specified range (inclusive), throws a custom exception otherwise.
      *
-     * @param value the value to check
-     * @param min the minimum value (inclusive)
-     * @param max the maximum value (inclusive)
+     * @param value             the value to check
+     * @param min               the minimum value (inclusive)
+     * @param max               the maximum value (inclusive)
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the value is not within the specified range
      */
     public static <X extends Throwable> void requireBetween(long value, long min, long max, Supplier<? extends X> exceptionSupplier) throws X {
@@ -723,7 +723,7 @@ public class ValidationUtil {
      * Checks if the index is within the bounds [0, size).
      *
      * @param index the index
-     * @param size the size
+     * @param size  the size
      * @return true if the index is valid, false otherwise
      */
     public static boolean isIndexValid(int index, int size) {
@@ -735,7 +735,7 @@ public class ValidationUtil {
      * The range is [0, size). Throws {@link IndexOutOfBoundsException} if invalid.
      *
      * @param index the index
-     * @param size the size
+     * @param size  the size
      * @throws IndexOutOfBoundsException if index < 0 or index >= size
      * @see Objects#checkIndex(int, int)
      */
@@ -749,8 +749,8 @@ public class ValidationUtil {
      * Checks if the index is valid for accessing an element of an array/list/string.
      * The range is [0, size). Throws {@link IndexOutOfBoundsException} with a custom message if invalid.
      *
-     * @param index the index
-     * @param size the size
+     * @param index   the index
+     * @param size    the size
      * @param message exception message
      * @throws IndexOutOfBoundsException if index < 0 or index >= size
      */
@@ -764,10 +764,10 @@ public class ValidationUtil {
      * Checks if the index is valid for accessing an element of an array/list/string.
      * The range is [0, size). Throws a custom exception if invalid.
      *
-     * @param index the index
-     * @param size the size
+     * @param index             the index
+     * @param size              the size
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if index < 0 or index >= size
      */
     public static <X extends Throwable> void checkElementIndex(int index, int size, Supplier<? extends X> exceptionSupplier) throws X {
@@ -783,7 +783,7 @@ public class ValidationUtil {
      * This is typically used for iterators or adding elements at the end of a list.
      *
      * @param index the index
-     * @param size the size
+     * @param size  the size
      * @throws IndexOutOfBoundsException if index < 0 or index > size
      * @see Objects#checkFromIndexSize(int, int, int) (similar concept, but this checks a single position)
      */
@@ -797,8 +797,8 @@ public class ValidationUtil {
      * Checks if the index is a valid position in an array/list/string.
      * The range is [0, size]. Throws {@link IndexOutOfBoundsException} with a custom message if invalid.
      *
-     * @param index the index
-     * @param size the size
+     * @param index   the index
+     * @param size    the size
      * @param message exception message
      * @throws IndexOutOfBoundsException if index < 0 or index > size
      */
@@ -812,10 +812,10 @@ public class ValidationUtil {
      * Checks if the index is a valid position in an array/list/string.
      * The range is [0, size]. Throws a custom exception if invalid.
      *
-     * @param index the index
-     * @param size the size
+     * @param index             the index
+     * @param size              the size
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if index < 0 or index > size
      */
     public static <X extends Throwable> void checkPositionIndex(int index, int size, Supplier<? extends X> exceptionSupplier) throws X {
@@ -829,7 +829,7 @@ public class ValidationUtil {
      * Ensures that the condition is true, throws {@link IllegalArgumentException} otherwise.
      *
      * @param condition the condition to check
-     * @param message exception message
+     * @param message   exception message
      * @throws IllegalArgumentException if the condition is false
      */
     public static void requireTrue(boolean condition, String message) {
@@ -841,9 +841,9 @@ public class ValidationUtil {
     /**
      * Ensures that the condition is true, throws a custom exception otherwise.
      *
-     * @param condition the condition to check
+     * @param condition         the condition to check
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the condition is false
      */
     public static <X extends Throwable> void requireTrue(boolean condition, Supplier<? extends X> exceptionSupplier) throws X {
@@ -856,7 +856,7 @@ public class ValidationUtil {
      * Ensures that the condition is false, throws {@link IllegalArgumentException} otherwise.
      *
      * @param condition the condition to check
-     * @param message exception message
+     * @param message   exception message
      * @throws IllegalArgumentException if the condition is true
      */
     public static void requireFalse(boolean condition, String message) {
@@ -868,9 +868,9 @@ public class ValidationUtil {
     /**
      * Ensures that the condition is false, throws a custom exception otherwise.
      *
-     * @param condition the condition to check
+     * @param condition         the condition to check
      * @param exceptionSupplier exception supplier
-     * @param <X> exception type
+     * @param <X>               exception type
      * @throws X if the condition is true
      */
     public static <X extends Throwable> void requireFalse(boolean condition, Supplier<? extends X> exceptionSupplier) throws X {
@@ -882,10 +882,10 @@ public class ValidationUtil {
     /**
      * Generic validation method, throws {@link IllegalArgumentException} when the predicate returns false.
      *
-     * @param value the object to validate
+     * @param value     the object to validate
      * @param predicate the predicate function
-     * @param message exception message
-     * @param <T> the type of the object
+     * @param message   exception message
+     * @param <T>       the type of the object
      * @throws IllegalArgumentException if the predicate returns false
      */
     public static <T> void validate(T value, Predicate<T> predicate, String message) {
@@ -898,11 +898,11 @@ public class ValidationUtil {
     /**
      * Generic validation method, throws a custom exception when the predicate returns false.
      *
-     * @param value the object to validate
-     * @param predicate the predicate function
+     * @param value             the object to validate
+     * @param predicate         the predicate function
      * @param exceptionSupplier exception supplier
-     * @param <T> the type of the object
-     * @param <X> exception type
+     * @param <T>               the type of the object
+     * @param <X>               exception type
      * @throws X if the predicate returns false
      */
     public static <T, X extends Throwable> void validate(T value, Predicate<T> predicate, Supplier<? extends X> exceptionSupplier) throws X {

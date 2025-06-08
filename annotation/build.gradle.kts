@@ -17,6 +17,7 @@ fairy {
     fairyPackage.set("io.fairyproject")
 
     bukkitProperties().depends.add("fairy-lib-plugin")
+    bukkitProperties().depends.add("foundation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -24,6 +25,9 @@ fairy {
 
 // Dependencies
 dependencies {
+    // Foundation module
+    compileOnly(project(":foundation"))
+
     // Reflections
     implementation("org.reflections:reflections:0.10.2")
 }

@@ -111,7 +111,7 @@ public class AnnotationProcessingService implements AnnotationProcessingServiceI
         AnnotationProcessor annotationProcessingService = handlerClass.getAnnotation(AnnotationProcessor.class);
 
         if (annotationProcessingService == null) {
-            Log.error("AnnotationProcessor annotation not found on handlerClass: " + handlerClass.getName());
+            Log.error("AnnotationProcessor annotation not found on handlerClass: %s", handlerClass.getName());
             return;
         }
 

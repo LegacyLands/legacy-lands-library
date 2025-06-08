@@ -398,7 +398,7 @@ public class LegacyPlayerDataService {
 
             return TTLUtil.setReliableTTL(redissonClient, playerKey, ttl.getSeconds());
         } catch (Exception exception) {
-            Log.error("Failed to set TTL for player " + uuid, exception);
+            Log.error("Failed to set TTL for player %s", uuid, exception);
             return false;
         }
     }

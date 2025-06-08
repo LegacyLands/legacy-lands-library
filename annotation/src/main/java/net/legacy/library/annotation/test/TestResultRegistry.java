@@ -1,7 +1,10 @@
 package net.legacy.library.annotation.test;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.UtilityClass;
+import net.legacy.library.foundation.test.TestExecutionContext;
+import net.legacy.library.foundation.util.TestLogger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,16 +25,39 @@ public class TestResultRegistry {
     private static final Map<String, ProcessedClassInfo> processedClasses = new ConcurrentHashMap<>();
     private static final Map<String, FailedClassInfo> failedClasses = new ConcurrentHashMap<>();
 
+    // Integration with foundation's TestExecutionContext
+    private static TestExecutionContext currentContext;
+
+    /**
+     * Sets the current test execution context for integration with foundation.
+     *
+     * @param context the test execution context
+     */
+    public static void setExecutionContext(TestExecutionContext context) {
+        currentContext = context;
+    }
+
     /**
      * Registers a successfully processed class.
      *
-     * @param clazz      the processed class
-     * @param testName   the test name from the annotation
-     * @param result     the processing result
+     * @param clazz    the processed class
+     * @param testName the test name from the annotation
+     * @param result   the processing result
      */
     public static void registerProcessedClass(Class<?> clazz, String testName, String result) {
         String key = generateKey(clazz, testName);
         processedClasses.put(key, new ProcessedClassInfo(clazz, testName, result, System.currentTimeMillis()));
+
+        // Integrate with foundation's TestExecutionContext
+        if (currentContext != null) {
+            currentContext.incrementProcessed();
+            currentContext.incrementSuccess();
+            currentContext.putContextData("processed_" + clazz.getSimpleName(), result);
+
+            // Enhanced logging using foundation's TestLogger
+            TestLogger.logSuccess("annotation",
+                    "Class " + clazz.getSimpleName() + " processed successfully with result: " + result);
+        }
     }
 
     /**
@@ -44,6 +70,17 @@ public class TestResultRegistry {
     public static void registerFailedClass(Class<?> clazz, String testName, String errorMessage) {
         String key = generateKey(clazz, testName);
         failedClasses.put(key, new FailedClassInfo(clazz, testName, errorMessage, System.currentTimeMillis()));
+
+        // Integrate with foundation's TestExecutionContext
+        if (currentContext != null) {
+            currentContext.incrementProcessed();
+            currentContext.incrementFailure();
+            currentContext.putContextData("failed_" + clazz.getSimpleName(), errorMessage);
+
+            // Enhanced logging using foundation's TestLogger  
+            TestLogger.logFailure("annotation",
+                    "Class " + clazz.getSimpleName() + " processing failed: " + errorMessage);
+        }
     }
 
     /**
@@ -129,35 +166,23 @@ public class TestResultRegistry {
      * Information about a successfully processed class.
      */
     @Getter
+    @AllArgsConstructor
     public static class ProcessedClassInfo {
         private final Class<?> clazz;
         private final String testName;
         private final String result;
         private final long timestamp;
-
-        public ProcessedClassInfo(Class<?> clazz, String testName, String result, long timestamp) {
-            this.clazz = clazz;
-            this.testName = testName;
-            this.result = result;
-            this.timestamp = timestamp;
-        }
     }
 
     /**
      * Information about a failed class processing.
      */
     @Getter
+    @AllArgsConstructor
     public static class FailedClassInfo {
         private final Class<?> clazz;
         private final String testName;
         private final String errorMessage;
         private final long timestamp;
-
-        public FailedClassInfo(Class<?> clazz, String testName, String errorMessage, long timestamp) {
-            this.clazz = clazz;
-            this.testName = testName;
-            this.errorMessage = errorMessage;
-            this.timestamp = timestamp;
-        }
     }
 }

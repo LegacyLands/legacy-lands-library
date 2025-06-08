@@ -2,9 +2,10 @@ package net.legacy.library.annotation;
 
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.InjectableComponent;
-import io.fairyproject.log.Log;
 import io.fairyproject.plugin.Plugin;
 import net.legacy.library.annotation.test.AnnotationTestRunner;
+import net.legacy.library.foundation.test.TestResultSummary;
+import net.legacy.library.foundation.util.TestLogger;
 
 /**
  * The annotation module launcher for the Legacy Lands Library.
@@ -30,45 +31,47 @@ public class AnnotationLauncher extends Plugin {
     @Override
     public void onPluginEnable() {
         if (DEBUG) {
-            Log.info("DEBUG mode enabled - Running annotation processing tests...");
             runDebugTests();
         }
     }
 
     /**
      * Runs comprehensive debug tests for the annotation processing framework.
-     *
-     * <p>This method creates and executes a test runner that validates:
-     * <ul>
-     *   <li>Annotation scanning functionality</li>
-     *   <li>Custom processor execution</li>
-     *   <li>Error handling mechanisms</li>
-     *   <li>Lifecycle method invocation order</li>
-     *   <li>Result validation and reporting</li>
-     * </ul>
-     *
-     * <p>Test results are logged with detailed information about the execution,
-     * including success/failure status, processing counts, and any errors encountered.
      */
     private void runDebugTests() {
         try {
-            Log.info("[DEBUG] Initializing annotation processing test runner...");
-            
+            TestLogger.logInfo("annotation", "Initializing annotation processing test runner...");
+
             AnnotationTestRunner testRunner = AnnotationTestRunner.create();
-            AnnotationTestRunner.TestResultSummary result = testRunner.runTests();
-            
+            TestResultSummary result = testRunner.runTests();
+
+            // Extract test metrics from result
+            Object successCountObj = result.getMetadata().get("successCount");
+            Object failureCountObj = result.getMetadata().get("failureCount");
+            Object totalCountObj = result.getMetadata().get("totalCount");
+
+            int successCount = successCountObj instanceof Integer ? (Integer) successCountObj : 0;
+            int failureCount = failureCountObj instanceof Integer ? (Integer) failureCountObj : 0;
+            int totalCount = totalCountObj instanceof Integer ? (Integer) totalCountObj : 0;
+
             if (result.isSuccess()) {
-                Log.info("[DEBUG] ✅ All annotation processing tests completed successfully in %dms", 
-                        result.getDurationMs());
-                Log.info("[DEBUG] Test summary: %s", result.getMessage());
+                TestLogger.logSuccess("annotation",
+                        String.format("All annotation processing tests completed successfully in %dms (Total: %d, Passed: %d, Failed: %d)",
+                                result.getDurationMs(), totalCount, successCount, failureCount));
             } else {
-                Log.warn("[DEBUG] ❌ Annotation processing tests failed after %dms", 
-                        result.getDurationMs());
-                Log.warn("[DEBUG] Failure details: %s", result.getMessage());
+                TestLogger.logFailure("annotation",
+                        String.format("Annotation processing tests completed with failures in %dms (Total: %d, Passed: %d, Failed: %d)",
+                                result.getDurationMs(), totalCount, successCount, failureCount));
+
+                // Log detailed failure information
+                TestLogger.logInfo("annotation", "Test Results Summary:");
+                TestLogger.logInfo("annotation", "    Passed: " + successCount + " tests");
+                TestLogger.logInfo("annotation", "    Failed: " + failureCount + " tests");
+                TestLogger.logInfo("annotation", "    Total:  " + totalCount + " tests");
+                TestLogger.logInfo("annotation", "    Duration: " + result.getDurationMs() + "ms");
             }
-            
         } catch (Exception exception) {
-            Log.error("[DEBUG] Critical error while running annotation processing tests", exception);
+            TestLogger.logFailure("annotation", "Critical error while running annotation processing tests", exception);
         }
     }
 }

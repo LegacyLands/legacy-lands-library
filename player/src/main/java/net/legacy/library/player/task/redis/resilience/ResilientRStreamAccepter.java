@@ -177,7 +177,7 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
         // Use the configured retry counter asynchronously
         retryCounter.increment(retryKey).whenComplete((currentAttempt, throwable) -> {
             if (throwable != null) {
-                Log.error("Failed to increment retry counter for key: " + retryKey, throwable);
+                Log.error("Failed to increment retry counter for key: %s", retryKey, throwable);
                 // Fallback to local counter logic
                 currentAttempt = 1;
             }
@@ -249,7 +249,7 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
     private String generateRetryKey(StreamMessageId streamMessageId, String data) {
         String actionName = getActionName() != null ? getActionName() : "default";
         int dataHash = data != null ? data.hashCode() : 0;
-        return String.format("%s:%s:%d", actionName, streamMessageId.toString(), dataHash);
+        return actionName + ":" + streamMessageId.toString() + ":" + dataHash;
     }
 
     /**

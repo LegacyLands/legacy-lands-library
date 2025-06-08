@@ -18,6 +18,7 @@ fairy {
 
     bukkitProperties().depends.add("fairy-lib-plugin")
     bukkitProperties().depends.add("annotation")
+    bukkitProperties().depends.add("foundation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -25,6 +26,9 @@ fairy {
 
 // Dependencies
 dependencies {
+    // Foundation module
+    compileOnly(project(":foundation"))
+
     // Annotation module
     compileOnly(project(":annotation"))
 

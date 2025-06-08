@@ -1005,8 +1005,8 @@ public class LegacyEntityDataService {
 
         // Wait for the task to complete with a timeout
         if (!completionLatch.await(5, TimeUnit.SECONDS)) {
-            Log.warn("Timed out waiting for entity persistence task to complete. " +
-                    "Only " + successCount.get() + " out of " + entityCount + " entities were likely persisted.");
+            Log.warn("Timed out waiting for entity persistence task to complete. Only %s out of %s entities were likely persisted.", 
+                    successCount.get(), entityCount);
         }
 
         // Remove this service from the registry
@@ -1040,7 +1040,7 @@ public class LegacyEntityDataService {
 
             return TTLUtil.setReliableTTL(redissonClient, entityKey, ttl.getSeconds());
         } catch (Exception exception) {
-            Log.error("Failed to set TTL for entity " + uuid, exception);
+            Log.error("Failed to set TTL for entity %s", uuid, exception);
             return false;
         }
     }

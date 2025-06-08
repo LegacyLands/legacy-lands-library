@@ -1,5 +1,10 @@
 package net.legacy.library.annotation.test;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import net.legacy.library.foundation.annotation.ModuleTest;
+
 /**
  * Complex test class for validating advanced annotation processing functionality.
  *
@@ -11,46 +16,21 @@ package net.legacy.library.annotation.test;
  * @since 2025-06-07 21:30
  */
 @TestableAnnotation(
-        testName = "complex-test",
-        expectedResult = "processed",
-        validateOrder = false
+        testName = "complex-test"
 )
+@ModuleTest(
+        testName = "complex-test",
+        description = "Complex test class for validating advanced annotation processing functionality",
+        tags = {"annotation", "complex", "integration"},
+        priority = 2,
+        timeout = 4000,
+        expectedResult = "SUCCESS"
+)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ComplexTestClass {
-    private String complexData;
-
-    /**
-     * Constructor for complex test class.
-     *
-     * @param complexData the complex data to initialize
-     */
-    public ComplexTestClass(String complexData) {
-        this.complexData = complexData;
-    }
-
-    /**
-     * Default constructor.
-     */
-    public ComplexTestClass() {
-        this("default-complex-data");
-    }
-
-    /**
-     * Gets the complex data.
-     *
-     * @return the complex data
-     */
-    public String getComplexData() {
-        return complexData;
-    }
-
-    /**
-     * Sets the complex data.
-     *
-     * @param complexData the complex data to set
-     */
-    public void setComplexData(String complexData) {
-        this.complexData = complexData;
-    }
+    private String complexData = "default-complex-data";
 
     /**
      * Performs a complex operation for testing.

@@ -254,12 +254,12 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
 
                     // Validate message format
                     if (value.isEmpty()) {
-                        Log.error("RStream message is empty! StreamMessageId: " + streamMessageId);
+                        Log.error("RStream message is empty! StreamMessageId: %s", streamMessageId);
                         continue;
                     }
 
                     if (value.size() > 2) {
-                        Log.error("RStream message is not a pair! StreamMessageId: " + streamMessageId);
+                        Log.error("RStream message is not a pair! StreamMessageId: %s", streamMessageId);
                         continue;
                     }
 
