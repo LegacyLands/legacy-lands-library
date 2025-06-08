@@ -17,6 +17,7 @@ fairy {
     fairyPackage.set("io.fairyproject")
 
     bukkitProperties().depends.add("fairy-lib-plugin")
+    bukkitProperties().depends.add("foundation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -26,7 +27,7 @@ fairy {
 dependencies {
     // Foundation module for testing infrastructure
     compileOnly(project(":foundation"))
-    
+
     // https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine
     api("com.github.ben-manes.caffeine:caffeine:3.2.0")
 
