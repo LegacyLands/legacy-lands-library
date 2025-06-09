@@ -158,11 +158,10 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
                             Duration ttlToApply = this.ttl != null ? this.ttl : LegacyEntityDataService.DEFAULT_TTL_DURATION;
                             RBucket<Object> bucket = redissonClient.getBucket(entityKey);
 
-                            bucket.set(serialized, Duration.ofMillis(ttlToApply.toMillis()));
+                            bucket.set(serialized);
 
-                            if (bucket.remainTimeToLive() == -1) {
-                                TTLUtil.setReliableTTL(redissonClient, entityKey, ttlToApply.getSeconds());
-                            }
+                            // Always use TTLUtil for consistent TTL setting
+                            TTLUtil.setReliableTTL(redissonClient, entityKey, ttlToApply.getSeconds());
 
                             return null;
                         },

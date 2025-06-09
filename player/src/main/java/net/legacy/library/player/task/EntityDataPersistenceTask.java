@@ -154,7 +154,11 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
             Log.error("Exception during entity persistence", exception);
         } finally {
             if (lock.isHeldByCurrentThread()) {
-                lock.forceUnlock();
+                try {
+                    lock.unlock();
+                } catch (Exception unlockException) {
+                    Log.warn("Failed to unlock persistence lock", unlockException);
+                }
             }
         }
     }

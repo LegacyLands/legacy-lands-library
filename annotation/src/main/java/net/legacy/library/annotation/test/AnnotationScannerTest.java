@@ -227,7 +227,7 @@ public class AnnotationScannerTest {
                     Set<Class<?>> result1 = AnnotationScanner.findAnnotatedClasses(
                             testPackage, ScannerTestAnnotation.class);
                     results[0] = !result1.isEmpty();
-                } catch (Exception e) {
+                } catch (Exception exception) {
                     results[0] = false;
                 }
             });
@@ -237,7 +237,7 @@ public class AnnotationScannerTest {
                     Set<Class<?>> result2 = AnnotationScanner.findAnnotatedClasses(
                             testPackage, AnotherTestAnnotation.class);
                     results[1] = !result2.isEmpty();
-                } catch (Exception e) {
+                } catch (Exception exception) {
                     results[1] = false;
                 }
             });
@@ -248,7 +248,7 @@ public class AnnotationScannerTest {
                     Set<Class<?>> result3 = AnnotationScanner.findAnnotatedClasses(
                             urls, ScannerTestAnnotation.class);
                     results[2] = !result3.isEmpty();
-                } catch (Exception e) {
+                } catch (Exception exception) {
                     results[2] = false;
                 }
             });

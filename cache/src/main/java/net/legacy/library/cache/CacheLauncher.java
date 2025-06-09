@@ -26,7 +26,7 @@ public class CacheLauncher extends Plugin {
      * Debug mode flag. When set to true, enables focused testing
      * of the cache module's critical logic during plugin startup.
      */
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     @Override
     public void onPluginEnable() {

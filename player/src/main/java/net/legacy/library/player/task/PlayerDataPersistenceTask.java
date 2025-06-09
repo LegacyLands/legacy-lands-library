@@ -137,8 +137,14 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
                 Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
                 processPlayerDataInL2Cache(l2Cache, redissonClient, datastore);
             } finally {
-                // Ensure the lock is always released
-                lock.forceUnlock();
+                // Ensure the lock is always released safely
+                if (lock.isHeldByCurrentThread()) {
+                    try {
+                        lock.unlock();
+                    } catch (Exception exception) {
+                        Log.warn("Failed to unlock player persistence lock", exception);
+                    }
+                }
             }
         } catch (InterruptedException exception) {
             Log.error("Task interrupted during persistence", exception);

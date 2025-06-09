@@ -22,6 +22,7 @@ fairy {
     bukkitProperties().depends.add("commons")
     bukkitProperties().depends.add("mongodb")
     bukkitProperties().depends.add("cache")
+    bukkitProperties().depends.add("foundation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -29,6 +30,9 @@ fairy {
 
 // Dependencies
 dependencies {
+    // Foundation module
+    compileOnly(project(":foundation"))
+
     // Annotation module
     compileOnly(project(":annotation"))
 

@@ -1005,7 +1005,7 @@ public class LegacyEntityDataService {
 
         // Wait for the task to complete with a timeout
         if (!completionLatch.await(5, TimeUnit.SECONDS)) {
-            Log.warn("Timed out waiting for entity persistence task to complete. Only %s out of %s entities were likely persisted.", 
+            Log.warn("Timed out waiting for entity persistence task to complete. Only %s out of %s entities were likely persisted.",
                     successCount.get(), entityCount);
         }
 

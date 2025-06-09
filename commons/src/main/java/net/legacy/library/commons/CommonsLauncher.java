@@ -25,7 +25,7 @@ public class CommonsLauncher extends Plugin {
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the commons module's core logic during plugin startup.
      */
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     @Override
     public void onPluginEnable() {

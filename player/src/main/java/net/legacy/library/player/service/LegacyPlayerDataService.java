@@ -339,8 +339,11 @@ public class LegacyPlayerDataService {
      *   <li>Schedule persistence to MongoDB</li>
      * </ol>
      *
-     * <p>Note: The data will be automatically loaded into L1 cache when accessed via getLegacyPlayerData.
-     * This method focuses on ensuring data persistence across storage layers.
+     * <p><b>⚠️ Performance Warning:</b> Heavy concurrent usage of this method can cause severe distributed
+     * lock contention as each call schedules an immediate {@link PlayerDataPersistenceTask} that competes
+     * for the same persistence lock. In high-throughput scenarios with many simultaneous player data saves,
+     * consider batching operations or relying on the automatic timer-based persistence to avoid
+     * performance degradation. Monitor lock acquisition metrics when using this method extensively.
      *
      * @param legacyPlayerData the player data to save
      */
@@ -362,7 +365,9 @@ public class LegacyPlayerDataService {
                 () -> {
                     // Store operation with TTL using the new Duration-based method
                     RedissonClient client = getL2Cache().getResource();
-                    client.getBucket(key).set(serialized, DEFAULT_TTL_DURATION);
+                    client.getBucket(key).set(serialized);
+                    // Use TTLUtil for consistent TTL setting
+                    TTLUtil.setReliableTTL(client, key, DEFAULT_TTL_DURATION.getSeconds());
                     return null;
                 },
                 null,
@@ -370,7 +375,7 @@ public class LegacyPlayerDataService {
                 LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
         );
 
-        // Schedule database persistence
+        // Schedule persistence to database
         PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
     }
 

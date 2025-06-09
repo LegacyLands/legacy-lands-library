@@ -76,8 +76,8 @@ public class EasyPlayerRawCacheDataService {
      *
      * @param uuid              the unique identifier of the player
      * @param createIfNotExists whether to create a new instance if one doesn't exist
-     * @return an {@link Optional} containing the {@link EasyPlayerRawCacheData} if found or created, 
-     *         or empty if not found and creation was not requested
+     * @return an {@link Optional} containing the {@link EasyPlayerRawCacheData} if found or created,
+     * or empty if not found and creation was not requested
      */
     public Optional<EasyPlayerRawCacheData> get(UUID uuid, boolean createIfNotExists) {
         EasyPlayerRawCacheData data = easyPlayerRawCacheDataSets.stream()
@@ -100,7 +100,7 @@ public class EasyPlayerRawCacheDataService {
     /**
      * Retrieves the {@link EasyPlayerRawCacheData} for the specified UUID.
      *
-     * @param uuid              the unique identifier of the player
+     * @param uuid the unique identifier of the player
      * @return an {@link EasyPlayerRawCacheData} if found or created
      */
     public EasyPlayerRawCacheData get(UUID uuid) {

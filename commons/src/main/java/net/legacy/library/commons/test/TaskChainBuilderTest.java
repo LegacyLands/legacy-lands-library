@@ -105,7 +105,7 @@ public class TaskChainBuilderTest {
                 return CompletableFuture.supplyAsync(() -> {
                     try {
                         Thread.sleep(100);
-                    } catch (InterruptedException e) {
+                    } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
                     }
                     return "Async Result";
@@ -199,7 +199,7 @@ public class TaskChainBuilderTest {
             builder.withMode((taskInterface, input) -> CompletableFuture.supplyAsync(() -> {
                 try {
                     Thread.sleep(2000); // 2 seconds delay
-                } catch (InterruptedException e) {
+                } catch (InterruptedException exception) {
                     Thread.currentThread().interrupt();
                 }
                 return "Delayed Result";
@@ -266,7 +266,7 @@ public class TaskChainBuilderTest {
             builder.withMode((taskInterface, input) -> CompletableFuture.supplyAsync(() -> {
                 try {
                     Thread.sleep(100);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException exception) {
                     Thread.currentThread().interrupt();
                 }
                 return "Task1";
@@ -275,7 +275,7 @@ public class TaskChainBuilderTest {
             builder.withMode((taskInterface, input) -> CompletableFuture.supplyAsync(() -> {
                 try {
                     Thread.sleep(100);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException exception) {
                     Thread.currentThread().interrupt();
                 }
                 return "Task2";
@@ -284,7 +284,7 @@ public class TaskChainBuilderTest {
             builder.withMode((taskInterface, input) -> CompletableFuture.supplyAsync(() -> {
                 try {
                     Thread.sleep(100);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException exception) {
                     Thread.currentThread().interrupt();
                 }
                 return "Task3";
