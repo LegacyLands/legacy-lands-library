@@ -89,6 +89,10 @@ dependencies {
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
+[PromptX](https://github.com/Deepractice/PromptX) 是 [Deepractice](https://github.com/Deepractice) 开发的 AI 应用原生的专业能力增强系统，在该项目中发挥关键作用。
+
+![deepractice-logo.png](./deepractice-logo.png)
+
 ## Star 历史
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)

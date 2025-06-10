@@ -100,6 +100,10 @@ is a Folia fork with many useful optimizations, configurable vanilla features, a
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
+[PromptX](https://github.com/Deepractice/PromptX) is an AI application-native professional capability enhancement system developed by [Deepractice](https://github.com/Deepractice), playing a key role in this project.
+
+![deepractice-logo.png](./deepractice-logo.png)
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
