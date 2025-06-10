@@ -113,7 +113,8 @@ public class RetryPolicy {
      * Creates a retry policy that only retries for specific exception types.
      *
      * <p>The policy will check if the failed exception is an instance of any of the
-     * specified exception types (including subclasses). Only matching exceptions
+     * specified exception types (including subclasses). It also checks the cause
+     * of the exception if the top-level exception doesn't match. Only matching exceptions
      * will trigger retry attempts.
      *
      * @param exceptionTypes the exception types that should trigger retries
@@ -122,11 +123,23 @@ public class RetryPolicy {
     public static RetryPolicy forExceptionTypes(Class<?>... exceptionTypes) {
         return RetryPolicy.builder()
                 .retryCondition(exception -> {
+                    // Check the exception itself
                     for (Class<?> type : exceptionTypes) {
                         if (type.isInstance(exception)) {
                             return true;
                         }
                     }
+                    
+                    // Check the cause of the exception
+                    Throwable cause = exception.getCause();
+                    if (cause != null) {
+                        for (Class<?> type : exceptionTypes) {
+                            if (type.isInstance(cause)) {
+                                return true;
+                            }
+                        }
+                    }
+                    
                     return false;
                 })
                 .build();

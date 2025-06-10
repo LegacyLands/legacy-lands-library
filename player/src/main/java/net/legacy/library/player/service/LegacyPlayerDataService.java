@@ -352,6 +352,30 @@ public class LegacyPlayerDataService {
             return;
         }
 
+        saveLegacyPlayerDataToL2Cache(legacyPlayerData);
+
+        // Schedule persistence to database
+        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+    }
+
+    public void saveLegacyPlayersData(List<LegacyPlayerData> legacyPlayerDataList) {
+        if (legacyPlayerDataList == null ||  legacyPlayerDataList.isEmpty()) {
+            return;
+        }
+
+        for (LegacyPlayerData legacyPlayerData : legacyPlayerDataList) {
+            saveLegacyPlayerDataToL2Cache(legacyPlayerData);
+        }
+
+        // Schedule persistence to database
+        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+    }
+
+    public void saveLegacyPlayerDataToL2Cache(LegacyPlayerData legacyPlayerData) {
+        if (legacyPlayerData == null) {
+            return;
+        }
+
         UUID uuid = legacyPlayerData.getUuid();
 
         // Save to L2 cache with TTL
@@ -374,9 +398,6 @@ public class LegacyPlayerDataService {
                 false,
                 LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
         );
-
-        // Schedule persistence to database
-        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
     }
 
     /**
