@@ -78,7 +78,7 @@ jobs:
             script/build/libs/*.jar
       - uses: actions/upload-artifact@v4.5.0
         with:
-          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -script
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -foundation
           path: |
             foundation/build/libs/*.jar
       - uses: actions/upload-artifact@v4.5.0
