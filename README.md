@@ -102,7 +102,7 @@ is a Folia fork with many useful optimizations, configurable vanilla features, a
 
 [PromptX](https://github.com/Deepractice/PromptX) is an AI application-native professional capability enhancement system developed by [Deepractice](https://github.com/Deepractice), playing a key role in this project.
 
-![deepractice-logo.png](./deepractice-logo.png)
+![promptx-logo.png](./promptx-logo.png)
 
 ## Star History
 
