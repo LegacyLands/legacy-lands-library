@@ -28,7 +28,7 @@ tokio = { version = "1.0", features = [
     "io-util",
     "time",
 ] }
-prost = "0.13.5"
+prost = "0.14.0"
 prost-types = "0.13.5"
 parking_lot = "0.12"
 dashmap = "6.1.0"
