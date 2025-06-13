@@ -4,8 +4,7 @@ import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.plugin.Plugin;
 import net.legacy.library.cache.test.CacheTestRunner;
-import net.legacy.library.foundation.test.TestResultSummary;
-import net.legacy.library.foundation.util.TestLogger;
+import net.legacy.library.foundation.test.TestExecutionUtil;
 
 /**
  * The cache module launcher for the Legacy Lands Library.
@@ -39,39 +38,6 @@ public class CacheLauncher extends Plugin {
      * Runs focused debug tests for the cache module's critical logic.
      */
     private void runDebugTests() {
-        try {
-            TestLogger.logInfo("cache", "Initializing cache module test runner...");
-
-            CacheTestRunner testRunner = CacheTestRunner.create();
-            TestResultSummary result = testRunner.runTests();
-
-            // Extract test metrics from result
-            Object successCountObj = result.getMetadata().get("successCount");
-            Object failureCountObj = result.getMetadata().get("failureCount");
-            Object totalCountObj = result.getMetadata().get("totalCount");
-
-            int successCount = successCountObj instanceof Integer ? (Integer) successCountObj : 0;
-            int failureCount = failureCountObj instanceof Integer ? (Integer) failureCountObj : 0;
-            int totalCount = totalCountObj instanceof Integer ? (Integer) totalCountObj : 0;
-
-            if (result.isSuccess()) {
-                TestLogger.logSuccess("cache",
-                        String.format("All cache module tests completed successfully in %dms (Total: %d, Passed: %d, Failed: %d)",
-                                result.getDurationMs(), totalCount, successCount, failureCount));
-            } else {
-                TestLogger.logFailure("cache",
-                        String.format("Cache module tests completed with failures in %dms (Total: %d, Passed: %d, Failed: %d)",
-                                result.getDurationMs(), totalCount, successCount, failureCount));
-
-                // Log detailed failure information
-                TestLogger.logInfo("cache", "Test Results Summary:");
-                TestLogger.logInfo("cache", "    Passed: " + successCount + " tests");
-                TestLogger.logInfo("cache", "    Failed: " + failureCount + " tests");
-                TestLogger.logInfo("cache", "    Total:  " + totalCount + " tests");
-                TestLogger.logInfo("cache", "    Duration: " + result.getDurationMs() + "ms");
-            }
-        } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Critical error while running cache module tests", exception);
-        }
+        TestExecutionUtil.executeModuleTestRunner("cache", CacheTestRunner.create());
     }
 }
