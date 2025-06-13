@@ -9,8 +9,7 @@ import io.fairyproject.plugin.Plugin;
 import net.legacy.library.annotation.service.AnnotationProcessingServiceInterface;
 import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.configuration.ConfigurationLauncher;
-import net.legacy.library.foundation.test.TestResultSummary;
-import net.legacy.library.foundation.util.TestLogger;
+import net.legacy.library.foundation.test.TestExecutionUtil;
 import net.legacy.library.player.service.LegacyEntityDataService;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.test.PlayerTestRunner;
@@ -38,7 +37,7 @@ public class PlayerLauncher extends Plugin {
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the player module's core logic during plugin startup.
      */
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     @Autowired
     @SuppressWarnings("unused")
@@ -65,40 +64,7 @@ public class PlayerLauncher extends Plugin {
      * Runs comprehensive debug tests for the player module's core logic.
      */
     private void runDebugTests() {
-        try {
-            TestLogger.logInfo("player", "Initializing player module test runner...");
-
-            PlayerTestRunner testRunner = PlayerTestRunner.create();
-            TestResultSummary result = testRunner.runTests();
-
-            // Extract test metrics from result
-            Object successCountObj = result.getMetadata().get("successCount");
-            Object failureCountObj = result.getMetadata().get("failureCount");
-            Object totalCountObj = result.getMetadata().get("totalCount");
-
-            int successCount = successCountObj instanceof Integer ? (Integer) successCountObj : 0;
-            int failureCount = failureCountObj instanceof Integer ? (Integer) failureCountObj : 0;
-            int totalCount = totalCountObj instanceof Integer ? (Integer) totalCountObj : 0;
-
-            if (result.isSuccess()) {
-                TestLogger.logSuccess("player",
-                        String.format("All player module tests completed successfully in %dms (Total: %d, Passed: %d, Failed: %d)",
-                                result.getDurationMs(), totalCount, successCount, failureCount));
-            } else {
-                TestLogger.logFailure("player",
-                        String.format("Player module tests completed with failures in %dms (Total: %d, Passed: %d, Failed: %d)",
-                                result.getDurationMs(), totalCount, successCount, failureCount));
-
-                // Log detailed failure information
-                TestLogger.logInfo("player", "Test Results Summary:");
-                TestLogger.logInfo("player", "    Passed: " + successCount + " tests");
-                TestLogger.logInfo("player", "    Failed: " + failureCount + " tests");
-                TestLogger.logInfo("player", "    Total:  " + totalCount + " tests");
-                TestLogger.logInfo("player", "    Duration: " + result.getDurationMs() + "ms");
-            }
-        } catch (Exception exception) {
-            TestLogger.logFailure("player", "Critical error while running player module tests", exception);
-        }
+        TestExecutionUtil.executeModuleTestRunner("player", PlayerTestRunner.create());
     }
 
     @Override
