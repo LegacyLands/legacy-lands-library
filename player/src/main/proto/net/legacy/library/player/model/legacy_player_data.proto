@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package net.legacy.library.player.model;
+
+option java_package = "net.legacy.library.player.model.proto";
+option java_outer_classname = "LegacyPlayerDataProto";
+
+message LegacyPlayerDataMsg {
+  string uuid = 1;
+  map<string, string> data = 2;
+}

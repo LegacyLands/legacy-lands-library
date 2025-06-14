@@ -1,13 +1,13 @@
 package net.legacy.library.player.task;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyEntityData;
+import net.legacy.library.player.serialize.protobuf.LegacyEntityDataProtobufSerializer;
 import net.legacy.library.player.service.LegacyEntityDataService;
 import net.legacy.library.player.util.EntityRKeyUtil;
 import net.legacy.library.player.util.TTLUtil;
@@ -15,6 +15,7 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
@@ -129,6 +130,7 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
         return submitWithVirtualThreadAsync(() -> {
             CacheServiceInterface<Cache<UUID, LegacyEntityData>, LegacyEntityData> l1Cache = service.getL1Cache();
             RedisCacheServiceInterface l2Cache = service.getL2Cache();
+            RedissonClient redissonClientInstance = l2Cache.getResource(); // Get RedissonClient once
 
             l1Cache.getResource().asMap().forEach((uuid, entityData) -> {
                 // Skip if we have specific UUIDs and this one is not in the set
@@ -136,12 +138,17 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
                     return;
                 }
 
-                String serialized = SimplixSerializer.serialize(entityData).toString();
+                byte[] serializedBytes = LegacyEntityDataProtobufSerializer.serializeDomainObject(entityData);
+                if (serializedBytes == null) {
+                    return; // Serialization failed or entityData was null
+                }
+
                 String entityKey = EntityRKeyUtil.getEntityKey(uuid, service);
-                String currentCache = l2Cache.getWithType(client -> client.getBucket(entityKey).get(), () -> "", null, false);
+                RBucket<byte[]> l2Bucket = redissonClientInstance.getBucket(entityKey);
+                byte[] currentCacheBytes = l2Bucket.get();
 
                 // If the data is the same, no need to sync
-                if (currentCache.equals(serialized)) {
+                if (Arrays.equals(currentCacheBytes, serializedBytes)) {
                     return;
                 }
 
@@ -149,19 +156,18 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
 
                 // Write lock
                 l2Cache.execute(
+                        // The 'client' in this lambda is the RedissonClient instance from l2Cache.getResource()
                         client -> client.getReadWriteLock(syncLockKey).writeLock(),
                         client -> {
                             // Store operation
-                            RedissonClient redissonClient = l2Cache.getResource();
+                            // 'client' here is the RedissonClient passed by the execute method
+                            RBucket<byte[]> bucket = client.getBucket(entityKey);
+                            bucket.set(serializedBytes);
 
                             // Set TTL based on custom TTL if provided, otherwise use default
                             Duration ttlToApply = this.ttl != null ? this.ttl : LegacyEntityDataService.DEFAULT_TTL_DURATION;
-                            RBucket<Object> bucket = redissonClient.getBucket(entityKey);
-
-                            bucket.set(serialized);
-
                             // Always use TTLUtil for consistent TTL setting
-                            TTLUtil.setReliableTTL(redissonClient, entityKey, ttlToApply.getSeconds());
+                            TTLUtil.setReliableTTL(client, entityKey, ttlToApply.getSeconds());
 
                             return null;
                         },
@@ -170,4 +176,4 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
             });
         });
     }
-} 
+}

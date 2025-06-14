@@ -91,6 +91,7 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
         executeTestClass(ResilientIntegrationTest.class, "ResilientIntegrationTest");
         executeTestClass(PerformanceStressTest.class, "PerformanceStressTest");
         executeTestClass(LockContentionQPSTest.class, "LockContentionQPSTest");
+        executeTestClass(ProtobufSerializationTest.class, "Protocol Buffer Serialization Logic"); // Added this line
 
         timer.stopTimer("test-execution");
         timer.startTimer("validation");
@@ -212,6 +213,8 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
                 .anyMatch(name -> name.contains("Management") || name.contains("Shutdown"));
         boolean hasPerformanceTests = timer.getAllResults().keySet().stream()
                 .anyMatch(name -> name.contains("Performance") || name.contains("QPS") || name.contains("Stress"));
+        boolean hasSerializationTests = timer.getAllResults().keySet().stream() // Added check
+                .anyMatch(name -> name.contains("Serialization"));
 
         validateResult(hasServiceCreationTests, "Should include service creation tests");
         validateResult(hasCacheTests, "Should include cache operation tests");
@@ -219,9 +222,10 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
         validateResult(hasTTLTests, "Should include TTL management tests");
         validateResult(hasManagementTests, "Should include service management tests");
         validateResult(hasPerformanceTests, "Should include performance stress tests");
+        validateResult(hasSerializationTests, "Should include serialization tests"); // Added validation
 
         // Log detailed validation results
-        TestLogger.logValidation(MODULE_NAME, "TotalTestCount", totalTests >= 40,
+        TestLogger.logValidation(MODULE_NAME, "TotalTestCount", totalTests >= 40, // Maybe adjust this count
                 "Total integration tests: " + totalTests);
         TestLogger.logValidation(MODULE_NAME, "SuccessRate", successRate == 1.0,
                 "Success rate: " + (successRate * 100) + "% (" + passedTests + "/" + totalTests + ") - 100% required");
@@ -237,6 +241,9 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
                 "Service management test coverage");
         TestLogger.logValidation(MODULE_NAME, "PerformanceStressCoverage", hasPerformanceTests,
                 "Performance stress test coverage");
+        TestLogger.logValidation(MODULE_NAME, "SerializationLogicCoverage", hasSerializationTests, // Added log
+                "Serialization logic test coverage");
+
 
         // Add metrics to context
         context.putContextData("totalTests", totalTests);

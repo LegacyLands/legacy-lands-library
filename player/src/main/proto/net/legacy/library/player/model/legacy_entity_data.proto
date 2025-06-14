@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package net.legacy.library.player.model;
+
+option java_package = "net.legacy.library.player.model.proto";
+option java_outer_classname = "LegacyEntityDataProto";
+
+// Message for a set of UUIDs (strings)
+message UuidSet {
+  repeated string uuid = 1;
+}
+
+message LegacyEntityDataMsg {
+  string uuid = 1;
+  map<string, string> attributes = 2;
+  map<string, UuidSet> relationships = 3; // Map relationship type to a set of UUIDs
+  string entity_type = 4;
+  int64 version = 5; // Using int64 for long
+  int64 last_modified_time = 6; // Using int64 for long
+}

@@ -1,7 +1,7 @@
 package net.legacy.library.player.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import de.leonhard.storage.internal.serialize.SimplixSerializer;
+import com.google.protobuf.InvalidProtocolBufferException; // Added import
 import dev.morphia.query.MorphiaCursor;
 import dev.morphia.query.filters.Filters;
 import io.fairyproject.log.Log;
@@ -17,6 +17,7 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.model.LegacyPlayerData;
+import net.legacy.library.player.serialize.protobuf.LegacyPlayerDataProtobufSerializer; // Added import
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
 import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
 import net.legacy.library.player.task.redis.RStreamAccepterInvokeTask;
@@ -250,19 +251,27 @@ public class LegacyPlayerDataService {
 
         // Get L2 cache
         RedisCacheServiceInterface l2Cache = getL2Cache();
-        String string =
+        byte[] bytes =
                 l2Cache.getWithType(
                         client -> client.getReadWriteLock(RKeyUtil.getRLPDSReadWriteLockKey(key)).readLock(),
-                        client -> client.getBucket(key).get(),
+                        client -> {
+                            RBucket<byte[]> bucket = client.getBucket(key);
+                            return bucket.get();
+                        },
                         () -> null, null, false, LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
                 );
 
-        if (string == null || string.isEmpty()) {
+        if (bytes == null || bytes.length == 0) {
             return Optional.empty();
         }
 
-        // Deserialize JSON to LegacyPlayerData
-        return Optional.ofNullable(SimplixSerializer.deserialize(string, LegacyPlayerData.class));
+        try {
+            // Deserialize bytes to LegacyPlayerData using Protobuf
+            return Optional.ofNullable(LegacyPlayerDataProtobufSerializer.deserializeToDomainObject(bytes));
+        } catch (InvalidProtocolBufferException e) {
+            Log.error("Failed to deserialize LegacyPlayerData from Protobuf for UUID %s", uuid, e);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -380,22 +389,28 @@ public class LegacyPlayerDataService {
 
         // Save to L2 cache with TTL
         String key = RKeyUtil.getRLPDSKey(uuid, this);
-        String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
+        byte[] serializedBytes = LegacyPlayerDataProtobufSerializer.serializeDomainObject(legacyPlayerData);
+
+        if (serializedBytes == null) {
+            Log.warn("Serialization of LegacyPlayerData for UUID %s resulted in null byte array.", uuid);
+            return;
+        }
 
         // Use getWithType with writeLock to store data in L2 cache with TTL
         getL2Cache().getWithType(
                 client -> client.getReadWriteLock(RKeyUtil.getRLPDSReadWriteLockKey(key)).writeLock(),
-                client -> null,
+                client -> null, // Not retrieving in a write operation
                 () -> {
                     // Store operation with TTL using the new Duration-based method
                     RedissonClient client = getL2Cache().getResource();
-                    client.getBucket(key).set(serialized);
+                    RBucket<byte[]> bucket = client.getBucket(key);
+                    bucket.set(serializedBytes);
                     // Use TTLUtil for consistent TTL setting
                     TTLUtil.setReliableTTL(client, key, DEFAULT_TTL_DURATION.getSeconds());
                     return null;
                 },
-                null,
-                false,
+                null, // Not applicable for write
+                false, // Not caching after query, this is a write operation
                 LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
         );
     }
@@ -416,7 +431,7 @@ public class LegacyPlayerDataService {
         try {
             String playerKey = RKeyUtil.getRLPDSKey(uuid, this);
             RedissonClient redissonClient = getL2Cache().getResource();
-            RBucket<Object> bucket = redissonClient.getBucket(playerKey);
+            RBucket<byte[]> bucket = redissonClient.getBucket(playerKey); // Type changed to byte[]
 
             if (!bucket.isExists()) {
                 return false;

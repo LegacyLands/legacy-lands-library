@@ -1,6 +1,6 @@
 package net.legacy.library.player.task;
 
-import de.leonhard.storage.internal.serialize.SimplixSerializer;
+import com.google.protobuf.InvalidProtocolBufferException; // Added import
 import dev.morphia.Datastore;
 import io.fairyproject.log.Log;
 import lombok.RequiredArgsConstructor;
@@ -8,9 +8,11 @@ import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
+import net.legacy.library.player.serialize.protobuf.LegacyPlayerDataProtobufSerializer; // Added import
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
 import net.legacy.library.player.util.TTLUtil;
+import org.redisson.api.RBucket; // Added import
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
 import org.redisson.api.RType;
@@ -101,7 +103,7 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
         return submitWithVirtualThreadAsync(() -> {
             try {
                 // Sync L1 cache to L2 cache first
-                L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();
+                // L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start(); // This task must also write Protobuf to L2
 
                 // Perform persistence operation
                 persistPlayerData();
@@ -135,7 +137,7 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
 
             try {
                 Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
-                processPlayerDataInL2Cache(l2Cache, redissonClient, datastore);
+                processPlayerDataInL2Cache(redissonClient, datastore); // Removed l2Cache from params
             } finally {
                 // Ensure the lock is always released safely
                 if (lock.isHeldByCurrentThread()) {
@@ -161,13 +163,10 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
      * and persists it to the MongoDB database. It also maintains TTL for each entry in Redis,
      * either using the provided custom TTL or falling back to the default TTL.
      *
-     * @param l2Cache        the Redis cache service
      * @param redissonClient the Redisson client
      * @param datastore      the MongoDB datastore
      */
-    private void processPlayerDataInL2Cache(RedisCacheServiceInterface l2Cache,
-                                            RedissonClient redissonClient,
-                                            Datastore datastore) {
+    private void processPlayerDataInL2Cache(RedissonClient redissonClient, Datastore datastore) {
         // Get all LPDS keys and process them
         RKeys keys = redissonClient.getKeys();
         KeysScanOptions keysScanOptions = KeysScanOptions.defaults()
@@ -175,30 +174,36 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
                 .limit(limit);
 
         for (String key : keys.getKeys(keysScanOptions)) {
-            if (keys.getType(key) != RType.OBJECT) {
+            // For byte[] in buckets, RType.STRING is the correct type reported by Redisson.
+            if (keys.getType(key) != RType.STRING) {
+                Log.debug("Skipping key %s with unexpected type %s", key, keys.getType(key));
                 continue;
             }
 
-            String playerDataString = l2Cache.getWithType(
-                    client -> client.getBucket(key).get(),
-                    () -> "",
-                    null,
-                    false
-            );
+            RBucket<byte[]> bucket = redissonClient.getBucket(key); // RBucket of byte[]
+            byte[] serializedData = bucket.get();
 
-            if (playerDataString.isEmpty()) {
-                Log.error("The key value is not expected to be null, this should not happen!! key: %s", key);
+            if (serializedData == null || serializedData.length == 0) {
+                Log.warn("The key %s value is null or empty in L2 cache.", key);
                 continue;
             }
 
-            // Save to database
-            datastore.save(SimplixSerializer.deserialize(playerDataString, LegacyPlayerData.class));
+            try {
+                LegacyPlayerData playerData = LegacyPlayerDataProtobufSerializer.deserializeToDomainObject(serializedData);
+                if (playerData != null) {
+                    // Save to database
+                    datastore.save(playerData);
 
-            // Update TTL if needed
-            if (ttl != null) {
-                TTLUtil.setTTLIfMissing(redissonClient, key, ttl.getSeconds());
-            } else {
-                TTLUtil.setTTLIfMissing(redissonClient, key, LegacyPlayerDataService.DEFAULT_TTL_DURATION.getSeconds());
+                    // Update TTL if needed
+                    Duration effectiveTTL = (this.ttl != null) ? this.ttl : LegacyPlayerDataService.DEFAULT_TTL_DURATION;
+                    TTLUtil.setTTLIfMissing(redissonClient, key, effectiveTTL.getSeconds());
+                } else {
+                    Log.error("Deserialization of key %s resulted in null LegacyPlayerData object.", key);
+                }
+            } catch (InvalidProtocolBufferException e) {
+                Log.error("Failed to deserialize LegacyPlayerData from Protobuf for key %s. Data might be corrupted or in old format.", key, e);
+            } catch (Exception e) {
+                Log.error("An unexpected error occurred while processing player data for key %s", key, e);
             }
         }
     }

@@ -1,7 +1,7 @@
 package net.legacy.library.player.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import de.leonhard.storage.internal.serialize.SimplixSerializer;
+import com.google.protobuf.InvalidProtocolBufferException; // Added import
 import dev.morphia.query.MorphiaCursor;
 import dev.morphia.query.filters.Filters;
 import io.fairyproject.log.Log;
@@ -19,6 +19,7 @@ import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.model.LegacyEntityData;
 import net.legacy.library.player.model.RelationshipCriteria;
 import net.legacy.library.player.model.RelationshipQueryType;
+import net.legacy.library.player.serialize.protobuf.LegacyEntityDataProtobufSerializer; // Added import
 import net.legacy.library.player.task.EntityDataPersistenceTask;
 import net.legacy.library.player.task.EntityDataPersistenceTimerTask;
 import net.legacy.library.player.task.redis.EntityRStreamAccepterInvokeTask;
@@ -290,18 +291,26 @@ public class LegacyEntityDataService {
         String key = EntityRKeyUtil.getEntityKey(uuid, this);
         RedisCacheServiceInterface l2Cache = getL2Cache();
 
-        String jsonData = l2Cache.getWithType(
+        byte[] bytes = l2Cache.getWithType(
                 client -> client.getReadWriteLock(EntityRKeyUtil.getEntityReadWriteLockKey(key)).readLock(),
-                client -> client.getBucket(key).get(),
+                client -> {
+                    RBucket<byte[]> bucket = client.getBucket(key); // Type changed to byte[]
+                    return bucket.get();
+                },
                 () -> null, null, false, LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
         );
 
-        if (jsonData == null || jsonData.isEmpty()) {
+        if (bytes == null || bytes.length == 0) {
             return Optional.empty();
         }
 
-        // Deserialize JSON to LegacyEntityData
-        return Optional.ofNullable(SimplixSerializer.deserialize(jsonData, LegacyEntityData.class));
+        try {
+            // Deserialize bytes to LegacyEntityData using Protobuf
+            return Optional.ofNullable(LegacyEntityDataProtobufSerializer.deserializeToDomainObject(bytes));
+        } catch (InvalidProtocolBufferException e) {
+            Log.error("Failed to deserialize LegacyEntityData from Protobuf for UUID %s", uuid, e);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -1032,7 +1041,7 @@ public class LegacyEntityDataService {
         try {
             String entityKey = EntityRKeyUtil.getEntityKey(uuid, this);
             RedissonClient redissonClient = getL2Cache().getResource();
-            RBucket<Object> bucket = redissonClient.getBucket(entityKey);
+            RBucket<byte[]> bucket = redissonClient.getBucket(entityKey); // Type changed to byte[]
 
             if (!bucket.isExists()) {
                 return false;

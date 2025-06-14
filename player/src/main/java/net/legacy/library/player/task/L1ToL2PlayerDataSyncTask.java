@@ -1,16 +1,19 @@
 package net.legacy.library.player.task;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import de.leonhard.storage.internal.serialize.SimplixSerializer;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.CacheServiceInterface;
 import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
+import net.legacy.library.player.serialize.protobuf.LegacyPlayerDataProtobufSerializer; // Added import
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
+import org.redisson.api.RBucket; // Added import
+import org.redisson.api.RedissonClient; // Added import
 
+import java.util.Arrays; // Added import
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -70,18 +73,24 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture
             CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> l1Cache =
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
+            RedissonClient redissonClient = l2Cache.getResource(); // Get RedissonClient once for direct use
 
             l1Cache.getResource().asMap().forEach((key, legacyPlayerData) -> {
                 if (this.uuid != null && !this.uuid.equals(key)) {
                     return;
                 }
 
-                String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
+                byte[] serializedBytes = LegacyPlayerDataProtobufSerializer.serializeDomainObject(legacyPlayerData);
+                if (serializedBytes == null) { // Serialization might return null if input is null
+                    return;
+                }
+
                 String bucketKey = RKeyUtil.getRLPDSKey(key, legacyPlayerDataService);
-                String nowCache = l2Cache.getWithType(client -> client.getBucket(bucketKey).get(), () -> "", null, false);
+                RBucket<byte[]> l2Bucket = redissonClient.getBucket(bucketKey); // Use byte[] bucket
+                byte[] nowCacheBytes = l2Bucket.get();
 
                 // If the data is the same, no need to sync
-                if (nowCache.equals(serialized)) {
+                if (Arrays.equals(nowCacheBytes, serializedBytes)) {
                     return;
                 }
 
@@ -89,9 +98,15 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture
 
                 // Write lock
                 l2Cache.execute(
+                        // The 'client' in this lambda is the RedissonClient instance from l2Cache.getResource()
                         client -> client.getReadWriteLock(syncLockKey).writeLock(),
                         client -> {
-                            client.getBucket(bucketKey).set(serialized);
+                            // 'client' here is the RedissonClient passed by the execute method's scope
+                            RBucket<byte[]> bucket = client.getBucket(bucketKey);
+                            bucket.set(serializedBytes);
+                            // TTL is typically set when data is first saved to L2 or by a separate TTL management task.
+                            // If L1ToL2SyncTask should also refresh/set TTL, it can be done here using TTLUtil.
+                            // For example: TTLUtil.setReliableTTL(client, bucketKey, LegacyPlayerDataService.DEFAULT_TTL_DURATION.getSeconds());
                             return null;
                         },
                         LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
