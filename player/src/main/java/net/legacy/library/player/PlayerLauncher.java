@@ -47,7 +47,8 @@ public class PlayerLauncher extends Plugin {
     public void onPluginEnable() {
         List<String> basePackages = List.of(
                 "net.legacy.library.player",
-                "net.legacy.library.configuration.serialize.annotation"
+                "net.legacy.library.configuration.serialize.annotation",
+                "net.legacy.library.configuration.serialize.annotation.abc"
         );
 
         annotationProcessingService.processAnnotations(
