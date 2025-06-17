@@ -32,5 +32,5 @@ dependencies {
     api("com.github.ben-manes.caffeine:caffeine:3.2.0")
 
     // https://mvnrepository.com/artifact/org.redisson/redisson
-    api("org.redisson:redisson:3.47.0")
+    api("org.redisson:redisson:3.50.0")
 }
