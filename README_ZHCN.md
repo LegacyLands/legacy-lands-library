@@ -17,12 +17,14 @@
 
 ## 核心模块
 
+- [**foundation**](foundation/README_ZHCN.md) - 核心基础模块，为所有库模块提供基本的测试基础设施、工具类和基础抽象。
 - [**annotation**](annotation/README_ZHCN.md) - 强大的注解处理框架，具有灵活的扫描选项和生命周期管理。
+- [**aop**](aop/README_ZHCN.md) - 企业级面向切面编程框架，具有 ClassLoader 隔离功能，提供性能监控、线程安全、日志记录和异常处理切面。
 - [**commons**](commons/README_ZHCN.md) - 基础工具集，包括 VarHandle 注入、任务调度、虚拟线程调度、JSON 操作和随机对象生成。。
 - [**configuration**](configuration/README_ZHCN.md) - 基于 SimplixStorage 构建的灵活配置框架，支持序列化。
 - [**mongodb**](mongodb/README_ZHCN.md) - 基于 Morphia 的精简 MongoDB 集成，用于高效数据持久化。
 - [**cache**](cache/README_ZHCN.md) - 集成 Caffeine 和 Redis 的多级缓存系统，具有全面的锁机制与通用的线程安全资源管理框架。
-- [**player**](player/README_ZHCN.md) - 高性能玩家数据管理，支持多级缓存和实时同步。
+- [**player**](player/README_ZHCN.md) - 企业级分布式数据管理框架，构建高性能实体-关系数据层。能够 **无缝处理数千实体间** 的关系网络与状态同步。
 - [**script**](script/README_ZHCN.md) - 这是一个强大、灵活、可拓展且高性能的脚本执行引擎封装，支持 `Rhino`, `Nashorn`, `V8`
   三种 `JavaScript` 引擎。
 

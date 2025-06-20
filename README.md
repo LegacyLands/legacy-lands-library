@@ -17,8 +17,10 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 
 ## Core Modules
 
+- [**foundation**](foundation/README.md) - Core foundation module providing essential testing infrastructure, utilities, and base abstractions for all library modules.
 - [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and
   lifecycle management.
+- [**aop**](aop/README.md) - Enterprise-grade Aspect-Oriented Programming framework with ClassLoader isolation, providing performance monitoring, thread safety, logging, and exception handling aspects.
 - [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, virtual thread
   scheduling, JSON operations, and random object generation.
 - [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with
@@ -26,8 +28,7 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 - [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence.
 - [**cache**](cache/README.md) - Multi-tier caching system integrating Caffeine and Redis, providing comprehensive lock
   management and a generic framework for thread-safe resource access.
-- [**player**](player/README.md) - High-performance player data management with multi-tier caching and real-time
-  synchronization.
+- [**player**](player/README.md) - Enterprise-grade distributed data management framework building high-performance entity-relationship data layers. Capable of **seamlessly handling thousands of inter-entity** relationship networks and state synchronization.
 - [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper
   that supports `Rhino`, `Nashorn` and `V8` `JavaScript` engines.
 
