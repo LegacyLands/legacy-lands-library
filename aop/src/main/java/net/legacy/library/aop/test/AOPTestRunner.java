@@ -50,7 +50,9 @@ public class AOPTestRunner extends AbstractModuleTestRunner {
             AOPAsyncTest.class,
             AOPMonitoringTest.class,
             AOPAnnotationTest.class,
-            AOPCustomTest.class
+            AOPCustomTest.class,
+            AOPPointcutTest.class,
+            ParameterMatchingTest.class
     };
 
     @Getter
@@ -97,10 +99,16 @@ public class AOPTestRunner extends AbstractModuleTestRunner {
         for (Class<?> testClass : TEST_CLASSES) {
             TestLogger.logInfo(MODULE_NAME, "Executing test class: %s", testClass.getSimpleName());
 
-            // Special handling for AOPCustomTest
+            // Special handling for AOPCustomTest, AOPPointcutTest and ParameterMatchingTest
             if (testClass == AOPCustomTest.class) {
                 context.incrementProcessed();
                 executeCustomTests();
+            } else if (testClass == AOPPointcutTest.class) {
+                context.incrementProcessed();
+                executePointcutTests();
+            } else if (testClass == ParameterMatchingTest.class) {
+                context.incrementProcessed();
+                executeParameterMatchingTests();
             } else {
                 List<String> testMethods = discoverTestMethods(testClass);
                 TestLogger.logInfo(MODULE_NAME, "Found %d test methods in %s", testMethods.size(), testClass.getSimpleName());
@@ -218,6 +226,51 @@ public class AOPTestRunner extends AbstractModuleTestRunner {
             
         } finally {
             timer.stopTimer("custom-tests");
+        }
+    }
+    
+    /**
+     * Executes pointcut expression tests from AOPPointcutTest.
+     */
+    private void executePointcutTests() {
+        timer.startTimer("pointcut-tests");
+        
+        try {
+            TestLogger.logInfo(MODULE_NAME, "Executing pointcut expression tests...");
+            AOPPointcutTest.runTests();
+            
+            TestLogger.logValidation(MODULE_NAME, "pointcut-tests", true, "Pointcut tests completed successfully");
+            context.incrementSuccess();
+            
+        } catch (Exception exception) {
+            TestLogger.logValidation(MODULE_NAME, "pointcut-tests", false, "Pointcut tests failed: %s", exception.getMessage());
+            context.incrementFailure();
+            
+        } finally {
+            timer.stopTimer("pointcut-tests");
+        }
+    }
+    
+    /**
+     * Executes parameter matching tests from ParameterMatchingTest.
+     */
+    private void executeParameterMatchingTests() {
+        timer.startTimer("parameter-matching-tests");
+        
+        try {
+            TestLogger.logInfo(MODULE_NAME, "Executing parameter matching tests...");
+            ParameterMatchingTest test = new ParameterMatchingTest();
+            test.runTest();
+            
+            TestLogger.logValidation(MODULE_NAME, "parameter-matching-tests", true, "Parameter matching tests completed successfully");
+            context.incrementSuccess();
+            
+        } catch (Exception exception) {
+            TestLogger.logValidation(MODULE_NAME, "parameter-matching-tests", false, "Parameter matching tests failed: %s", exception.getMessage());
+            context.incrementFailure();
+            
+        } finally {
+            timer.stopTimer("parameter-matching-tests");
         }
     }
 

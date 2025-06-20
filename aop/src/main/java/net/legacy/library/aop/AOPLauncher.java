@@ -36,7 +36,7 @@ public class AOPLauncher extends Plugin {
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the annotation processing framework during plugin startup.
      */
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     @Autowired
     public AOPService aopService;
