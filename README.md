@@ -105,6 +105,14 @@ is a Folia fork with many useful optimizations, configurable vanilla features, a
 
 ![promptx-logo.png](./promptx-logo.png)
 
+## Contributing
+
+We warmly welcome more developers to join our open source project and contribute their strength. Whether it's sharing ideas, creating Issues, or submitting Pull Requests, every contribution is significant!
+
+We are very liberal with our use of AI. You can use any AI you want to write and contribute code, as long as it all works and meets the requirements in [CLAUDE.md](CLAUDE.md) (this is a Chinese document).
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
+
+---
