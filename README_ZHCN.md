@@ -30,7 +30,7 @@
 
 - [**experimental**](experimental/README.md) - 一些实验性的模块，可以显著提高性能，但可能过于复杂而无法使用或暂时不稳定。
     - [**third-party-schedulers**](experimental/third-party-schedulers/README.md) - 通过 gRPC
-      外部任务调度器实现分布式任务处理，从而实现大型插件解耦和性能提升（适用于不需要访问 Bukkit API 的后端）。
+      外部任务调度器实现分布式任务处理（目前基于 Rust 实现），从而实现大型插件解耦和性能提升（适用于不需要访问 Bukkit API 的后端）。
       非常适合机器学习、反作弊大数据计算、数学和类似应用。
 
 - **security** - *即将推出。*

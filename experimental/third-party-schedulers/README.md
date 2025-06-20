@@ -3,6 +3,12 @@
 The Task Scheduler module is a high-performance task execution platform designed to overcome the limitations of
 conventional server architectures.
 
+## WARNING
+
+This module is currently known to have certain defects ([Issue 58](https://github.com/LegacyLands/legacy-lands-library/issues/58)).
+Although it may be operational, its use is strongly discouraged.
+A complete refactoring is planned for the near future. This warning will be removed upon stabilization of the module.
+
 ## Overview
 
 In many traditional systems, every computation—regardless of its resource demands—is performed on the primary service

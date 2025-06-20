@@ -35,7 +35,7 @@ utilities for modern Minecraft plugin development. It is cross-platform and supp
 - [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but
   may be too complex to use or temporarily unstable.
     - [**third-party-schedulers**](experimental/third-party-schedulers/README.md) - Achieves distributed task processing
-      via gRPC external task schedulers, enabling large plugin decoupling and performance improvements (for backends
+      via gRPC external task schedulers (currently implemented in Rust), enabling large plugin decoupling and performance improvements (for backends
       that cannot directly access the Bukkit API). Ideal for machine learning, anti-cheat large data computation,
       mathematics, and similar
       applications.
