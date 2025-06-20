@@ -359,7 +359,7 @@ public class LegacyPlayerDataService {
     }
 
     public void saveLegacyPlayersData(List<LegacyPlayerData> legacyPlayerDataList) {
-        if (legacyPlayerDataList == null ||  legacyPlayerDataList.isEmpty()) {
+        if (legacyPlayerDataList == null || legacyPlayerDataList.isEmpty()) {
             return;
         }
 

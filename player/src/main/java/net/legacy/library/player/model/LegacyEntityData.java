@@ -164,7 +164,7 @@ public class LegacyEntityData {
      * Gets an attribute value.
      *
      * @param key the attribute key
-     * @return the attribute value, or null if not present
+     * @return the attribute value, or {@code null} if not present
      */
     public String getAttribute(String key) {
         return attributes.get(key);
@@ -176,7 +176,7 @@ public class LegacyEntityData {
      * @param key      the attribute key
      * @param function the transformation function
      * @param <R>      the return type
-     * @return the transformed value, or null if not present
+     * @return the transformed value, or {@code null} if not present
      */
     public <R> R getAttribute(String key, Function<String, R> function) {
         String value = attributes.get(key);

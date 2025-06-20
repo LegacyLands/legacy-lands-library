@@ -3,6 +3,8 @@ package net.legacy.library.foundation.util;
 import io.fairyproject.log.Log;
 import lombok.experimental.UtilityClass;
 
+import java.util.Arrays;
+
 /**
  * Standardized logging utility for module testing.
  *
@@ -29,10 +31,7 @@ public class TestLogger {
      * @param testName   the name of the test being started
      */
     public static void logTestStart(String moduleName, String testName) {
-        Log.info("%s [%s] Starting test: %s",
-                TEST_PREFIX,
-                moduleName,
-                testName);
+        logInfo(moduleName, "Starting test: %s", testName);
     }
 
     /**
@@ -41,14 +40,11 @@ public class TestLogger {
      * @param moduleName the name of the module being tested
      * @param testName   the name of the test that completed
      * @param durationMs the test duration in milliseconds
+     * @param replace    format arguments for testName string formatting
      */
-    public static void logTestComplete(String moduleName, String testName, long durationMs) {
-        Log.info("%s [%s] %s Test completed: %s (took %dms)",
-                TEST_PREFIX,
-                moduleName,
-                "🏁",
-                testName,
-                durationMs);
+    public static void logTestComplete(String moduleName, String testName, long durationMs, Object... replace) {
+        String formattedTestName = String.format(testName, replace);
+        Log.info("%s [%s] %s Test completed: %s (took %dms)", TEST_PREFIX, moduleName, "🏁", formattedTestName, durationMs);
     }
 
     /**
@@ -56,13 +52,11 @@ public class TestLogger {
      *
      * @param moduleName the name of the module being tested
      * @param message    the success message
+     * @param replace    format arguments for message string formatting
      */
-    public static void logSuccess(String moduleName, String message) {
-        Log.info("%s [%s] %s %s",
-                TEST_PREFIX,
-                moduleName,
-                SUCCESS_ICON,
-                message);
+    public static void logSuccess(String moduleName, String message, Object... replace) {
+        String formattedMessage = String.format(message, replace);
+        Log.info("%s [%s] %s %s", TEST_PREFIX, moduleName, SUCCESS_ICON, formattedMessage);
     }
 
     /**
@@ -70,13 +64,11 @@ public class TestLogger {
      *
      * @param moduleName the name of the module being tested
      * @param message    the failure message
+     * @param replace    format arguments for message string formatting
      */
-    public static void logFailure(String moduleName, String message) {
-        Log.warn("%s [%s] %s %s",
-                TEST_PREFIX,
-                moduleName,
-                FAILURE_ICON,
-                message);
+    public static void logFailure(String moduleName, String message, Object... replace) {
+        String formattedMessage = String.format(message, replace);
+        Log.warn("%s [%s] %s %s", TEST_PREFIX, moduleName, FAILURE_ICON, formattedMessage);
     }
 
     /**
@@ -85,14 +77,11 @@ public class TestLogger {
      * @param moduleName the name of the module being tested
      * @param message    the failure message
      * @param exception  the exception that caused the failure
+     * @param replace    format arguments for message string formatting
      */
-    public static void logFailure(String moduleName, String message, Exception exception) {
-        Log.error("%s [%s] %s %s",
-                TEST_PREFIX,
-                moduleName,
-                FAILURE_ICON,
-                message,
-                exception);
+    public static void logFailure(String moduleName, String message, Exception exception, Object... replace) {
+        String formattedMessage = String.format(message, replace);
+        Log.error("%s [%s] %s %s", TEST_PREFIX, moduleName, FAILURE_ICON, formattedMessage, exception);
     }
 
     /**
@@ -100,13 +89,11 @@ public class TestLogger {
      *
      * @param moduleName the name of the module being tested
      * @param message    the information message
+     * @param replace    format arguments for message string formatting
      */
-    public static void logInfo(String moduleName, String message) {
-        Log.info("%s [%s] %s %s",
-                TEST_PREFIX,
-                moduleName,
-                INFO_ICON,
-                message);
+    public static void logInfo(String moduleName, String message, Object... replace) {
+        String formattedMessage = String.format(message, replace);
+        Log.info("%s [%s] %s %s", TEST_PREFIX, moduleName, INFO_ICON, formattedMessage);
     }
 
     /**
@@ -114,13 +101,11 @@ public class TestLogger {
      *
      * @param moduleName the name of the module being tested
      * @param message    the warning message
+     * @param replace    format arguments for message string formatting
      */
-    public static void logWarning(String moduleName, String message) {
-        Log.warn("%s [%s] %s %s",
-                TEST_PREFIX,
-                moduleName,
-                WARNING_ICON,
-                message);
+    public static void logWarning(String moduleName, String message, Object... replace) {
+        String formattedMessage = String.format(message, replace);
+        Log.warn("%s [%s] %s %s", TEST_PREFIX, moduleName, WARNING_ICON, formattedMessage);
     }
 
     /**
@@ -131,17 +116,13 @@ public class TestLogger {
      * @param successCount the number of successful tests
      * @param failureCount the number of failed tests
      * @param durationMs   the total execution duration in milliseconds
+     * @param replace      additional formatting arguments for statistics
      */
     public static void logStatistics(String moduleName, int totalTests, int successCount,
-                                     int failureCount, long durationMs) {
-        Log.info("%s [%s] %s Statistics: Total=%d, Success=%d, Failed=%d, Duration=%dms",
-                TEST_PREFIX,
-                moduleName,
-                "📊",
-                totalTests,
-                successCount,
-                failureCount,
-                durationMs);
+                                     int failureCount, long durationMs, Object... replace) {
+        String additionalInfo = replace.length > 0 ? String.format(", %s", String.format(Arrays.toString(replace), replace)) : "";
+        Log.info("%s [%s] %s Statistics: Total=%d, Success=%d, Failed=%d, Duration=%dms%s", TEST_PREFIX, moduleName,
+                "📊", totalTests, successCount, failureCount, durationMs, additionalInfo);
     }
 
     /**
@@ -151,15 +132,13 @@ public class TestLogger {
      * @param processedCount        the number of processed items
      * @param averageProcessingTime the average processing time per item
      * @param throughput            the processing throughput (items per second)
+     * @param replace               additional formatting arguments for metrics
      */
     public static void logMetrics(String moduleName, int processedCount,
-                                  long averageProcessingTime, double throughput) {
-        Log.info("%s [%s] Metrics: Processed=%d, AvgTime=%dms, Throughput=%.2f/sec",
-                TEST_PREFIX,
-                moduleName,
-                processedCount,
-                averageProcessingTime,
-                throughput);
+                                  long averageProcessingTime, double throughput, Object... replace) {
+        String additionalInfo = replace.length > 0 ? String.format(", %s", String.format(Arrays.toString(replace), replace)) : "";
+        Log.info("%s [%s] Metrics: Processed=%d, AvgTime=%dms, Throughput=%.2f/sec%s", TEST_PREFIX, moduleName,
+                processedCount, averageProcessingTime, throughput, additionalInfo);
     }
 
     /**
@@ -168,13 +147,12 @@ public class TestLogger {
      * @param moduleName the name of the module being tested
      * @param message    the debug message
      * @param debugMode  whether debug mode is enabled
+     * @param replace    format arguments for message string formatting
      */
-    public static void logDebug(String moduleName, String message, boolean debugMode) {
+    public static void logDebug(String moduleName, String message, boolean debugMode, Object... replace) {
         if (debugMode) {
-            Log.info("%s [%s] [DEBUG] %s",
-                    TEST_PREFIX,
-                    moduleName,
-                    message);
+            String formattedMessage = String.format(message, replace);
+            Log.info("%s [%s] [DEBUG] %s", TEST_PREFIX, moduleName, formattedMessage);
         }
     }
 
@@ -185,28 +163,18 @@ public class TestLogger {
      * @param testName    the name of the test
      * @param condition   the validation condition result
      * @param description description of what was validated
+     * @param replace     format arguments for description string formatting
      */
     public static void logValidation(String moduleName, String testName,
-                                     boolean condition, String description) {
+                                     boolean condition, String description, Object... replace) {
         String icon = condition ? SUCCESS_ICON : FAILURE_ICON;
         String result = condition ? "PASSED" : "FAILED";
 
+        String formattedDescription = String.format(description, replace);
         if (condition) {
-            Log.info("%s [%s] %s %s: %s - %s",
-                    TEST_PREFIX,
-                    moduleName,
-                    icon,
-                    testName,
-                    result,
-                    description);
+            Log.info("%s [%s] %s %s: %s - %s", TEST_PREFIX, moduleName, icon, testName, result, formattedDescription);
         } else {
-            Log.warn("%s [%s] %s %s: %s - %s",
-                    TEST_PREFIX,
-                    moduleName,
-                    icon,
-                    testName,
-                    result,
-                    description);
+            Log.warn("%s [%s] %s %s: %s - %s", TEST_PREFIX, moduleName, icon, testName, result, formattedDescription);
         }
     }
 
@@ -215,16 +183,12 @@ public class TestLogger {
      *
      * @param moduleName the name of the module being tested
      * @param summary    the formatted summary text
+     * @param replace    format arguments for summary string formatting
      */
-    public static void logSummary(String moduleName, String summary) {
-        String[] lines = summary.split("\n");
-        for (String line : lines) {
-            if (!line.trim().isEmpty()) {
-                Log.info("%s [%s] %s",
-                        TEST_PREFIX,
-                        moduleName,
-                        line.trim());
-            }
-        }
+    public static void logSummary(String moduleName, String summary, Object... replace) {
+        String formattedSummary = String.format(summary, replace);
+        Arrays.stream(formattedSummary.split("\n"))
+                .filter(line -> !line.trim().isEmpty())
+                .forEach(line -> Log.info("%s [%s] %s", TEST_PREFIX, moduleName, line.trim()));
     }
 }

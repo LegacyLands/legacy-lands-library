@@ -116,7 +116,7 @@ public class RedisCacheService extends AbstractLockable<RedissonClient> implemen
     /**
      * Core method implementing the cache retrieval and storage logic with expiration support.
      *
-     * @param value           the value from cache, may be null indicating a cache miss
+     * @param value           the value from cache, may be {@code null} indicating a cache miss
      * @param query           the supplier to compute value if not found in cache
      * @param cacheBiConsumer the consumer to handle cache storage operations
      * @param cacheAfterQuery flag indicating whether to store the computed value in cache

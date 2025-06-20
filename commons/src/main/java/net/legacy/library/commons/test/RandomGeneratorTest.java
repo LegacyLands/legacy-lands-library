@@ -51,11 +51,11 @@ public class RandomGeneratorTest {
             String resultValue = result.get();
             boolean validResult = "common".equals(resultValue) || "rare".equals(resultValue) || "epic".equals(resultValue);
 
-            TestLogger.logInfo("commons", "Basic random generation test: hasResult=" + true + ", validResult=" + validResult + ", result=" + resultValue);
+            TestLogger.logInfo("commons", "Basic random generation test: hasResult=%s, validResult=%s, result=%s", true, validResult, resultValue);
 
             return validResult;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Basic random generation test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Basic random generation test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -79,11 +79,11 @@ public class RandomGeneratorTest {
             Object resultValue = result.get();
             boolean validResult = "item1".equals(resultValue) || "item2".equals(resultValue) || "item3".equals(resultValue);
 
-            TestLogger.logInfo("commons", "Varargs constructor test: hasResult=" + true + ", validResult=" + validResult);
+            TestLogger.logInfo("commons", "Varargs constructor test: hasResult=%s, validResult=%s", true, validResult);
 
             return validResult;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Varargs constructor test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Varargs constructor test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -110,11 +110,11 @@ public class RandomGeneratorTest {
             String resultValue = result.get();
             boolean validResult = probabilities.containsKey(resultValue);
 
-            TestLogger.logInfo("commons", "Map constructor test: hasResult=" + true + ", validResult=" + validResult);
+            TestLogger.logInfo("commons", "Map constructor test: hasResult=%s, validResult=%s", true, validResult);
 
             return validResult;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Map constructor test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Map constructor test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -142,11 +142,11 @@ public class RandomGeneratorTest {
             String resultValue = result.get();
             boolean onlyValidResult = "valid".equals(resultValue);
 
-            TestLogger.logInfo("commons", "Zero/negative probability test: hasResult=" + true + ", onlyValidResult=" + onlyValidResult);
+            TestLogger.logInfo("commons", "Zero/negative probability test: hasResult=%s, onlyValidResult=%s", true, onlyValidResult);
 
             return onlyValidResult;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Zero/negative probability test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Zero/negative probability test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -165,12 +165,12 @@ public class RandomGeneratorTest {
             } catch (IllegalArgumentException expected) {
                 boolean correctExceptionMessage = expected.getMessage().contains("No objects to randomize");
 
-                TestLogger.logInfo("commons", "Empty generator test: caught expected exception=" + correctExceptionMessage);
+                TestLogger.logInfo("commons", "Empty generator test: caught expected exception=%s", correctExceptionMessage);
 
                 return correctExceptionMessage;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Empty generator test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Empty generator test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -189,12 +189,12 @@ public class RandomGeneratorTest {
             } catch (IllegalArgumentException expected) {
                 boolean correctExceptionMessage = expected.getMessage().contains("Missing probability value");
 
-                TestLogger.logInfo("commons", "Invalid varargs test: caught expected exception=" + correctExceptionMessage);
+                TestLogger.logInfo("commons", "Invalid varargs test: caught expected exception=%s", correctExceptionMessage);
 
                 return correctExceptionMessage;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Invalid varargs test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Invalid varargs test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -226,11 +226,11 @@ public class RandomGeneratorTest {
                     mersenneTwisterResult.isPresent() &&
                     xorShiftResult.isPresent();
 
-            TestLogger.logInfo("commons", "Different algorithms test: allAlgorithmsWork=" + allAlgorithmsWork);
+            TestLogger.logInfo("commons", "Different algorithms test: allAlgorithmsWork=%s", allAlgorithmsWork);
 
             return allAlgorithmsWork;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Different algorithms test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Different algorithms test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -253,11 +253,11 @@ public class RandomGeneratorTest {
                     intSeedResult.isPresent() &&
                     arraySeedResult.isPresent();
 
-            TestLogger.logInfo("commons", "MersenneTwister seeds test: allSeedTypesWork=" + allSeedTypesWork);
+            TestLogger.logInfo("commons", "MersenneTwister seeds test: allSeedTypesWork=%s", allSeedTypesWork);
 
             return allSeedTypesWork;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "MersenneTwister seeds test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "MersenneTwister seeds test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -280,11 +280,11 @@ public class RandomGeneratorTest {
                 }
             }
 
-            TestLogger.logInfo("commons", "Single object probability test: allResultsCorrect=" + allResultsCorrect);
+            TestLogger.logInfo("commons", "Single object probability test: allResultsCorrect=%s", allResultsCorrect);
 
             return allResultsCorrect;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Single object probability test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Single object probability test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -314,11 +314,11 @@ public class RandomGeneratorTest {
             String resultValue = result.get();
             boolean validResult = additionalObjects.containsKey(resultValue);
 
-            TestLogger.logInfo("commons", "Add multiple objects test: hasResult=" + true + ", validResult=" + validResult);
+            TestLogger.logInfo("commons", "Add multiple objects test: hasResult=%s, validResult=%s", true, validResult);
 
             return validResult;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Add multiple objects test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Add multiple objects test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -343,11 +343,11 @@ public class RandomGeneratorTest {
                 validHandling = "valid".equals(resultValue);
             }
 
-            TestLogger.logInfo("commons", "Null object handling test: hasResult=" + hasResult + ", validHandling=" + validHandling);
+            TestLogger.logInfo("commons", "Null object handling test: hasResult=%s, validHandling=%s", hasResult, validHandling);
 
             return validHandling;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Null object handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Null object handling test failed: %s", exception.getMessage());
             return false;
         }
     }

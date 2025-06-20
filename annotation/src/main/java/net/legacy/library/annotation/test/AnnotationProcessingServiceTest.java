@@ -50,12 +50,12 @@ public class AnnotationProcessingServiceTest {
             boolean serviceCreated = service != null;
             boolean implementsInterface = service instanceof AnnotationProcessingServiceInterface;
 
-            TestLogger.logInfo("annotation", "Direct instantiation test: serviceCreated=" + serviceCreated +
-                    ", implementsInterface=" + implementsInterface);
+            TestLogger.logInfo("annotation", "Direct instantiation test: serviceCreated=%s, implementsInterface=%s",
+                    serviceCreated, implementsInterface);
 
             return serviceCreated && implementsInterface;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Direct instantiation test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Direct instantiation test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -80,13 +80,13 @@ public class AnnotationProcessingServiceTest {
             int afterCount = TestableAnnotationProcessor.getAfterCount();
             int finallyCount = TestableAnnotationProcessor.getFinallyAfterCount();
 
-            TestLogger.logInfo("annotation", "Package processing test: processCount=" + processCount +
-                    ", beforeCount=" + beforeCount + ", afterCount=" + afterCount + ", finallyCount=" + finallyCount);
+            TestLogger.logInfo("annotation", "Package processing test: processCount=%d, beforeCount=%d, afterCount=%d, finallyCount=%d",
+                    processCount, beforeCount, afterCount, finallyCount);
 
             // Should have processed at least the test classes
             return processCount > 0 && beforeCount > 0 && afterCount > 0 && finallyCount > 0;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Package processing test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Package processing test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -117,12 +117,12 @@ public class AnnotationProcessingServiceTest {
             int afterCount = TestableAnnotationProcessor.getAfterCount();
             int finallyCount = TestableAnnotationProcessor.getFinallyAfterCount();
 
-            TestLogger.logInfo("annotation", "Multiple package processing test: processCount=" + processCount +
-                    ", beforeCount=" + beforeCount + ", afterCount=" + afterCount + ", finallyCount=" + finallyCount);
+            TestLogger.logInfo("annotation", "Multiple package processing test: processCount=%d, beforeCount=%d, afterCount=%d, finallyCount=%d",
+                    processCount, beforeCount, afterCount, finallyCount);
 
             return processCount > 0 && beforeCount > 0 && afterCount > 0 && finallyCount > 0;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Multiple package processing test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Multiple package processing test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -149,12 +149,12 @@ public class AnnotationProcessingServiceTest {
             int afterCount = TestableAnnotationProcessor.getAfterCount();
             int finallyCount = TestableAnnotationProcessor.getFinallyAfterCount();
 
-            TestLogger.logInfo("annotation", "URL-based processing test: processCount=" + processCount +
-                    ", beforeCount=" + beforeCount + ", afterCount=" + afterCount + ", finallyCount=" + finallyCount);
+            TestLogger.logInfo("annotation", "URL-based processing test: processCount=%d, beforeCount=%d, afterCount=%d, finallyCount=%d",
+                    processCount, beforeCount, afterCount, finallyCount);
 
             return processCount > 0 && beforeCount > 0 && afterCount > 0 && finallyCount > 0;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "URL-based processing test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "URL-based processing test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -182,19 +182,19 @@ public class AnnotationProcessingServiceTest {
                 service.processAnnotations(testPackage, true);
                 int iocProcessCount = TestableAnnotationProcessor.getProcessedCount();
 
-                TestLogger.logInfo("annotation", "IoC integration test: directCount=" + directProcessCount +
-                        ", iocCount=" + iocProcessCount);
+                TestLogger.logInfo("annotation", "IoC integration test: directCount=%d, iocCount=%d",
+                        directProcessCount, iocProcessCount);
 
                 // Both should work, though IoC might fail gracefully
                 return directProcessCount > 0;
             } catch (Exception iocException) {
                 // IoC failure is acceptable in test environment
-                TestLogger.logInfo("annotation", "IoC integration test: directCount=" + directProcessCount +
-                        ", IoC failed as expected in test environment");
+                TestLogger.logInfo("annotation", "IoC integration test: directCount=%d, IoC failed as expected in test environment",
+                        directProcessCount);
                 return directProcessCount > 0;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "IoC integration test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "IoC integration test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -227,7 +227,7 @@ public class AnnotationProcessingServiceTest {
             // Should not throw exception, but handle gracefully
             return true;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Invalid processor test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Invalid processor test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -265,7 +265,7 @@ public class AnnotationProcessingServiceTest {
 
             return true; // Should handle gracefully without crashing
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Null input handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Null input handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -294,13 +294,12 @@ public class AnnotationProcessingServiceTest {
                     (beforeCount == afterCount) &&
                     (afterCount == finallyCount);
 
-            TestLogger.logInfo("annotation", "Lifecycle order test: processCount=" + processCount +
-                    ", beforeCount=" + beforeCount + ", afterCount=" + afterCount +
-                    ", finallyCount=" + finallyCount + ", orderCorrect=" + lifecycleOrderCorrect);
+            TestLogger.logInfo("annotation", "Lifecycle order test: processCount=%d, beforeCount=%d, afterCount=%d, finallyCount=%d, orderCorrect=%s",
+                    processCount, beforeCount, afterCount, finallyCount, lifecycleOrderCorrect);
 
             return lifecycleOrderCorrect && processCount > 0;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Lifecycle order test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Lifecycle order test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -323,12 +322,12 @@ public class AnnotationProcessingServiceTest {
 
             long duration = System.currentTimeMillis() - startTime;
 
-            TestLogger.logInfo("annotation", "Performance test: 5 processing cycles completed in " + duration + "ms");
+            TestLogger.logInfo("annotation", "Performance test: 5 processing cycles completed in %dms", duration);
 
             // Should complete within reasonable time (5 seconds)
             return duration < 5000;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Performance test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Performance test failed: %s", exception.getMessage());
             return false;
         }
     }

@@ -58,12 +58,12 @@ public class AbstractCacheServiceTest {
             boolean accessedCache = cache.getAccessCount() == 1;
             boolean didNotStore = cache.getStoreCount() == 0; // Should not store on cache hit
 
-            TestLogger.logInfo("cache", "Basic cache hit test: correctValue=" + correctValue +
-                    ", accessedCache=" + accessedCache + ", didNotStore=" + didNotStore);
+            TestLogger.logInfo("cache", "Basic cache hit test: correctValue=%s, accessedCache=%s, didNotStore=%s",
+                    correctValue, accessedCache, didNotStore);
 
             return correctValue && accessedCache && didNotStore;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Basic cache hit test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Basic cache hit test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -87,13 +87,12 @@ public class AbstractCacheServiceTest {
             boolean storedValue = cache.getStoreCount() == 1;
             boolean valueInCache = "computed-value".equals(cache.get("missing-key"));
 
-            TestLogger.logInfo("cache", "Cache miss with storage test: correctValue=" + correctValue +
-                    ", accessedCache=" + accessedCache + ", storedValue=" + storedValue +
-                    ", valueInCache=" + valueInCache);
+            TestLogger.logInfo("cache", "Cache miss with storage test: correctValue=%s, accessedCache=%s, storedValue=%s, valueInCache=%s",
+                    correctValue, accessedCache, storedValue, valueInCache);
 
             return correctValue && accessedCache && storedValue && valueInCache;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Cache miss with storage test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Cache miss with storage test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -117,13 +116,12 @@ public class AbstractCacheServiceTest {
             boolean didNotStore = cache.getStoreCount() == 0; // cacheAfterQuery = false
             boolean valueNotInCache = !cache.containsKey("missing-key");
 
-            TestLogger.logInfo("cache", "Cache miss without storage test: correctValue=" + correctValue +
-                    ", accessedCache=" + accessedCache + ", didNotStore=" + didNotStore +
-                    ", valueNotInCache=" + valueNotInCache);
+            TestLogger.logInfo("cache", "Cache miss without storage test: correctValue=%s, accessedCache=%s, didNotStore=%s, valueNotInCache=%s",
+                    correctValue, accessedCache, didNotStore, valueNotInCache);
 
             return correctValue && accessedCache && didNotStore && valueNotInCache;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Cache miss without storage test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Cache miss without storage test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -150,13 +148,12 @@ public class AbstractCacheServiceTest {
             boolean storedValue = cache.getStoreCount() == 1;
             boolean valueInCache = "locked-computed-value".equals(cache.get("locked-key"));
 
-            TestLogger.logInfo("cache", "Locked cache operations test: correctValue=" + correctValue +
-                    ", accessedCache=" + accessedCache + ", storedValue=" + storedValue +
-                    ", valueInCache=" + valueInCache);
+            TestLogger.logInfo("cache", "Locked cache operations test: correctValue=%s, accessedCache=%s, storedValue=%s, valueInCache=%s",
+                    correctValue, accessedCache, storedValue, valueInCache);
 
             return correctValue && accessedCache && storedValue && valueInCache;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Locked cache operations test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Locked cache operations test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -186,12 +183,12 @@ public class AbstractCacheServiceTest {
             boolean handledNullQuery = result2 == null;
             boolean didNotStoreNull = !cache.containsKey("null-key2"); // Should not store null
 
-            TestLogger.logInfo("cache", "Null value handling test: handledNullCache=" + handledNullCache +
-                    ", handledNullQuery=" + handledNullQuery + ", didNotStoreNull=" + didNotStoreNull);
+            TestLogger.logInfo("cache", "Null value handling test: handledNullCache=%s, handledNullQuery=%s, didNotStoreNull=%s",
+                    handledNullCache, handledNullQuery, didNotStoreNull);
 
             return handledNullCache && handledNullQuery && didNotStoreNull;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Null value handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Null value handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -226,7 +223,7 @@ public class AbstractCacheServiceTest {
                         results[threadIndex] = service.get(getCacheFunction, query, cacheBiConsumer, true);
 
                     } catch (Exception exception) {
-                        TestLogger.logFailure("cache", "Concurrent thread " + threadIndex + " failed: " + exception.getMessage());
+                        TestLogger.logFailure("cache", "Concurrent thread %d failed: %s", threadIndex, exception.getMessage());
                     } finally {
                         completeLatch.countDown();
                     }
@@ -256,12 +253,12 @@ public class AbstractCacheServiceTest {
             int totalQueries = queryCount.get();
             boolean someQueriesExecuted = totalQueries > 0;
 
-            TestLogger.logInfo("cache", "Concurrent cache access test: allResultsPresent=" + allResultsPresent +
-                    ", totalQueries=" + totalQueries + ", someQueriesExecuted=" + someQueriesExecuted);
+            TestLogger.logInfo("cache", "Concurrent cache access test: allResultsPresent=%s, totalQueries=%d, someQueriesExecuted=%s",
+                    allResultsPresent, totalQueries, someQueriesExecuted);
 
             return completed && allResultsPresent && someQueriesExecuted;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Concurrent cache access test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Concurrent cache access test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -288,13 +285,13 @@ public class AbstractCacheServiceTest {
                 boolean correctException = "Query failed".equals(expected.getMessage());
                 boolean didNotStore = cache.getStoreCount() == 0;
 
-                TestLogger.logInfo("cache", "Query exception handling test: correctException=" + correctException +
-                        ", didNotStore=" + didNotStore);
+                TestLogger.logInfo("cache", "Query exception handling test: correctException=%s, didNotStore=%s",
+                        correctException, didNotStore);
 
                 return correctException && didNotStore;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Query exception handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Query exception handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -325,13 +322,12 @@ public class AbstractCacheServiceTest {
             boolean completedInTime = duration < 1000; // Should complete within 1 second
             boolean allValuesStored = cache.size() == operationCount;
 
-            TestLogger.logInfo("cache", "Cache service performance test: duration=" + duration + "ms, " +
-                    "operations=" + operationCount + ", completedInTime=" + completedInTime +
-                    ", allValuesStored=" + allValuesStored);
+            TestLogger.logInfo("cache", "Cache service performance test: duration=%dms, operations=%d, completedInTime=%s, allValuesStored=%s",
+                    duration, operationCount, completedInTime, allValuesStored);
 
             return completedInTime && allValuesStored;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Cache service performance test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Cache service performance test failed: %s", exception.getMessage());
             return false;
         }
     }

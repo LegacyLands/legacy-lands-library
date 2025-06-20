@@ -181,7 +181,7 @@ public class GRPCTaskSchedulerClient {
     /**
      * Submits a task to the scheduler synchronously (blocking).
      *
-     * @param taskId a unique identifier for this task submission. Must not be null or empty
+     * @param taskId a unique identifier for this task submission. Must not be {@code null} or empty
      * @param method the name of the task function to execute on the server side
      * @param args   variable arguments to pass to the remote task function
      * @return the result returned by the remote task function as a String
@@ -202,7 +202,7 @@ public class GRPCTaskSchedulerClient {
      * <p>This method returns immediately with a {@link CompletableFuture} which will be completed
      * with the task result when the remote server responds. The actual gRPC call is made using the configured {@code grpcExecutor}.
      *
-     * @param taskId a unique identifier for this task submission. Must not be null or empty
+     * @param taskId a unique identifier for this task submission. Must not be {@code null} or empty
      * @param method the name of the task function to execute on the server side
      * @param args   variable arguments to pass to the remote task function
      * @return a {@link CompletableFuture<String>} that will eventually contain the task result or an exception

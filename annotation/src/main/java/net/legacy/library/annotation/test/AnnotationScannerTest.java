@@ -53,14 +53,12 @@ public class AnnotationScannerTest {
             boolean correctlyFilteredTestClass3 = scannerAnnotatedClasses.stream()
                     .noneMatch(clazz -> clazz.getSimpleName().equals("TestClass3"));
 
-            TestLogger.logInfo("annotation", "Basic package scanning test: foundClasses=" + foundClasses +
-                    ", foundTestClass1=" + foundTestClass1 + ", foundTestClass2=" + foundTestClass2 +
-                    ", filteredTestClass3=" + correctlyFilteredTestClass3 +
-                    ", totalFound=" + scannerAnnotatedClasses.size());
+            TestLogger.logInfo("annotation", "Basic package scanning test: foundClasses=%s, foundTestClass1=%s, foundTestClass2=%s, filteredTestClass3=%s, totalFound=%d",
+                    foundClasses, foundTestClass1, foundTestClass2, correctlyFilteredTestClass3, scannerAnnotatedClasses.size());
 
             return foundClasses && foundTestClass1 && foundTestClass2 && correctlyFilteredTestClass3;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Basic package scanning test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Basic package scanning test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -85,14 +83,12 @@ public class AnnotationScannerTest {
             boolean correctlyFilteredTestClass1 = anotherAnnotatedClasses.stream()
                     .noneMatch(clazz -> clazz.getSimpleName().equals("TestClass1"));
 
-            TestLogger.logInfo("annotation", "URL-based scanning test: foundClasses=" + foundClasses +
-                    ", foundTestClass2=" + foundTestClass2 + ", foundTestClass3=" + foundTestClass3 +
-                    ", filteredTestClass1=" + correctlyFilteredTestClass1 +
-                    ", totalFound=" + anotherAnnotatedClasses.size());
+            TestLogger.logInfo("annotation", "URL-based scanning test: foundClasses=%s, foundTestClass2=%s, foundTestClass3=%s, filteredTestClass1=%s, totalFound=%d",
+                    foundClasses, foundTestClass2, foundTestClass3, correctlyFilteredTestClass1, anotherAnnotatedClasses.size());
 
             return foundClasses && foundTestClass2 && foundTestClass3 && correctlyFilteredTestClass1;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "URL-based scanning test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "URL-based scanning test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -122,22 +118,21 @@ public class AnnotationScannerTest {
             int multiLoaderCount = multiLoaderClasses.size();
             int singleLoaderCount = singleLoaderClasses.size();
 
-            TestLogger.logInfo("annotation", "Multiple class loader scanning test: defaultCount=" + defaultCount +
-                    ", multiLoaderCount=" + multiLoaderCount + ", singleLoaderCount=" + singleLoaderCount);
+            TestLogger.logInfo("annotation", "Multiple class loader scanning test: defaultCount=%d, multiLoaderCount=%d, singleLoaderCount=%d",
+                    defaultCount, multiLoaderCount, singleLoaderCount);
 
             // Test passes if any approach finds the expected classes
             // In test environments, multiple class loaders might not add value, so we accept if default scanning works
             boolean hasFoundClasses = defaultCount >= 2 || multiLoaderCount >= 2 || singleLoaderCount >= 2;
 
             if (!hasFoundClasses) {
-                TestLogger.logInfo("annotation", "Multiple class loader scanning test: No approach found sufficient classes. " +
-                        "Expected at least 2 classes with ScannerTestAnnotation");
+                TestLogger.logInfo("annotation", "Multiple class loader scanning test: No approach found sufficient classes. Expected at least 2 classes with ScannerTestAnnotation");
                 return false;
             }
 
             return true;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Multiple class loader scanning test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Multiple class loader scanning test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -154,12 +149,12 @@ public class AnnotationScannerTest {
             boolean isEmpty = nonExistentAnnotatedClasses.isEmpty();
             int size = nonExistentAnnotatedClasses.size();
 
-            TestLogger.logInfo("annotation", "Non-existent annotation scanning test: isEmpty=" + isEmpty +
-                    ", size=" + size);
+            TestLogger.logInfo("annotation", "Non-existent annotation scanning test: isEmpty=%s, size=%d",
+                    isEmpty, size);
 
             return isEmpty;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Non-existent annotation scanning test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Non-existent annotation scanning test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -176,12 +171,12 @@ public class AnnotationScannerTest {
 
             boolean isEmpty = emptyResults.isEmpty();
 
-            TestLogger.logInfo("annotation", "Invalid package scanning test: isEmpty=" + isEmpty);
+            TestLogger.logInfo("annotation", "Invalid package scanning test: isEmpty=%s", isEmpty);
 
             return isEmpty;
         } catch (Exception exception) {
             // Exception is acceptable for invalid packages
-            TestLogger.logInfo("annotation", "Invalid package scanning test: caught expected exception - " +
+            TestLogger.logInfo("annotation", "Invalid package scanning test: caught expected exception - %s",
                     exception.getClass().getSimpleName());
             return true;
         }
@@ -202,13 +197,13 @@ public class AnnotationScannerTest {
             long duration = System.currentTimeMillis() - startTime;
             int classCount = allAnnotatedClasses.size();
 
-            TestLogger.logInfo("annotation", "Scanning performance test: duration=" + duration + "ms, " +
-                    "classCount=" + classCount);
+            TestLogger.logInfo("annotation", "Scanning performance test: duration=%dms, classCount=%d",
+                    duration, classCount);
 
             // Should complete within reasonable time (2 seconds) and find some classes
             return duration < 2000 && classCount > 0;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Scanning performance test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Scanning performance test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -263,12 +258,12 @@ public class AnnotationScannerTest {
 
             boolean allSucceeded = results[0] && results[1] && results[2];
 
-            TestLogger.logInfo("annotation", "Concurrent scanning test: thread1=" + results[0] +
-                    ", thread2=" + results[1] + ", thread3=" + results[2] + ", allSucceeded=" + allSucceeded);
+            TestLogger.logInfo("annotation", "Concurrent scanning test: thread1=%s, thread2=%s, thread3=%s, allSucceeded=%s",
+                    results[0], results[1], results[2], allSucceeded);
 
             return allSucceeded;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Concurrent scanning test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Concurrent scanning test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -302,12 +297,12 @@ public class AnnotationScannerTest {
             boolean foundAnnotatedClasses = !annotatedClasses.isEmpty();
             int totalFound = annotatedClasses.size();
 
-            TestLogger.logInfo("annotation", "Inherited annotation scanning test: foundClasses=" + foundAnnotatedClasses +
-                    ", totalFound=" + totalFound);
+            TestLogger.logInfo("annotation", "Inherited annotation scanning test: foundClasses=%s, totalFound=%d",
+                    foundAnnotatedClasses, totalFound);
 
             return foundAnnotatedClasses && totalFound >= 2;
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Inherited annotation scanning test failed: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Inherited annotation scanning test failed: %s", exception.getMessage());
             return false;
         }
     }

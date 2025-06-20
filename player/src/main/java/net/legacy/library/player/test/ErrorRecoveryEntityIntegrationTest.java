@@ -78,7 +78,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                 service.saveEntity(emptyEntity);
                 emptyAttributesHandled = true;
             } catch (Exception exception) {
-                TestLogger.logFailure("player", "Empty attributes caused unexpected exception: " + exception.getMessage());
+                TestLogger.logFailure("player", "Empty attributes caused unexpected exception: %s", exception.getMessage());
             }
 
             TestLogger.logValidation("player", "InvalidEntityDataHandling",
@@ -88,7 +88,7 @@ public class ErrorRecoveryEntityIntegrationTest {
 
             return nullEntityHandled && nonExistentHandled && invalidUuidHandled && emptyAttributesHandled;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Invalid entity data handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Invalid entity data handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -140,7 +140,7 @@ public class ErrorRecoveryEntityIntegrationTest {
 
             return memoryPressureHandled && noMemoryLeaks;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Cache memory pressure test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Cache memory pressure test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -176,7 +176,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                 service.saveEntities(entities);
                 Thread.sleep(1100); // Wait for RStream publishing and persistence
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "Batch save encountered expected exception: " + exception.getClass().getSimpleName());
+                TestLogger.logInfo("player", "Batch save encountered expected exception: %s", exception.getClass().getSimpleName());
             }
 
             // Verify that valid entities were still processed
@@ -203,7 +203,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                 serviceStillOperational = retrieved != null && "operational".equals(retrieved.getAttribute("test"));
             } catch (Exception exception) {
                 serviceStillOperational = false;
-                TestLogger.logFailure("player", "Service not operational after partial failure: " + exception.getMessage());
+                TestLogger.logFailure("player", "Service not operational after partial failure: %s", exception.getMessage());
             }
 
             TestLogger.logValidation("player", "PartialFailureHandling",
@@ -213,7 +213,7 @@ public class ErrorRecoveryEntityIntegrationTest {
 
             return partialSuccessAchieved && serviceStillOperational;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Partial failure handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Partial failure handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -250,7 +250,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                         successfulTTLSets++;
                     }
                 } catch (Exception exception) {
-                    TestLogger.logInfo("player", "TTL operation failed for entity " + uuid + ": " + exception.getMessage());
+                    TestLogger.logInfo("player", "TTL operation failed for entity %s: %s", uuid, exception.getMessage());
                 }
             }
 
@@ -260,7 +260,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                 int bulkCount = service.setDefaultTTLForAllEntities();
                 bulkTTLWorked = bulkCount >= 0; // Should not fail catastrophically
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "Bulk TTL operation handled exception: " + exception.getMessage());
+                TestLogger.logInfo("player", "Bulk TTL operation handled exception: %s", exception.getMessage());
                 bulkTTLWorked = true; // Graceful handling is acceptable
             }
 
@@ -274,7 +274,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                 service.saveEntity(testEntity);
                 serviceOperational = service.getEntityData(testUuid) != null;
             } catch (Exception exception) {
-                TestLogger.logFailure("player", "Service check after TTL stress failed: " + exception.getMessage());
+                TestLogger.logFailure("player", "Service check after TTL stress failed: %s", exception.getMessage());
             }
 
             TestLogger.logValidation("player", "TTLTimeoutHandling",
@@ -284,7 +284,7 @@ public class ErrorRecoveryEntityIntegrationTest {
 
             return acceptableSuccessRate && bulkTTLWorked && serviceOperational;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "TTL timeout handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "TTL timeout handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -330,7 +330,7 @@ public class ErrorRecoveryEntityIntegrationTest {
 
                     } catch (Exception exception) {
                         errorCount.incrementAndGet();
-                        TestLogger.logInfo("player", "Entity preparation " + taskId + " encountered error: " + exception.getClass().getSimpleName());
+                        TestLogger.logInfo("player", "Entity preparation %d encountered error: %s", taskId, exception.getClass().getSimpleName());
                         preparationLatch.countDown();
                         return null;
                     }
@@ -355,7 +355,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                     }
                 } catch (Exception exception) {
                     errorCount.incrementAndGet();
-                    TestLogger.logInfo("player", "Failed to collect prepared entity: " + exception.getClass().getSimpleName());
+                    TestLogger.logInfo("player", "Failed to collect prepared entity: %s", exception.getClass().getSimpleName());
                 }
             }
 
@@ -366,7 +366,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                     successCount.set(preparedEntities.size()); // All entities in batch are saved together
                 } catch (Exception exception) {
                     errorCount.incrementAndGet();
-                    TestLogger.logInfo("player", "Batch save encountered exception: " + exception.getClass().getSimpleName());
+                    TestLogger.logInfo("player", "Batch save encountered exception: %s", exception.getClass().getSimpleName());
 
                     // Fallback to individual saves for error analysis
                     for (LegacyEntityData entity : preparedEntities) {
@@ -395,7 +395,7 @@ public class ErrorRecoveryEntityIntegrationTest {
                 LegacyEntityData retrieved = service.getEntityData(recoveryTestUuid);
                 serviceStillWorks = retrieved != null && "successful".equals(retrieved.getAttribute("recovery"));
             } catch (Exception exception) {
-                TestLogger.logFailure("player", "Recovery test failed: " + exception.getMessage());
+                TestLogger.logFailure("player", "Recovery test failed: %s", exception.getMessage());
             }
 
             boolean acceptableRecovery = successCount.get() >= threadCount * 0.5; // At least 50% success
@@ -408,7 +408,7 @@ public class ErrorRecoveryEntityIntegrationTest {
 
             return acceptableRecovery && serviceStillWorks && errorsHandledGracefully;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Concurrent error recovery test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Concurrent error recovery test failed: %s", exception.getMessage());
             return false;
         }
     }

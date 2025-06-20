@@ -24,7 +24,7 @@ public class SimplixSerializerSerializableAutoRegisterProcessor implements Custo
     public void process(Class<?> clazz) throws Exception {
         // noinspection rawtypes
         SimplixSerializer.registerSerializable((SimplixSerializable) clazz.getDeclaredConstructor().newInstance());
-        Log.info("[AnnotationProcessor] %s serializable registered.", clazz.getName());
+        Log.info("[SimplixSerializerSerializableAutoRegisterProcessor] %s serializable registered.", clazz.getName());
     }
 
     /**

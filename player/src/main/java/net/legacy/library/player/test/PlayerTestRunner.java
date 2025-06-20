@@ -117,7 +117,7 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
      * Execute all test methods in a test class
      */
     private void executeTestClass(Class<?> testClass, String testDescription) {
-        TestLogger.logInfo(MODULE_NAME, "Executing " + testDescription + " tests...");
+        TestLogger.logInfo(MODULE_NAME, "Executing %s tests...", testDescription);
 
         List<String> testMethods = getTestMethods(testClass);
 

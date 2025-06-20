@@ -90,14 +90,14 @@ public class PerformanceStressTest {
                         preparedPlayers.addAndGet(playerBatch.size());
 
                         long threadEndTime = System.nanoTime();
-                        TestLogger.logInfo("player", "Thread " + Thread.currentThread().getName() +
-                                " prepared " + playerBatch.size() + " players in " +
-                                Duration.ofNanos(threadEndTime - threadStartTime).toMillis() + "ms");
+                        TestLogger.logInfo("player", "Thread %s prepared %d players in %dms",
+                                Thread.currentThread().getName(), playerBatch.size(),
+                                Duration.ofNanos(threadEndTime - threadStartTime).toMillis());
 
                         return playerBatch;
 
-                    } catch (Exception e) {
-                        TestLogger.logFailure("player", "Thread preparation failed: " + e.getMessage());
+                    } catch (Exception exception) {
+                        TestLogger.logFailure("player", "Thread preparation failed: %s", exception.getMessage());
                         return new ArrayList<>();
                     } finally {
                         preparationLatch.countDown();
@@ -119,13 +119,13 @@ public class PerformanceStressTest {
             for (CompletableFuture<List<LegacyPlayerData>> future : preparationFutures) {
                 try {
                     allPlayers.addAll(future.get());
-                } catch (Exception e) {
-                    TestLogger.logFailure("player", "Failed to collect prepared data: " + e.getMessage());
+                } catch (Exception exception) {
+                    TestLogger.logFailure("player", "Failed to collect prepared data: %s", exception.getMessage());
                 }
             }
 
             // Phase 2: Single unified batch save operation - START TIMER HERE
-            TestLogger.logInfo("player", "Starting unified batch save of " + allPlayers.size() + " players");
+            TestLogger.logInfo("player", "Starting unified batch save of %d players", allPlayers.size());
             timer.startTimer("player-qps-test");
             long unifiedSaveStart = System.nanoTime();
             service.saveLegacyPlayersData(allPlayers);
@@ -134,7 +134,7 @@ public class PerformanceStressTest {
             int savedPlayers = allPlayers.size();
 
             // Phase 3: Batch synchronization using L1ToL2PlayerDataSyncTask
-            TestLogger.logInfo("player", "Starting L1 to L2 sync task for " + savedPlayers + " players");
+            TestLogger.logInfo("player", "Starting L1 to L2 sync task for %d players", savedPlayers);
             long syncStartTime = System.nanoTime();
 
             L1ToL2PlayerDataSyncTask syncTask = L1ToL2PlayerDataSyncTask.of(service);
@@ -161,8 +161,8 @@ public class PerformanceStressTest {
                     service.getLegacyPlayerData(randomUuid);
                     // We expect null for random UUIDs, this tests the service health
                     successfulReads++;
-                } catch (Exception e) {
-                    TestLogger.logInfo("player", "Sample read failed (expected): " + e.getMessage());
+                } catch (Exception exception) {
+                    TestLogger.logInfo("player", "Sample read failed (expected): %s", exception.getMessage());
                 }
             }
 
@@ -179,7 +179,7 @@ public class PerformanceStressTest {
             return performanceAcceptable && syncEfficient && serviceHealthy;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Player QPS test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Player QPS test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -233,8 +233,8 @@ public class PerformanceStressTest {
 
                         return batchEntities;
 
-                    } catch (Exception e) {
-                        TestLogger.logFailure("player", "Entity preparation batch " + finalBatchId + " failed: " + e.getMessage());
+                    } catch (Exception exception) {
+                        TestLogger.logFailure("player", "Entity preparation batch %d failed: %s", finalBatchId, exception.getMessage());
                         return new ArrayList<>();
                     } finally {
                         entityPreparationLatch.countDown();
@@ -256,13 +256,13 @@ public class PerformanceStressTest {
             for (CompletableFuture<List<LegacyEntityData>> future : entityPreparationFutures) {
                 try {
                     allEntities.addAll(future.get());
-                } catch (Exception e) {
-                    TestLogger.logFailure("player", "Failed to collect prepared entity data: " + e.getMessage());
+                } catch (Exception exception) {
+                    TestLogger.logFailure("player", "Failed to collect prepared entity data: %s", exception.getMessage());
                 }
             }
 
             // Phase 2: Single unified batch save operation - START TIMER HERE
-            TestLogger.logInfo("player", "Starting unified batch save of " + allEntities.size() + " entities");
+            TestLogger.logInfo("player", "Starting unified batch save of %d entities", allEntities.size());
             timer.startTimer("entity-qps-test");
             long unifiedEntitySaveStart = System.nanoTime();
             service.saveEntities(allEntities);
@@ -271,7 +271,7 @@ public class PerformanceStressTest {
             int totalSaved = allEntities.size();
 
             // Phase 3: Wait for RStream processing to complete
-            TestLogger.logInfo("player", "Waiting for RStream processing for " + totalSaved + " entities");
+            TestLogger.logInfo("player", "Waiting for RStream processing for %d entities", totalSaved);
             Thread.sleep(2000); // Allow RStream tasks to process batch saves
 
             timer.stopTimer("entity-qps-test");
@@ -292,8 +292,8 @@ public class PerformanceStressTest {
                     service.getEntityData(randomUuid);
                     // We expect null for random UUIDs, testing service health
                     successfulRetrievals++;
-                } catch (Exception e) {
-                    TestLogger.logInfo("player", "Sample retrieval handled: " + e.getClass().getSimpleName());
+                } catch (Exception exception) {
+                    TestLogger.logInfo("player", "Sample retrieval handled: %s", exception.getClass().getSimpleName());
                 }
             }
 
@@ -313,7 +313,7 @@ public class PerformanceStressTest {
             return batchPerformanceGood && retrievalPerformanceGood && serviceStable;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Entity QPS test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Entity QPS test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -366,13 +366,13 @@ public class PerformanceStressTest {
                             }
                         }
 
-                        TestLogger.logInfo("player", "Thread " + finalThreadId + " prepared " +
-                                playerBatch.size() + " players and " + allEntities.size() + " entities");
+                        TestLogger.logInfo("player", "Thread %d prepared %d players and %d entities",
+                                finalThreadId, playerBatch.size(), allEntities.size());
 
                         return new MixedWorkloadData(playerBatch, allEntities);
 
-                    } catch (Exception e) {
-                        TestLogger.logFailure("player", "Mixed thread " + finalThreadId + " preparation failed: " + e.getMessage());
+                    } catch (Exception exception) {
+                        TestLogger.logFailure("player", "Mixed thread %d preparation failed: %s", finalThreadId, exception.getMessage());
                         return new MixedWorkloadData(new ArrayList<>(), new ArrayList<>());
                     } finally {
                         mixedLatch.countDown();
@@ -398,13 +398,13 @@ public class PerformanceStressTest {
                     MixedWorkloadData data = future.get();
                     allMixedPlayers.addAll(data.players);
                     allMixedEntities.addAll(data.entities);
-                } catch (Exception e) {
-                    TestLogger.logFailure("player", "Failed to collect mixed workload data: " + e.getMessage());
+                } catch (Exception exception) {
+                    TestLogger.logFailure("player", "Failed to collect mixed workload data: %s", exception.getMessage());
                 }
             }
 
             // Execute unified batch saves - START TIMER HERE
-            TestLogger.logInfo("player", "Starting unified saves: " + allMixedPlayers.size() + " players, " + allMixedEntities.size() + " entities");
+            TestLogger.logInfo("player", "Starting unified saves: %d players, %d entities", allMixedPlayers.size(), allMixedEntities.size());
             timer.startTimer("mixed-workload-test");
             playerService.saveLegacyPlayersData(allMixedPlayers);
             entityService.saveEntities(allMixedEntities);
@@ -440,7 +440,7 @@ public class PerformanceStressTest {
             return mixedPerformanceGood && syncEfficient && operationCountReasonable;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Mixed workload test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Mixed workload test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -458,7 +458,7 @@ public class PerformanceStressTest {
             int entitiesPerLargeBatch = 1000;
 
             long initialMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-            TestLogger.logInfo("player", "Initial memory usage: " + (initialMemory / 1024 / 1024) + " MB");
+            TestLogger.logInfo("player", "Initial memory usage: %d MB", (initialMemory / 1024 / 1024));
 
             // Phase 1: Concurrent entity data preparation (no saving yet)
             List<CompletableFuture<List<LegacyEntityData>>> preparationFutures = new ArrayList<>();
@@ -490,8 +490,8 @@ public class PerformanceStressTest {
 
                         return largeEntities;
 
-                    } catch (Exception e) {
-                        TestLogger.logFailure("player", "Memory pressure batch " + finalBatchId + " preparation failed: " + e.getMessage());
+                    } catch (Exception exception) {
+                        TestLogger.logFailure("player", "Memory pressure batch %d preparation failed: %s", finalBatchId, exception.getMessage());
                         return new ArrayList<>();
                     } finally {
                         preparationLatch.countDown();
@@ -513,13 +513,13 @@ public class PerformanceStressTest {
             for (CompletableFuture<List<LegacyEntityData>> future : preparationFutures) {
                 try {
                     allLargeEntities.addAll(future.get());
-                } catch (Exception e) {
-                    TestLogger.logFailure("player", "Failed to collect prepared entity data: " + e.getMessage());
+                } catch (Exception exception) {
+                    TestLogger.logFailure("player", "Failed to collect prepared entity data: %s", exception.getMessage());
                 }
             }
 
             // Phase 3: Single unified batch save operation - START TIMER HERE
-            TestLogger.logInfo("player", "Starting unified batch save of " + allLargeEntities.size() + " large entities");
+            TestLogger.logInfo("player", "Starting unified batch save of %d large entities", allLargeEntities.size());
             timer.startTimer("memory-pressure-test");
             int processedBatches = 0;
             try {
@@ -533,8 +533,8 @@ public class PerformanceStressTest {
                 TestLogger.logInfo("player", String.format("Unified batch completed, memory: %d MB",
                         currentMemory / 1024 / 1024));
 
-            } catch (Exception e) {
-                TestLogger.logFailure("player", "Unified batch save failed: " + e.getMessage());
+            } catch (Exception exception) {
+                TestLogger.logFailure("player", "Unified batch save failed: %s", exception.getMessage());
             }
 
             // Allow RStream processing to complete (entity data already saved via batch)
@@ -565,7 +565,7 @@ public class PerformanceStressTest {
             return allBatchesProcessed && performanceUnderPressure && memoryUsageReasonable;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Memory pressure test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Memory pressure test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -609,7 +609,7 @@ public class PerformanceStressTest {
             return overallPerformanceGood && suiteCompletedInTime;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Performance summary test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Performance summary test failed: %s", exception.getMessage());
             return false;
         }
     }

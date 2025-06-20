@@ -44,14 +44,11 @@ public class TestExecutionUtil {
      */
     public static void executeModuleTests(String moduleName, TestExecution testExecution) {
         try {
-            TestLogger.logInfo(moduleName, "Initializing " + moduleName + " module test runner...");
-
-            TestResultSummary result = testExecution.execute();
-            logTestResults(moduleName, result);
-
+            TestLogger.logInfo(moduleName, "Initializing %s module test runner...", moduleName);
+            logTestResults(moduleName, testExecution.execute());
         } catch (Exception exception) {
             TestLogger.logFailure(moduleName,
-                    "Critical error while running " + moduleName + " module tests", exception);
+                    "Critical error while running %s module tests", exception, moduleName);
         }
     }
 
@@ -122,9 +119,9 @@ public class TestExecutionUtil {
      */
     private static void logSuccessfulTestResults(String moduleName, TestResultSummary result, TestMetrics metrics) {
         TestLogger.logSuccess(moduleName,
-                String.format("All %s module tests completed successfully in %dms (Total: %d, Passed: %d, Failed: %d)",
-                        moduleName, result.getDurationMs(), metrics.operationsCount(),
-                        metrics.successCount(), metrics.failureCount()));
+                "All %s module tests completed successfully in %dms (Total: %d, Passed: %d, Failed: %d)",
+                moduleName, result.getDurationMs(), metrics.operationsCount(),
+                metrics.successCount(), metrics.failureCount());
     }
 
     /**
@@ -136,9 +133,9 @@ public class TestExecutionUtil {
      */
     private static void logFailedTestResults(String moduleName, TestResultSummary result, TestMetrics metrics) {
         TestLogger.logFailure(moduleName,
-                String.format("%s module tests completed with failures in %dms (Total: %d, Passed: %d, Failed: %d)",
-                        moduleName, result.getDurationMs(), metrics.operationsCount(),
-                        metrics.successCount(), metrics.failureCount()));
+                "%s module tests completed with failures in %dms (Total: %d, Passed: %d, Failed: %d)",
+                moduleName, result.getDurationMs(), metrics.operationsCount(),
+                metrics.successCount(), metrics.failureCount());
 
         // Log detailed failure information
         logDetailedTestSummary(moduleName, metrics);
@@ -152,22 +149,22 @@ public class TestExecutionUtil {
      */
     private static void logDetailedTestSummary(String moduleName, TestMetrics metrics) {
         TestLogger.logInfo(moduleName, "Test Results Summary:");
-        TestLogger.logInfo(moduleName, "    Passed: " + metrics.successCount() + " tests");
-        TestLogger.logInfo(moduleName, "    Failed: " + metrics.failureCount() + " tests");
-        TestLogger.logInfo(moduleName, "    Total:  " + metrics.operationsCount() + " tests");
-        TestLogger.logInfo(moduleName, "    Duration: " + metrics.durationMs() + "ms");
+        TestLogger.logInfo(moduleName, "    Passed: %d tests", metrics.successCount());
+        TestLogger.logInfo(moduleName, "    Failed: %d tests", metrics.failureCount());
+        TestLogger.logInfo(moduleName, "    Total:  %d tests", metrics.operationsCount());
+        TestLogger.logInfo(moduleName, "    Duration: %dms", metrics.durationMs());
 
         // Log additional metrics if available
         if (metrics.operationsPerSecond() > 0) {
-            TestLogger.logInfo(moduleName, "    Throughput: " + String.format("%.2f", metrics.operationsPerSecond()) + " tests/sec");
+            TestLogger.logInfo(moduleName, "    Throughput: %.2f tests/sec", metrics.operationsPerSecond());
         }
 
         if (metrics.averageOperationDurationMs() > 0) {
-            TestLogger.logInfo(moduleName, "    Avg Duration: " + String.format("%.2f", metrics.averageOperationDurationMs()) + "ms per test");
+            TestLogger.logInfo(moduleName, "    Avg Duration: %.2fms per test", metrics.averageOperationDurationMs());
         }
 
         if (metrics.getSuccessRate() > 0) {
-            TestLogger.logInfo(moduleName, "    Success Rate: " + String.format("%.1f", metrics.getSuccessRate()) + "%");
+            TestLogger.logInfo(moduleName, "    Success Rate: %.1f%%", metrics.getSuccessRate());
         }
     }
 }

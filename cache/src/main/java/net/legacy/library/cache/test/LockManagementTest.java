@@ -54,12 +54,12 @@ public class LockManagementTest {
 
             boolean success = "modified".equals(result) && "modified".equals(resource.getData());
 
-            TestLogger.logInfo("cache", "Successful lock execution test: success=" + success +
-                    ", result=" + result);
+            TestLogger.logInfo("cache", "Successful lock execution test: success=%s, result=%s",
+                    success, result);
 
             return success;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Successful lock execution test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Successful lock execution test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -110,14 +110,14 @@ public class LockManagementTest {
             } catch (RuntimeException exception) {
                 boolean isTimeoutException = exception.getMessage().contains("Could not acquire lock");
 
-                TestLogger.logInfo("cache", "Lock timeout test: caught expected exception=" +
-                        isTimeoutException + ", message=" + exception.getMessage());
+                TestLogger.logInfo("cache", "Lock timeout test: caught expected exception=%s, message=%s",
+                        isTimeoutException, exception.getMessage());
 
                 lockHolder.join(); // Clean up
                 return isTimeoutException;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Lock timeout test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Lock timeout test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -158,8 +158,8 @@ public class LockManagementTest {
                         testResult[0] = isInterruptedException;
                         interruptedCorrectly[0] = isThreadInterrupted;
 
-                        TestLogger.logInfo("cache", "Thread interruption caught: isInterruptedException=" +
-                                isInterruptedException + ", threadInterrupted=" + isThreadInterrupted);
+                        TestLogger.logInfo("cache", "Thread interruption caught: isInterruptedException=%s, threadInterrupted=%s",
+                                isInterruptedException, isThreadInterrupted);
                     }
                 });
 
@@ -173,8 +173,8 @@ public class LockManagementTest {
                 testThread.interrupt();
                 testThread.join(1000);
 
-                TestLogger.logInfo("cache", "Thread interruption test: result=" + testResult[0] +
-                        ", interruptedCorrectly=" + interruptedCorrectly[0]);
+                TestLogger.logInfo("cache", "Thread interruption test: result=%s, interruptedCorrectly=%s",
+                        testResult[0], interruptedCorrectly[0]);
 
                 return testResult[0] && interruptedCorrectly[0];
 
@@ -182,7 +182,7 @@ public class LockManagementTest {
                 resource.getLock().unlock();
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Thread interruption test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Thread interruption test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -222,7 +222,7 @@ public class LockManagementTest {
                         results[threadIndex] = result != null && result.contains("-" + threadIndex);
 
                     } catch (Exception exception) {
-                        TestLogger.logFailure("cache", "Concurrent thread " + threadIndex + " failed: " + exception.getMessage());
+                        TestLogger.logFailure("cache", "Concurrent thread %d failed: %s", threadIndex, exception.getMessage());
                         results[threadIndex] = false;
                     } finally {
                         completeLatch.countDown();
@@ -260,14 +260,13 @@ public class LockManagementTest {
                 }
             }
 
-            TestLogger.logInfo("cache", "Concurrent access test: allSucceeded=" + allSucceeded +
-                    ", containsAllModifications=" + containsAllModifications +
-                    ", finalData=" + finalData);
+            TestLogger.logInfo("cache", "Concurrent access test: allSucceeded=%s, containsAllModifications=%s, finalData=%s",
+                    allSucceeded, containsAllModifications, finalData);
 
             return allSucceeded && containsAllModifications;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Concurrent access test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Concurrent access test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -297,7 +296,7 @@ public class LockManagementTest {
 
             } catch (RuntimeException exception) {
                 if (!"Test exception".equals(exception.getMessage())) {
-                    TestLogger.logFailure("cache", "Lock release test - unexpected exception: " + exception.getMessage());
+                    TestLogger.logFailure("cache", "Lock release test - unexpected exception: %s", exception.getMessage());
                     return false;
                 }
             }
@@ -308,12 +307,12 @@ public class LockManagementTest {
                 resource.getLock().unlock();
             }
 
-            TestLogger.logInfo("cache", "Lock release after exception test: lockReleased=" + lockReleased);
+            TestLogger.logInfo("cache", "Lock release after exception test: lockReleased=%s", lockReleased);
 
             return lockReleased;
 
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Lock release after exception test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Lock release after exception test failed: %s", exception.getMessage());
             return false;
         }
     }

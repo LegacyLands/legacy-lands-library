@@ -182,7 +182,7 @@ public interface ScriptEngineInterface {
      * @param functionName The name of the function to invoke.
      *                     The function must have been defined within a compiled script that
      *                     was previously executed using {@link #executeCompiled}
-     * @param args The arguments to pass to the function.
+     * @param args         The arguments to pass to the function.
      * @return The result of the function invocation.
      * @throws ScriptException If an error occurs during function invocation.
      */

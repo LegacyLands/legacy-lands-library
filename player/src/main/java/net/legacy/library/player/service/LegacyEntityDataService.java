@@ -308,7 +308,7 @@ public class LegacyEntityDataService {
      * Retrieves the {@link LegacyEntityData} from the database.
      *
      * @param uuid the unique identifier of the entity
-     * @return the entity data retrieved from the database, or null if not found
+     * @return the entity data retrieved from the database, or {@code null} if not found
      */
     public LegacyEntityData getFromDatabase(UUID uuid) {
         String uuidString = uuid.toString();
@@ -569,7 +569,7 @@ public class LegacyEntityDataService {
      * Retrieves entity data using the multi-level cache and database.
      *
      * @param uuid the unique identifier of the entity
-     * @return the entity data, or null if not found
+     * @return the entity data, or {@code null} if not found
      */
     public LegacyEntityData getEntityData(UUID uuid) {
         // Check L1 cache first
@@ -943,7 +943,7 @@ public class LegacyEntityDataService {
      *
      * @param entityId the entity ID to get
      * @param cache    the transaction cache of modified entities
-     * @return the entity, or null if not found
+     * @return the entity, or {@code null} if not found
      */
     private LegacyEntityData getOrCacheEntity(UUID entityId, Map<UUID, LegacyEntityData> cache) {
         // Check if we've already loaded this entity in this transaction

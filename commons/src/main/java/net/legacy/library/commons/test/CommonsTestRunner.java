@@ -111,7 +111,7 @@ public class CommonsTestRunner extends AbstractModuleTestRunner {
      * Execute all test methods in a test class
      */
     private void executeTestClass(Class<?> testClass, String testDescription) {
-        TestLogger.logInfo(MODULE_NAME, "Executing " + testDescription + " tests...");
+        TestLogger.logInfo(MODULE_NAME, "Executing %s tests...", testDescription);
 
         List<String> testMethods = getTestMethods(testClass);
 
@@ -170,7 +170,7 @@ public class CommonsTestRunner extends AbstractModuleTestRunner {
         } catch (Exception exception) {
             failedTests++;
             TestLogger.logValidation(MODULE_NAME, methodName, false,
-                    "Test failed with exception: " + exception.getMessage());
+                    "Test failed with exception: %s", exception.getMessage());
 
             context.incrementProcessed();
             context.incrementFailure();
@@ -207,9 +207,9 @@ public class CommonsTestRunner extends AbstractModuleTestRunner {
 
         // Log detailed validation results
         TestLogger.logValidation(MODULE_NAME, "TotalTestCount", totalTests >= 15,
-                "Total tests: " + totalTests);
+                "Total tests: %d", totalTests);
         TestLogger.logValidation(MODULE_NAME, "SuccessRate", successRate == 1.0,
-                "Success rate: " + (successRate * 100) + "% (" + passedTests + "/" + totalTests + ") - 100% required");
+                "Success rate: %.1f%% (%d/%d) - 100%% required", (successRate * 100), passedTests, totalTests);
         TestLogger.logValidation(MODULE_NAME, "InjectionCoverage", hasInjectionTests,
                 "VarHandle injection test coverage");
         TestLogger.logValidation(MODULE_NAME, "TaskChainCoverage", hasTaskChainTests,

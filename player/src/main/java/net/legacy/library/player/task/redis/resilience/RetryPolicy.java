@@ -129,7 +129,7 @@ public class RetryPolicy {
                             return true;
                         }
                     }
-                    
+
                     // Check the cause of the exception
                     Throwable cause = exception.getCause();
                     if (cause != null) {
@@ -139,7 +139,7 @@ public class RetryPolicy {
                             }
                         }
                     }
-                    
+
                     return false;
                 })
                 .build();

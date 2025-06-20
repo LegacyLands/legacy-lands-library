@@ -73,7 +73,7 @@ public class FlexibleMultiLevelCacheService extends AbstractLockable<Set<TieredC
      * @param <L>          the type of the level identifier
      * @param <C>          the concrete cache implementation type
      * @param <R>          the return type of the function
-     * @return the result of the function application, or null if the level is not found
+     * @return the result of the function application, or {@code null} if the level is not found
      */
     @SuppressWarnings("unchecked")
     public <L, C, R> R applyFunctionWithoutLock(L level, Function<C, R> cacheMapping) {
@@ -97,7 +97,7 @@ public class FlexibleMultiLevelCacheService extends AbstractLockable<Set<TieredC
      * @param <L>             the type of the level identifier
      * @param <C>             the concrete cache implementation type
      * @param <R>             the return type of the function
-     * @return the result of the function application, or null if the level is not found
+     * @return the result of the function application, or {@code null} if the level is not found
      * @throws RuntimeException if unable to acquire the lock or if the thread is interrupted
      */
     public <L, C, R> R applyFunctionWithLock(

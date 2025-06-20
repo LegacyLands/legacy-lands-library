@@ -17,5 +17,6 @@ include("player")
 include("script")
 include("bukkit-grpc-client")
 include("foundation")
+include("aop")
 
 project(":bukkit-grpc-client").projectDir = file("experimental/third-party-schedulers/bukkit-grpc-client")

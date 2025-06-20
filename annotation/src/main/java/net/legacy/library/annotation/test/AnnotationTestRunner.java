@@ -61,7 +61,7 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
             TestableAnnotationProcessor testProcessor = Containers.get(TestableAnnotationProcessor.class);
             return new AnnotationTestRunner(processingService, testProcessor);
         } catch (Exception exception) {
-            TestLogger.logFailure("annotation", "Failed to create AnnotationTestRunner: " + exception.getMessage());
+            TestLogger.logFailure("annotation", "Failed to create AnnotationTestRunner: %s", exception.getMessage());
             throw new RuntimeException("Failed to create test runner", exception);
         }
     }
@@ -87,7 +87,7 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
         timer.stopTimer("setup");
         timer.startTimer("annotation-processing");
 
-        TestLogger.logInfo(MODULE_NAME, "Running annotation processing on test package: " + TEST_PACKAGE);
+        TestLogger.logInfo(MODULE_NAME, "Running annotation processing on test package: %s", TEST_PACKAGE);
 
         // Reset processor counters before initial run
         TestableAnnotationProcessor.resetCounters();
@@ -158,9 +158,9 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
         TestLogger.logValidation(MODULE_NAME, "ComplexTestClass", complexTestSuccess, "Annotation processing");
         TestLogger.logValidation(MODULE_NAME, "ErrorTestClass", errorTestSuccess, "Processing with expected result");
         TestLogger.logValidation(MODULE_NAME, "ProcessCallCount", actualProcessCalls == expectedProcessCalls,
-                "Expected " + expectedProcessCalls + ", got " + actualProcessCalls);
+                "Expected %d, got %d", expectedProcessCalls, actualProcessCalls);
         TestLogger.logValidation(MODULE_NAME, "LifecycleCalls", actualFinallyCount == expectedProcessCalls,
-                "finallyAfter method invocations: expected " + expectedProcessCalls + ", got " + actualFinallyCount);
+                "finallyAfter method invocations: expected %d, got %d", expectedProcessCalls, actualFinallyCount);
 
         // Log comprehensive statistics using foundation's TestLogger
         TestLogger.logStatistics(MODULE_NAME,
@@ -185,7 +185,7 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
      * Execute all test methods in a test class using reflection.
      */
     private void executeTestClass(Class<?> testClass, String testDescription) {
-        TestLogger.logInfo(MODULE_NAME, "Executing " + testDescription + " tests...");
+        TestLogger.logInfo(MODULE_NAME, "Executing %s tests...", testDescription);
 
         try {
             java.lang.reflect.Method[] methods = testClass.getDeclaredMethods();
@@ -199,7 +199,7 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
                 }
             }
         } catch (Exception exception) {
-            TestLogger.logFailure(MODULE_NAME, "Failed to execute test class " + testClass.getSimpleName() + ": " + exception.getMessage());
+            TestLogger.logFailure(MODULE_NAME, "Failed to execute test class %s: %s", testClass.getSimpleName(), exception.getMessage());
         }
     }
 
@@ -224,7 +224,7 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
             }
 
         } catch (Exception exception) {
-            TestLogger.logValidation(MODULE_NAME, methodName, false, "Test failed with exception: " + exception.getMessage());
+            TestLogger.logValidation(MODULE_NAME, methodName, false, "Test failed with exception: %s", exception.getMessage());
             context.incrementProcessed();
             context.incrementFailure();
 

@@ -74,7 +74,7 @@ public class ProtoConversionUtil {
      * Converts a Java {@link List} into an {@link Any} containing a custom {@code taskscheduler.ListValue}.
      * <p>Each element in the list is recursively converted using {@link #convertToProtoAny(Object)}.
      *
-     * @param list the Java List to convert. Must not be null
+     * @param list the Java List to convert. Must not be {@code null}
      * @return an {@link Any} message containing the packed {@code taskscheduler.ListValue}
      */
     public static Any convertListToCustomProtoAny(List<?> list) {
@@ -89,7 +89,7 @@ public class ProtoConversionUtil {
      * Converts a Java {@link Map} with String keys into an {@link Any} containing a custom {@code taskscheduler.MapValue}.
      * <p>Each value in the map is recursively converted using {@link #convertToProtoAny(Object)}.
      *
-     * @param map the Java Map to convert. Must not be null, and keys must be Strings
+     * @param map the Java Map to convert. Must not be {@code null}, and keys must be Strings
      * @return an {@link Any} message containing the packed {@code taskscheduler.MapValue}
      */
     public static Any convertMapToCustomProtoAny(Map<String, ?> map) {

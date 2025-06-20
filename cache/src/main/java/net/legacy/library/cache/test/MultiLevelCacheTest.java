@@ -62,12 +62,12 @@ public class MultiLevelCacheTest {
             boolean l1Found = l1.isPresent() && "L1".equals(l1.get().getLevel());
             boolean l2Found = l2.isPresent() && "L2".equals(l2.get().getLevel());
 
-            TestLogger.logInfo("cache", "Successful level lookup test: l1Found=" + l1Found +
-                    ", l2Found=" + l2Found);
+            TestLogger.logInfo("cache", "Successful level lookup test: l1Found=%s, l2Found=%s",
+                    l1Found, l2Found);
 
             return l1Found && l2Found;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Successful level lookup test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Successful level lookup test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -83,11 +83,11 @@ public class MultiLevelCacheTest {
 
             boolean isEmpty = nonExistent.isEmpty();
 
-            TestLogger.logInfo("cache", "Non-existent level lookup test: isEmpty=" + isEmpty);
+            TestLogger.logInfo("cache", "Non-existent level lookup test: isEmpty=%s", isEmpty);
 
             return isEmpty;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Non-existent level lookup test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Non-existent level lookup test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -104,11 +104,11 @@ public class MultiLevelCacheTest {
 
             boolean found = level != null && "L1".equals(level.getLevel());
 
-            TestLogger.logInfo("cache", "getCacheLevelElseThrow success test: found=" + found);
+            TestLogger.logInfo("cache", "getCacheLevelElseThrow success test: found=%s", found);
 
             return found;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "getCacheLevelElseThrow success test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "getCacheLevelElseThrow success test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -130,13 +130,13 @@ public class MultiLevelCacheTest {
             } catch (IllegalArgumentException exception) {
                 boolean correctException = "Level not found".equals(exception.getMessage());
 
-                TestLogger.logInfo("cache", "getCacheLevelElseThrow exception test: correctException=" +
+                TestLogger.logInfo("cache", "getCacheLevelElseThrow exception test: correctException=%s",
                         correctException);
 
                 return correctException;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "getCacheLevelElseThrow exception test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "getCacheLevelElseThrow exception test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -156,12 +156,12 @@ public class MultiLevelCacheTest {
 
             boolean success = "value1".equals(result);
 
-            TestLogger.logInfo("cache", "applyFunctionWithoutLock success test: success=" + success +
-                    ", result=" + result);
+            TestLogger.logInfo("cache", "applyFunctionWithoutLock success test: success=%s, result=%s",
+                    success, result);
 
             return success;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "applyFunctionWithoutLock success test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "applyFunctionWithoutLock success test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -177,11 +177,11 @@ public class MultiLevelCacheTest {
 
             boolean isNull = result == null;
 
-            TestLogger.logInfo("cache", "applyFunctionWithoutLock non-existent test: isNull=" + isNull);
+            TestLogger.logInfo("cache", "applyFunctionWithoutLock non-existent test: isNull=%s", isNull);
 
             return isNull;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "applyFunctionWithoutLock non-existent test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "applyFunctionWithoutLock non-existent test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -208,12 +208,12 @@ public class MultiLevelCacheTest {
 
             boolean success = result != null && result == 2;
 
-            TestLogger.logInfo("cache", "applyFunctionWithLock success test: success=" + success +
-                    ", result=" + result);
+            TestLogger.logInfo("cache", "applyFunctionWithLock success test: success=%s, result=%s",
+                    success, result);
 
             return success;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "applyFunctionWithLock success test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "applyFunctionWithLock success test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -236,11 +236,11 @@ public class MultiLevelCacheTest {
 
             boolean isNull = result == null;
 
-            TestLogger.logInfo("cache", "applyFunctionWithLock non-existent test: isNull=" + isNull);
+            TestLogger.logInfo("cache", "applyFunctionWithLock non-existent test: isNull=%s", isNull);
 
             return isNull;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "applyFunctionWithLock non-existent test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "applyFunctionWithLock non-existent test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -260,14 +260,14 @@ public class MultiLevelCacheTest {
 
             boolean correctTypeWorked = "success".equals(result1);
 
-            TestLogger.logInfo("cache", "Type casting safety test: correctTypeWorked=" + correctTypeWorked);
+            TestLogger.logInfo("cache", "Type casting safety test: correctTypeWorked=%s", correctTypeWorked);
 
             // We can't easily test incorrect type casting in a safe way without
             // ClassCastException, but the test above verifies that correct casting works
 
             return correctTypeWorked;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Type casting safety test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Type casting safety test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -308,12 +308,12 @@ public class MultiLevelCacheTest {
 
             boolean success = l1Size != null && l1Size == 10 && l2Size != null && l2Size == 10;
 
-            TestLogger.logInfo("cache", "Concurrent multi-level access test: success=" + success +
-                    ", l1Size=" + l1Size + ", l2Size=" + l2Size);
+            TestLogger.logInfo("cache", "Concurrent multi-level access test: success=%s, l1Size=%s, l2Size=%s",
+                    success, l1Size, l2Size);
 
             return success;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Concurrent multi-level access test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Concurrent multi-level access test failed: %s", exception.getMessage());
             return false;
         }
     }

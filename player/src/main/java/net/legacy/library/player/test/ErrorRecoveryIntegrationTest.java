@@ -57,10 +57,10 @@ public class ErrorRecoveryIntegrationTest {
             try {
                 boolean ttlResult = service.setEntityDefaultTTL(entityUuid);
                 ttlOperationSucceeded = ttlResult;
-                TestLogger.logInfo("player", "TTL operation result: " + ttlResult);
+                TestLogger.logInfo("player", "TTL operation result: %s", ttlResult);
             } catch (Exception exception) {
                 // TTL operation may fail, but should not crash the service
-                TestLogger.logInfo("player", "TTL operation failed gracefully: " + exception.getMessage());
+                TestLogger.logInfo("player", "TTL operation failed gracefully: %s", exception.getMessage());
                 // ttlOperationSucceeded remains false, which is acceptable
             }
 
@@ -75,7 +75,7 @@ public class ErrorRecoveryIntegrationTest {
 
             return l1CacheWorks && serviceStillFunctional;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Redis connection failure handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Redis connection failure handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -100,9 +100,9 @@ public class ErrorRecoveryIntegrationTest {
                 LegacyEntityData fromDb = service.getFromDatabase(entityUuid);
                 // Operation may return null if MongoDB is unavailable
                 databaseQuerySucceeded = (fromDb != null);
-                TestLogger.logInfo("player", "Database query result: " + (fromDb != null ? "success" : "null"));
+                TestLogger.logInfo("player", "Database query result: %s", (fromDb != null ? "success" : "null"));
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "Database operation failed gracefully: " + exception.getMessage());
+                TestLogger.logInfo("player", "Database operation failed gracefully: %s", exception.getMessage());
                 // databaseQuerySucceeded remains false, which is acceptable for failure testing
             }
 
@@ -126,7 +126,7 @@ public class ErrorRecoveryIntegrationTest {
 
             return cacheStillWorks && updateSucceeded;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "MongoDB connection failure handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "MongoDB connection failure handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -159,7 +159,7 @@ public class ErrorRecoveryIntegrationTest {
                 service.saveEntities(entities);
                 Thread.sleep(1100); // Wait for RStream publishing and batch save
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "Batch save encountered expected exception: " + exception.getMessage());
+                TestLogger.logInfo("player", "Batch save encountered expected exception: %s", exception.getMessage());
             }
 
             // Verify service recovery and functionality
@@ -172,7 +172,7 @@ public class ErrorRecoveryIntegrationTest {
                         successfulRetrievals++;
                     }
                 } catch (Exception exception) {
-                    TestLogger.logInfo("player", "Retrieval " + i + " failed: " + exception.getMessage());
+                    TestLogger.logInfo("player", "Retrieval %d failed: %s", i, exception.getMessage());
                 }
             }
 
@@ -188,7 +188,7 @@ public class ErrorRecoveryIntegrationTest {
                 LegacyEntityData retrieved = service.getEntityData(newEntityUuid);
                 newEntitySaved = retrieved != null && "success".equals(retrieved.getAttribute("recovery"));
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "New entity save failed: " + exception.getMessage());
+                TestLogger.logInfo("player", "New entity save failed: %s", exception.getMessage());
             }
 
             boolean recoverySuccessful = successfulRetrievals >= 5 && newEntitySaved;
@@ -198,7 +198,7 @@ public class ErrorRecoveryIntegrationTest {
 
             return recoverySuccessful;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Resource exhaustion recovery test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Resource exhaustion recovery test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -238,14 +238,14 @@ public class ErrorRecoveryIntegrationTest {
                 service.saveEntities(entities);
                 successfulSaves = entities.size(); // All should succeed in batch
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "Batch save failed: " + exception.getMessage());
+                TestLogger.logInfo("player", "Batch save failed: %s", exception.getMessage());
                 // Fallback to individual saves for error analysis
                 for (LegacyEntityData entity : entities) {
                     try {
                         service.saveEntity(entity);
                         successfulSaves++;
                     } catch (Exception individualException) {
-                        TestLogger.logInfo("player", "Individual entity save failed: " + individualException.getMessage());
+                        TestLogger.logInfo("player", "Individual entity save failed: %s", individualException.getMessage());
                     }
                 }
             }
@@ -262,7 +262,7 @@ public class ErrorRecoveryIntegrationTest {
                         successfulRetrievals++;
                     }
                 } catch (Exception exception) {
-                    TestLogger.logInfo("player", "Entity retrieval failed: " + exception.getMessage());
+                    TestLogger.logInfo("player", "Entity retrieval failed: %s", exception.getMessage());
                 }
             }
 
@@ -278,7 +278,7 @@ public class ErrorRecoveryIntegrationTest {
                 LegacyEntityData retrieved = service.getEntityData(testUuid);
                 postFailureFunctionality = retrieved != null && "working".equals(retrieved.getAttribute("status"));
             } catch (Exception exception) {
-                TestLogger.logInfo("player", "Post-failure test failed: " + exception.getMessage());
+                TestLogger.logInfo("player", "Post-failure test failed: %s", exception.getMessage());
             }
 
             boolean partialRecoverySuccessful = successfulSaves >= 6 && successfulRetrievals >= 6 && postFailureFunctionality;
@@ -289,7 +289,7 @@ public class ErrorRecoveryIntegrationTest {
 
             return partialRecoverySuccessful;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Partial failure recovery test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Partial failure recovery test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -359,7 +359,7 @@ public class ErrorRecoveryIntegrationTest {
 
             return recoverySuccessful;
         } catch (Exception exception) {
-            TestLogger.logFailure("player", "Service recovery after outage test failed: " + exception.getMessage());
+            TestLogger.logFailure("player", "Service recovery after outage test failed: %s", exception.getMessage());
             return false;
         }
     }

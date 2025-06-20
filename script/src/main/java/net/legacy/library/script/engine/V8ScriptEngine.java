@@ -183,8 +183,7 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
                 case V8Value v8Value -> addV8Value(key, v8Value);
                 case Map<?, ?> map -> addMapToV8(key, map);
                 case List<?> list -> addListToV8(key, list);
-                default ->
-                        throw new IllegalArgumentException("Unsupported variable type: " + val.getClass().getName());
+                default -> throw new IllegalArgumentException("Unsupported variable type: " + val.getClass().getName());
             }
         }, name, value);
     }
@@ -239,7 +238,8 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
                     v8Array.release();
                 }
             }
-            default -> throw new IllegalArgumentException("Unsupported type in pushToV8: " + value.getClass().getName());
+            default ->
+                    throw new IllegalArgumentException("Unsupported type in pushToV8: " + value.getClass().getName());
         }
     }
 
@@ -287,8 +287,7 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
             case V8Value v8Value -> addV8Value(name, v8Value);
             case Map<?, ?> map -> addMapToV8(name, map);
             case List<?> list -> addListToV8(name, list);
-            default ->
-                    throw new IllegalArgumentException("Unsupported variable type: " + value.getClass().getName());
+            default -> throw new IllegalArgumentException("Unsupported variable type: " + value.getClass().getName());
         }
     }
 

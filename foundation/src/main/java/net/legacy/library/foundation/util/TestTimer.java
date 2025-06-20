@@ -1,6 +1,7 @@
 package net.legacy.library.foundation.util;
 
 import lombok.Getter;
+import lombok.ToString;
 import lombok.Value;
 
 import java.util.HashMap;
@@ -108,11 +109,7 @@ public class TestTimer {
      */
     public long getElapsedTime(String timerName) {
         Long startTime = activeTimers.get(timerName);
-        if (startTime == null) {
-            return -1;
-        }
-
-        return System.currentTimeMillis() - startTime;
+        return startTime == null ? -1 : System.currentTimeMillis() - startTime;
     }
 
     /**
@@ -272,22 +269,12 @@ public class TestTimer {
      * Represents the result of a completed timer operation.
      */
     @Value
+    @ToString
     public static class TimerResult {
         String name;
         long startTime;
         long endTime;
         long duration;
-
-        @Override
-        public String toString() {
-            return new StringBuilder()
-                    .append("TimerResult{name='")
-                    .append(name)
-                    .append("', duration=")
-                    .append(duration)
-                    .append("ms}")
-                    .toString();
-        }
     }
 
     /**

@@ -118,7 +118,7 @@ public class TaskChainBuilderTest {
             String result = taskChain.getResult(0);
             return "Async Result".equals(result);
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Asynchronous execution test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Asynchronous execution test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -143,7 +143,7 @@ public class TaskChainBuilderTest {
             // Accept both virtual and platform thread results as virtual thread support may not be available
             return "Virtual".equals(result) || "Platform".equals(result);
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Virtual thread mode test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Virtual thread mode test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -184,7 +184,7 @@ public class TaskChainBuilderTest {
             String result = taskChain.getResult(1);
             return "Normal Result".equals(result);
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Exception handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Exception handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -216,7 +216,7 @@ public class TaskChainBuilderTest {
                 return true;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Timeout handling test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Timeout handling test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -249,7 +249,7 @@ public class TaskChainBuilderTest {
             // Verify all mode results
             return taskChain.getAllModeResults().size() == 1;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Mode results test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Mode results test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -307,7 +307,7 @@ public class TaskChainBuilderTest {
 
             return "Task1".equals(result1) && "Task2".equals(result2) && "Task3".equals(result3);
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Concurrent execution test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Concurrent execution test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -327,7 +327,7 @@ public class TaskChainBuilderTest {
                 return true;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Empty chain exception test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Empty chain exception test failed: %s", exception.getMessage());
             return false;
         }
     }

@@ -42,11 +42,11 @@ public class CacheExpirationTest {
             // Simulate time passage (in real scenario, time would advance)
             boolean stillNotExpired = !item.isExpired();
 
-            TestLogger.logInfo("cache", "Never-expire item test: initially=" + notExpiredInitially + ", after time=" + stillNotExpired);
+            TestLogger.logInfo("cache", "Never-expire item test: initially=%s, after time=%s", notExpiredInitially, stillNotExpired);
 
             return notExpiredInitially && stillNotExpired;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Never-expire item test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Never-expire item test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -61,11 +61,11 @@ public class CacheExpirationTest {
 
             boolean isExpired = nullItem.isExpired();
 
-            TestLogger.logInfo("cache", "Null value expiration test: isExpired=" + isExpired);
+            TestLogger.logInfo("cache", "Null value expiration test: isExpired=%s", isExpired);
 
             return isExpired; // null values should always be expired
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Null value expiration test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Null value expiration test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -84,11 +84,11 @@ public class CacheExpirationTest {
 
             boolean isExpired = item.isExpired();
 
-            TestLogger.logInfo("cache", "Short TTL expiration test: isExpired=" + isExpired);
+            TestLogger.logInfo("cache", "Short TTL expiration test: isExpired=%s", isExpired);
 
             return isExpired; // should be expired after 5ms wait with 1ms TTL
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Short TTL expiration test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Short TTL expiration test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -104,11 +104,11 @@ public class CacheExpirationTest {
 
             boolean isNotExpired = !item.isExpired();
 
-            TestLogger.logInfo("cache", "Valid item not expired test: isNotExpired=" + isNotExpired);
+            TestLogger.logInfo("cache", "Valid item not expired test: isNotExpired=%s", isNotExpired);
 
             return isNotExpired; // should not be expired immediately
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Valid item not expired test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Valid item not expired test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -127,12 +127,12 @@ public class CacheExpirationTest {
             long expirationTime = item.getExpirationTime();
             boolean correctExpirationTime = (expirationTime == -1);
 
-            TestLogger.logInfo("cache", "Exactly -1 TTL test: neverExpires=" + neverExpires +
-                    ", expirationTime=" + expirationTime);
+            TestLogger.logInfo("cache", "Exactly -1 TTL test: neverExpires=%s, expirationTime=%s",
+                    neverExpires, expirationTime);
 
             return neverExpires && correctExpirationTime;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Exactly -1 TTL test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Exactly -1 TTL test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -151,12 +151,12 @@ public class CacheExpirationTest {
             long expirationTime = item.getExpirationTime();
             boolean correctExpirationTime = (expirationTime == -1);
 
-            TestLogger.logInfo("cache", "Less than -1 TTL test: neverExpires=" + neverExpires +
-                    ", expirationTime=" + expirationTime);
+            TestLogger.logInfo("cache", "Less than -1 TTL test: neverExpires=%s, expirationTime=%s",
+                    neverExpires, expirationTime);
 
             return neverExpires && correctExpirationTime;
         } catch (Exception exception) {
-            TestLogger.logFailure("cache", "Less than -1 TTL test failed: " + exception.getMessage());
+            TestLogger.logFailure("cache", "Less than -1 TTL test failed: %s", exception.getMessage());
             return false;
         }
     }

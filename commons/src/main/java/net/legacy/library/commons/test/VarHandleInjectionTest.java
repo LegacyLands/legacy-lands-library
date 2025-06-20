@@ -67,7 +67,7 @@ public class VarHandleInjectionTest {
 
             if (!stringHandleInjected || !intHandleInjected) {
                 TestLogger.logFailure("commons",
-                        "Basic injection failed: stringHandle=" + stringHandleInjected + ", intHandle=" + intHandleInjected);
+                        "Basic injection failed: stringHandle=%s, intHandle=%s", stringHandleInjected, intHandleInjected);
                 return false;
             }
 
@@ -84,11 +84,11 @@ public class VarHandleInjectionTest {
             testFieldHandle.set("initial");
 
             TestLogger.logInfo("commons",
-                    "Basic injection test: initialValue=" + correctInitialValue + ", modification=" + modificationWorked);
+                    "Basic injection test: initialValue=%s, modification=%s", correctInitialValue, modificationWorked);
 
             return correctInitialValue && modificationWorked;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Basic injection test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Basic injection test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -128,11 +128,11 @@ public class VarHandleInjectionTest {
             numberFieldHandle.set(42);
 
             TestLogger.logInfo("commons",
-                    "Int field injection test: initialValue=" + correctInitialValue + ", setValue=" + setOperationWorked + ", compareAndSet=" + casWorked);
+                    "Int field injection test: initialValue=%s, setValue=%s, compareAndSet=%s", correctInitialValue, setOperationWorked, casWorked);
 
             return correctInitialValue && setOperationWorked && casWorked;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Int field injection test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Int field injection test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -159,12 +159,12 @@ public class VarHandleInjectionTest {
                 boolean correctExceptionMessage = expected.getMessage().contains("Failed to inject VarHandle for field");
 
                 TestLogger.logInfo("commons",
-                        "Invalid field name test: caught expected exception=" + correctExceptionMessage + ", message=" + expected.getMessage());
+                        "Invalid field name test: caught expected exception=%s, message=%s", correctExceptionMessage, expected.getMessage());
 
                 return correctExceptionMessage;
             }
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Invalid field name test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Invalid field name test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -194,11 +194,11 @@ public class VarHandleInjectionTest {
             boolean fieldUnchanged = "unchanged".equals(NoAnnotationTest.normalField);
 
             TestLogger.logInfo("commons",
-                    "No annotation ignored test: handleUnchanged=" + handleUnchanged + ", fieldUnchanged=" + fieldUnchanged);
+                    "No annotation ignored test: handleUnchanged=%s, fieldUnchanged=%s", handleUnchanged, fieldUnchanged);
 
             return handleUnchanged && fieldUnchanged;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "No annotation ignored test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "No annotation ignored test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -238,11 +238,11 @@ public class VarHandleInjectionTest {
             boolean modificationWorked = "modified-private".equals(modifiedValue);
 
             TestLogger.logInfo("commons",
-                    "Private field injection test: injection=" + true + ", access=" + correctValue + ", modification=" + modificationWorked);
+                    "Private field injection test: injection=%s, access=%s, modification=%s", true, correctValue, modificationWorked);
 
             return correctValue && modificationWorked;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Private field injection test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Private field injection test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -274,7 +274,7 @@ public class VarHandleInjectionTest {
 
             if (!firstInjectionValid || !secondInjectionValid) {
                 TestLogger.logFailure("commons",
-                        "Multiple injection idempotency failed: first=" + firstInjectionValid + ", second=" + secondInjectionValid);
+                        "Multiple injection idempotency failed: first=%s, second=%s", firstInjectionValid, secondInjectionValid);
                 return false;
             }
 
@@ -284,11 +284,11 @@ public class VarHandleInjectionTest {
             boolean functionalityWorks = "initial".equals(stringValue) && intValue == 42;
 
             TestLogger.logInfo("commons",
-                    "Multiple injection idempotency test: functionality=" + functionalityWorks + ", stringValue=" + stringValue + ", intValue=" + intValue);
+                    "Multiple injection idempotency test: functionality=%s, stringValue=%s, intValue=%s", functionalityWorks, stringValue, intValue);
 
             return functionalityWorks;
         } catch (Exception exception) {
-            TestLogger.logFailure("commons", "Multiple injection idempotency test failed: " + exception.getMessage());
+            TestLogger.logFailure("commons", "Multiple injection idempotency test failed: %s", exception.getMessage());
             return false;
         }
     }

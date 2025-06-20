@@ -40,16 +40,16 @@ public class TaskAutoStartAnnotationProcessor implements CustomAnnotationProcess
             return;
         }
 
-        TaskInterface taskInterface;
+        TaskInterface<?> taskInterface;
 
         if (taskAutoStartAnnotation.isFromFairyIoC()) {
-            taskInterface = ((TaskInterface) Containers.get(clazz));
+            taskInterface = ((TaskInterface<?>) Containers.get(clazz));
         } else {
-            taskInterface = (TaskInterface) clazz.getDeclaredConstructor().newInstance();
+            taskInterface = (TaskInterface<?>) clazz.getDeclaredConstructor().newInstance();
         }
 
         taskInterface.start();
-        Log.info("[AnnotationProcessor] %s task started.", clazz.getName());
+        Log.info("[TaskAutoStartAnnotationProcessor] %s task started.", clazz.getName());
     }
 
     /**

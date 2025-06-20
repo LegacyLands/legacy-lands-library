@@ -32,8 +32,7 @@ public class TaskChainBuilder {
      * The default TaskInterface uses the async scheduler for task execution.
      */
     public TaskChainBuilder() {
-        this.taskInterface = new TaskInterface<>() {
-        };
+        this.taskInterface = TaskInterface.defaultInstance();
     }
 
     /**
@@ -43,8 +42,7 @@ public class TaskChainBuilder {
      *                      or null to use the default implementation
      */
     public TaskChainBuilder(TaskInterface<?> taskInterface) {
-        this.taskInterface = taskInterface != null ? taskInterface : new TaskInterface<>() {
-        };
+        this.taskInterface = taskInterface != null ? taskInterface : TaskInterface.defaultInstance();
     }
 
     /**
@@ -73,8 +71,7 @@ public class TaskChainBuilder {
      * @return this TaskChainBuilder for method chaining
      */
     public TaskChainBuilder withTaskInterface(TaskInterface<?> taskInterface) {
-        this.taskInterface = taskInterface != null ? taskInterface : new TaskInterface<>() {
-        };
+        this.taskInterface = taskInterface != null ? taskInterface : TaskInterface.defaultInstance();
         return this;
     }
 

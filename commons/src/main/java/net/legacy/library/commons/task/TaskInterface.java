@@ -46,6 +46,20 @@ import java.util.concurrent.TimeUnit;
  */
 public interface TaskInterface<R> {
     /**
+     * Returns a default TaskInterface instance with standard implementations.
+     *
+     * <p>This is useful when you just need to access the utility methods without
+     * implementing a custom task logic. The returned instance uses default
+     * implementations for all methods.
+     *
+     * @return a default TaskInterface instance
+     */
+    static TaskInterface<Object> defaultInstance() {
+        return new TaskInterface<>() {
+        };
+    }
+
+    /**
      * Starts the task. Implementations should define the logic of the task within this method.
      *
      * <p>By default, overriding this method will schedule the task asynchronously, depending on the

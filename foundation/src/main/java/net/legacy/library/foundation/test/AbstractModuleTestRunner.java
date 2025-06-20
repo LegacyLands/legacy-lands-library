@@ -104,7 +104,7 @@ public abstract class AbstractModuleTestRunner {
      */
     protected void beforeTests() throws Exception {
         // Default implementation does nothing
-        // Subclasses can override for custom setup
+        // Subclass can override for custom setup
     }
 
     /**
@@ -118,7 +118,7 @@ public abstract class AbstractModuleTestRunner {
      */
     protected void afterTests() throws Exception {
         // Default implementation does nothing
-        // Subclasses can override for custom cleanup
+        // Subclass can override for custom cleanup
     }
 
     /**
@@ -130,7 +130,7 @@ public abstract class AbstractModuleTestRunner {
      */
     protected void finalizeTests() {
         // Default implementation does nothing
-        // Subclasses can override for critical cleanup
+        // Subclass can override for critical cleanup
     }
 
     /**
@@ -143,11 +143,8 @@ public abstract class AbstractModuleTestRunner {
      * @return the success result summary
      */
     protected TestResultSummary generateSuccessResult(long duration) {
-        String message = new StringBuilder()
-                .append("All ")
-                .append(moduleName)
-                .append(" module tests passed successfully")
-                .toString();
+        String message = "All " + moduleName + " module tests passed successfully";
+
         return TestResultSummary.withMetadata(
                 moduleName,
                 true,
@@ -168,11 +165,7 @@ public abstract class AbstractModuleTestRunner {
      * @return the failure result summary
      */
     protected TestResultSummary generateFailureResult(long duration, Exception exception) {
-        String message = new StringBuilder()
-                .append(moduleName)
-                .append(" module tests failed: ")
-                .append(exception.getMessage())
-                .toString();
+        String message = moduleName + " module tests failed: " + exception.getMessage();
 
         TestResultSummary result = TestResultSummary.withMetadata(
                 moduleName,
