@@ -69,10 +69,27 @@
     - 对 null 的处理策略；
     - 默认行为或返回值；
     - 抛出异常的触发条件与意义；
-7. 必须模仿已有项目注释中的语气、缩进、空行规则，不得混用不同风格。
-8. 如果使用接口、抽象类、继承等，重写的方法若没有需要注重的内容，则可以对形参、返回值、异常、描述等等使用 `{@inheritDoc}`。
-9. 禁止写没必要的 `Usage example`。
-10. 不需要为非 `public` 字段或方法写 Javadoc，除非真的有需要。
+7. 必须模仿已有项目注释中的语气、缩进、空行规则，不得混用不同风格；
+8. 如果使用接口、抽象类、继承等，重写的方法若没有需要注重的内容，则可以对形参、返回值、异常、描述等等使用 `{@inheritDoc}`；
+9. 禁止写没必要的 `Usage example`；
+10. 不需要为非 `public` 字段或方法写 Javadoc，除非真的有需要；
+11. 其他标签使用规范：
+    - `@see`：列出相关类、接口或方法，按出现顺序书写；
+    - `@since`：首次引入版本；
+    - `@deprecated`：标记过时元素，并使用 `@see` 指向替代方案；
+    - `@implSpec`：说明实现细节，供继承或实现者阅读；
+    - `@implNote`：记录实现者备注（性能、限制等），不影响规范语义；
+    - `@apiNote`：公开 API 额外说明（示例、用法注意事项等）；
+12. 内联标签使用规范：
+    - `{@link ClassName#memberName}`：在描述中插入可点击引用，避免冗长全名。例如：  
+      `Parses the given {@link java.nio.file.Path} instance.`
+    - `{@code ...}`：在描述或列表中嵌入等宽代码片段。例如：  
+      `Returns {@code null} if the input is empty.`
+    - `{@literal ...}`：插入按字面量输出的字符串，避免被解析为 HTML/标签：  
+      `Converts the string {@literal "<none>"} to an empty value.`
+    - `{@value #CONSTANT}`：引用常量值，保持文档与代码同步。
+13. 标题、列表、段落等 HTML 标签仅在确实提升可读性时使用，禁止为追求样式而滥用。
+14. 使用任何标签或 HTML 元素时应遵循 "必要且充分" 原则；
 
 ## 7. Git 提交规范（Commit Message）
 
