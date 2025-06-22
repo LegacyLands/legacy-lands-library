@@ -89,12 +89,18 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
         Validate.notNull(v8, "V8 is not initialized.");
 
         try {
-            v8.executeVoidScript(script);
-            V8Function function = (V8Function) v8.get(functionName);
-            if (function == null || function.isUndefined()) {
-                throw new ScriptException("Function '" + functionName + "' is not defined.");
+            // Execute script if provided
+            if (script != null && !script.trim().isEmpty()) {
+                v8.executeVoidScript(script);
             }
-
+            
+            // Get the function
+            Object functionObj = v8.get(functionName);
+            if (functionObj == null || !(functionObj instanceof V8Function)) {
+                throw new ScriptException("Function '" + functionName + "' is not defined or not a function.");
+            }
+            
+            V8Function function = (V8Function) functionObj;
             V8Array parameters = new V8Array(v8);
             try {
                 Stream.of(args).forEach(arg -> pushToV8Array(parameters, arg));
@@ -244,7 +250,25 @@ public class V8ScriptEngine implements ScriptEngineInterface, AutoCloseable {
     }
 
     private void pushToV8Array(V8Array v8Array, Object value) {
-        pushToV8(v8Array, "", value);
+        switch (value) {
+            case null -> v8Array.pushNull();
+            case Integer i -> v8Array.push(i);
+            case Double d -> v8Array.push(d);
+            case Boolean b -> v8Array.push(b);
+            case String s -> v8Array.push(s);
+            case V8Value vv -> {
+                switch (vv) {
+                    case V8TypedArray vta -> v8Array.push(vta);
+                    case V8Array va -> v8Array.push(va);
+                    case V8Function vf -> v8Array.push(vf);
+                    case V8Object vo -> v8Array.push(vo);
+                    default ->
+                            throw new IllegalArgumentException("Unsupported V8Value subtype in pushToV8Array: " + vv.getClass().getName());
+                }
+            }
+            default ->
+                    throw new IllegalArgumentException("Unsupported type in pushToV8Array: " + value.getClass().getName());
+        }
     }
 
     private Object convertV8Result(Object result) {

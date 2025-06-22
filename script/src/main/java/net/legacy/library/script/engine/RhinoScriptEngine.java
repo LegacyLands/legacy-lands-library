@@ -181,7 +181,11 @@ public class RhinoScriptEngine implements ScriptEngineInterface {
      */
     @Override
     public Object getGlobalVariable(String name) {
-        return Context.jsToJava(ScriptableObject.getProperty(rootScope, name), Object.class);
+        Object property = ScriptableObject.getProperty(rootScope, name);
+        if (property == Scriptable.NOT_FOUND) {
+            return null;
+        }
+        return Context.jsToJava(property, Object.class);
     }
 
     /**

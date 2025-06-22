@@ -17,6 +17,7 @@ fairy {
     fairyPackage.set("io.fairyproject")
 
     bukkitProperties().depends.add("fairy-lib-plugin")
+    bukkitProperties().depends.add("foundation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -24,6 +25,9 @@ fairy {
 
 // Dependencies
 dependencies {
+    // Foundation module
+    compileOnly(project(":foundation"))
+    
     // https://mvnrepository.com/artifact/org.openjdk.nashorn/nashorn-core
     implementation("org.openjdk.nashorn:nashorn-core:15.6")
 
