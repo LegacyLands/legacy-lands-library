@@ -1,4 +1,4 @@
-package net.legacy.library.annotation;
+package net.legacy.library.foundation;
 
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.InjectableComponent;

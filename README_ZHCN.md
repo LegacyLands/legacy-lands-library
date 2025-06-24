@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./logo.png">
+    <img src="./logo.png" alt="legacy-lands-library-logo">
     <br /><br />
     <a href="https://app.codacy.com/gh/LegacyLands/legacy-lands-library/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/cccd526f9bc94aaabc990dd65920cd21"/></a>
     <a><img alt="Issues" src="https://img.shields.io/github/issues/LegacyLands/legacy-lands-library"></a>
@@ -12,8 +12,8 @@
 
 ## 概述
 
-这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的综合性库，为现代 Minecraft
-插件开发提供了必要的工具和实用程序。它是跨平台的，支持 Spigot Paper 和 Folia。
+这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的模块化插件工具库，采用模块化设计，深度利用 Java 21 现代化特性。
+为现代 Minecraft 插件开发提供了必要的工具和实用程序，跨平台支持 Spigot、Paper 和 Folia。
 
 ## 核心模块
 

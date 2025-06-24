@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./logo.png">
+    <img src="./logo.png" alt="legacy-lands-library-logo">
     <br /><br />
     <a href="https://app.codacy.com/gh/LegacyLands/legacy-lands-library/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/cccd526f9bc94aaabc990dd65920cd21"/></a>
     <a><img alt="Issues" src="https://img.shields.io/github/issues/LegacyLands/legacy-lands-library"></a>
@@ -12,8 +12,8 @@
 
 ## Overview
 
-A comprehensive library built on [Fairy Framework](https://github.com/FairyProject/fairy), providing essential tools and
-utilities for modern Minecraft plugin development. It is cross-platform and supports Spigot Paper and Folia.
+A Modular Plugin Toolkit built on [Fairy Framework](https://github.com/FairyProject/fairy), featuring modular design and leveraging modern Java 21 features.
+It provides essential tools and utilities for modern Minecraft plugin development with cross-platform support for Spigot, Paper, and Folia.
 
 ## Core Modules
 
