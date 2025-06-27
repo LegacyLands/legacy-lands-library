@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: task-scheduler
+  labels:
+    name: task-scheduler
+    app.kubernetes.io/name: task-scheduler
+    app.kubernetes.io/part-of: legacy-lands-library

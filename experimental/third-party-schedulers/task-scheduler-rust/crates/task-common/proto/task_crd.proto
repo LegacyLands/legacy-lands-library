@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package taskscheduler.crd;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/any.proto";
+
+// Task CRD spec for Kubernetes
+message TaskSpec {
+  // Task method name
+  string method = 1;
+  
+  // Task parameters
+  repeated google.protobuf.Any args = 2;
+  
+  // Dependencies on other tasks
+  repeated string dependencies = 3;
+  
+  // Priority (0-100, higher is more important)
+  int32 priority = 4;
+  
+  // Retry policy
+  RetryPolicy retry_policy = 5;
+  
+  // Resource requirements
+  ResourceRequirements resources = 6;
+  
+  // Timeout for task execution
+  google.protobuf.Duration timeout = 7;
+  
+  // Node selector for task execution
+  map<string, string> node_selector = 8;
+  
+  // Plugin configuration
+  PluginConfig plugin = 9;
+}
+
+// Task status in Kubernetes
+message TaskStatus {
+  // Current phase of the task
+  TaskPhase phase = 1;
+  
+  // Status message
+  string message = 2;
+  
+  // Start time
+  google.protobuf.Timestamp start_time = 3;
+  
+  // Completion time
+  google.protobuf.Timestamp completion_time = 4;
+  
+  // Job reference
+  string job_name = 5;
+  
+  // Result of the task (if completed)
+  string result = 6;
+  
+  // Number of retries attempted
+  int32 retries = 7;
+  
+  // Worker node that executed the task
+  string worker_node = 8;
+  
+  // Conditions
+  repeated TaskCondition conditions = 9;
+}
+
+enum TaskPhase {
+  PENDING = 0;
+  QUEUED = 1;
+  RUNNING = 2;
+  SUCCEEDED = 3;
+  FAILED = 4;
+  CANCELLED = 5;
+}
+
+message TaskCondition {
+  string type = 1;
+  string status = 2;
+  google.protobuf.Timestamp last_transition_time = 3;
+  string reason = 4;
+  string message = 5;
+}
+
+message RetryPolicy {
+  // Maximum number of retries
+  int32 max_retries = 1;
+  
+  // Backoff strategy
+  BackoffStrategy backoff_strategy = 2;
+  
+  // Initial backoff duration
+  google.protobuf.Duration initial_backoff = 3;
+  
+  // Maximum backoff duration
+  google.protobuf.Duration max_backoff = 4;
+  
+  // Backoff multiplier
+  double backoff_multiplier = 5;
+}
+
+enum BackoffStrategy {
+  FIXED = 0;
+  EXPONENTIAL = 1;
+  LINEAR = 2;
+}
+
+message ResourceRequirements {
+  // CPU requirements (e.g., "100m", "2")
+  string cpu_request = 1;
+  string cpu_limit = 2;
+  
+  // Memory requirements (e.g., "128Mi", "2Gi")
+  string memory_request = 3;
+  string memory_limit = 4;
+  
+  // Ephemeral storage requirements
+  string ephemeral_storage_request = 5;
+  string ephemeral_storage_limit = 6;
+}
+
+message PluginConfig {
+  // Plugin name
+  string name = 1;
+  
+  // Plugin version
+  string version = 2;
+  
+  // ConfigMap containing the plugin
+  string config_map = 3;
+  
+  // PVC containing the plugin
+  string pvc = 4;
+  
+  // Additional plugin configuration
+  map<string, string> config = 5;
+}
+
+// Message queue events
+message TaskEvent {
+  // Event ID
+  string id = 1;
+  
+  // Task ID
+  string task_id = 2;
+  
+  // Event type
+  EventType type = 3;
+  
+  // Event timestamp
+  google.protobuf.Timestamp timestamp = 4;
+  
+  // Event payload
+  google.protobuf.Any payload = 5;
+  
+  // Source of the event
+  string source = 6;
+}
+
+enum EventType {
+  TASK_CREATED = 0;
+  TASK_QUEUED = 1;
+  TASK_ASSIGNED = 2;
+  TASK_STARTED = 3;
+  TASK_COMPLETED = 4;
+  TASK_FAILED = 5;
+  TASK_RETRYING = 6;
+  TASK_CANCELLED = 7;
+}

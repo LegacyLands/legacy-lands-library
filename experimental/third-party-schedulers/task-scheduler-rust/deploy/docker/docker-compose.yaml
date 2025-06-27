@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # NATS JetStream
+  nats:
+    image: nats:2.10-alpine
+    container_name: task-scheduler-nats
+    ports:
+      - "4222:4222"   # Client connections
+      - "6222:6222"   # Cluster connections
+      - "8222:8222"   # HTTP monitoring
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: task-scheduler-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - task-scheduler-net
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: task-scheduler-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - task-scheduler-net
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: task-scheduler-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - task-scheduler-net
+    depends_on:
+      - prometheus
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: task-scheduler-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # PostgreSQL for persistent storage (optional)
+  postgres:
+    image: postgres:16-alpine
+    container_name: task-scheduler-postgres
+    environment:
+      POSTGRES_DB: task_scheduler
+      POSTGRES_USER: task_scheduler
+      POSTGRES_PASSWORD: task_scheduler_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U task_scheduler"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nats-data:
+  prometheus-data:
+  grafana-data:
+  redis-data:
+  postgres-data:
+
+networks:
+  task-scheduler-net:
+    driver: bridge

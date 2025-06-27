@@ -1,0 +1,8 @@
+{{- if .Values.namespace.create -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "task-scheduler.namespace" . }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+{{- end -}}

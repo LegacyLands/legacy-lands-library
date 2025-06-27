@@ -1,0 +1,41 @@
+apiVersion: v2
+name: task-scheduler
+description: A Kubernetes-native distributed task scheduler with Rust
+type: application
+
+# Chart version - increment for each release
+version: 0.1.0
+
+# Application version
+appVersion: "0.2.0"
+
+keywords:
+  - task-scheduler
+  - distributed-computing
+  - rust
+  - kubernetes-operator
+  - job-scheduler
+
+home: https://github.com/LegacyLands/legacy-lands-library
+sources:
+  - https://github.com/LegacyLands/legacy-lands-library/tree/main/experimental/third-party-schedulers/task-scheduler-rust
+
+maintainers:
+  - name: Legacy Lands Team
+    email: team@legacylands.io
+
+dependencies:
+  - name: nats
+    version: "1.2.5"
+    repository: https://nats-io.github.io/k8s/helm/charts/
+    condition: nats.enabled
+
+annotations:
+  # Supported Kubernetes versions
+  "artifacthub.io/prerelease": "false"
+  "artifacthub.io/license": "MIT OR Apache-2.0"
+  "artifacthub.io/operator": "true"
+  "artifacthub.io/operatorCapabilities": "Full Lifecycle"
+  "artifacthub.io/recommendations": |
+    - url: https://prometheus.io/docs/prometheus/latest/installation/
+    - url: https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/

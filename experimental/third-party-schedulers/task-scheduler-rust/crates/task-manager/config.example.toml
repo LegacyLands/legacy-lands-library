@@ -1,0 +1,33 @@
+# Task Manager Configuration
+
+[server]
+grpc_address = "0.0.0.0:50051"
+metrics_address = "0.0.0.0:9000"
+tls_enabled = false
+# tls_cert_path = "/path/to/server.crt"
+# tls_key_path = "/path/to/server.key"
+# tls_ca_path = "/path/to/ca.crt"
+max_concurrent_requests = 1000
+
+[storage]
+backend = "memory"  # Options: memory, postgresql, mongodb
+cache_size = 10000
+# postgres_url = "postgres://user:password@localhost/taskdb"
+# mongodb_url = "mongodb://localhost:27017/taskdb"
+
+[queue]
+nats_url = "nats://localhost:4222"
+jetstream_enabled = true
+queue_prefix = "tasks"
+
+[kubernetes]
+namespace = "task-scheduler"
+enabled = false
+# kubeconfig_path = "/path/to/kubeconfig"
+
+[observability]
+tracing_enabled = true
+otlp_endpoint = "http://localhost:4317"
+service_name = "task-manager"
+log_level = "info"
+sampling_ratio = 1.0

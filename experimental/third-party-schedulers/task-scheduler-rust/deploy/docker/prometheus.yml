@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Task Manager metrics
+  - job_name: 'task-manager'
+    static_configs:
+      - targets: ['task-manager:9000']
+        labels:
+          service: 'task-manager'
+          
+  # Task Worker metrics
+  - job_name: 'task-worker'
+    static_configs:
+      - targets: ['task-worker-1:9000', 'task-worker-2:9000', 'task-worker-3:9000']
+        labels:
+          service: 'task-worker'
+          
+  # Task Operator metrics
+  - job_name: 'task-operator'
+    static_configs:
+      - targets: ['task-operator:9000']
+        labels:
+          service: 'task-operator'
+          
+  # NATS metrics
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats:8222']
+        labels:
+          service: 'nats'
+    metrics_path: '/metrics'

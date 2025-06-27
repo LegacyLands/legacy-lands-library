@@ -1,0 +1,156 @@
+---
+# NATS ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  namespace: task-scheduler
+data:
+  nats.conf: |
+    # NATS Server Configuration
+    
+    # Server name
+    server_name: $POD_NAME
+    
+    # Client port
+    port: 4222
+    
+    # HTTP monitoring port
+    http_port: 8222
+    
+    # Cluster configuration
+    cluster {
+      name: task-scheduler-cluster
+      port: 6222
+      
+      routes: [
+        nats://nats-0.nats.task-scheduler.svc.cluster.local:6222
+      ]
+      
+      cluster_advertise: $CLUSTER_ADVERTISE
+      connect_retries: 30
+    }
+    
+    # JetStream configuration
+    jetstream {
+      store_dir: /data/jetstream
+      max_memory_store: 1Gi
+      max_file_store: 10Gi
+    }
+    
+    # Logging
+    debug: false
+    trace: false
+    logtime: true
+    
+    # Limits
+    max_connections: 10000
+    max_subscriptions: 1000000
+    max_payload: 8MB
+    
+    # Write deadline
+    write_deadline: "10s"
+---
+# NATS Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: task-scheduler
+  labels:
+    app: nats
+spec:
+  clusterIP: None
+  ports:
+  - name: client
+    port: 4222
+    targetPort: 4222
+  - name: cluster
+    port: 6222
+    targetPort: 6222
+  - name: monitor
+    port: 8222
+    targetPort: 8222
+  selector:
+    app: nats
+---
+# NATS StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  namespace: task-scheduler
+  labels:
+    app: nats
+spec:
+  serviceName: nats
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+      - name: nats
+        image: nats:2.10-alpine
+        ports:
+        - containerPort: 4222
+          name: client
+        - containerPort: 6222
+          name: cluster
+        - containerPort: 8222
+          name: monitor
+        command:
+        - nats-server
+        - -c
+        - /etc/nats/nats.conf
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CLUSTER_ADVERTISE
+          value: $(POD_NAME).nats.$(POD_NAMESPACE).svc.cluster.local
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nats
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: monitor
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz?js-enabled-only=true
+            port: monitor
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: nats-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi

@@ -1,0 +1,155 @@
+---
+# ServiceAccount for Task Manager
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: task-manager
+  namespace: task-scheduler
+---
+# ServiceAccount for Task Worker
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: task-worker
+  namespace: task-scheduler
+---
+# ServiceAccount for Task Operator
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: task-operator
+  namespace: task-scheduler
+---
+# ClusterRole for Task Manager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: task-manager
+rules:
+# Access to Task CRD
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/status"]
+  verbs: ["get", "update", "patch"]
+# Access to events
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+# Access to ConfigMaps for configuration
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Access to Secrets for credentials
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+# ClusterRole for Task Worker
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: task-worker
+rules:
+# Access to Jobs
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Access to Pods
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+# Access to ConfigMaps for plugins
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Access to PVCs for plugins
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
+# Access to Task CRD
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/status"]
+  verbs: ["get", "update", "patch"]
+---
+# ClusterRole for Task Operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: task-operator
+rules:
+# Full access to Task CRD
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks"]
+  verbs: ["*"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/status"]
+  verbs: ["*"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/finalizers"]
+  verbs: ["update"]
+# Access to Jobs
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Access to Pods
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+# Access to events
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+# Leader election
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# ClusterRoleBinding for Task Manager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: task-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: task-manager
+subjects:
+- kind: ServiceAccount
+  name: task-manager
+  namespace: task-scheduler
+---
+# ClusterRoleBinding for Task Worker
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: task-worker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: task-worker
+subjects:
+- kind: ServiceAccount
+  name: task-worker
+  namespace: task-scheduler
+---
+# ClusterRoleBinding for Task Operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: task-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: task-operator
+subjects:
+- kind: ServiceAccount
+  name: task-operator
+  namespace: task-scheduler

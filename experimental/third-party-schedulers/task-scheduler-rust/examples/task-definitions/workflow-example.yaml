@@ -1,0 +1,71 @@
+apiVersion: taskscheduler.io/v1
+kind: Task
+metadata:
+  name: data-processing-workflow
+  namespace: default
+spec:
+  # Step 1: Fetch data
+  method: fetch_data
+  args:
+    - type: string
+      value: "https://api.example.com/data"
+  timeout: 60
+  retries: 3
+  async: true
+---
+apiVersion: taskscheduler.io/v1
+kind: Task
+metadata:
+  name: transform-data
+  namespace: default
+spec:
+  # Step 2: Transform the fetched data
+  method: transform
+  args:
+    - type: string
+      value: "@data-processing-workflow"  # Reference to previous task result
+  dependencies:
+    - data-processing-workflow
+  timeout: 120
+  retries: 2
+  async: true
+---
+apiVersion: taskscheduler.io/v1
+kind: Task
+metadata:
+  name: analyze-data
+  namespace: default
+spec:
+  # Step 3: Analyze transformed data
+  method: analyze
+  args:
+    - type: string
+      value: "@transform-data"
+  dependencies:
+    - transform-data
+  timeout: 180
+  retries: 2
+  async: true
+---
+apiVersion: taskscheduler.io/v1
+kind: Task
+metadata:
+  name: generate-report
+  namespace: default
+spec:
+  # Step 4: Generate final report
+  method: generate_report
+  args:
+    - type: string
+      value: "@analyze-data"
+  dependencies:
+    - analyze-data
+  timeout: 60
+  retries: 3
+  async: true
+  # Send notification when complete
+  onComplete:
+    method: send_notification
+    args:
+      - type: string
+        value: "Report generation complete"

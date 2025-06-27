@@ -1,0 +1,35 @@
+# Task Worker Configuration
+
+[worker]
+# Worker ID (defaults to hostname-pid)
+# worker_id = "worker-1"
+max_concurrent_tasks = 10
+metrics_address = "0.0.0.0:9001"
+mode = "worker"  # Options: worker, job
+
+[queue]
+nats_url = "nats://localhost:4222"
+batch_size = 10
+fetch_timeout_seconds = 30
+
+[kubernetes]
+enabled = false
+namespace = "task-scheduler"
+worker_image = "task-worker:latest"
+service_account = "task-worker"
+# kubeconfig_path = "/path/to/kubeconfig"
+
+[plugins]
+plugin_dirs = [
+    "/usr/local/lib/task-scheduler/plugins",
+    "./plugins"
+]
+auto_load = true
+plugin_patterns = ["*.so", "*.dll", "*.dylib"]
+
+[observability]
+tracing_enabled = true
+otlp_endpoint = "http://localhost:4317"
+service_name = "task-worker"
+log_level = "info"
+sampling_ratio = 1.0

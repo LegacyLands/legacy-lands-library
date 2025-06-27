@@ -1,0 +1,68 @@
+# Build stage
+FROM rust:latest AS builder
+
+# Configure Aliyun mirror for faster downloads in China
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+
+# Build only dependencies first (for better caching)
+RUN cargo build --release -p task-worker --no-default-features
+
+# Build the application
+RUN cargo build --release -p task-worker
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Configure Aliyun mirror for faster downloads in China
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash appuser
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/target/release/task-worker /app/task-worker
+
+# Copy default configuration
+COPY crates/task-worker/config.example.toml /app/config.toml
+
+# Install curl for health check before switching user
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Create plugin directory
+RUN mkdir -p /app/plugins && chown -R appuser:appuser /app
+
+USER appuser
+
+# Expose metrics port
+EXPOSE 9001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/bin/sh", "-c", "curl -f http://localhost:9001/health || exit 1"]
+
+# Run the application
+ENTRYPOINT ["/app/task-worker"]
+CMD ["--config", "/app/config.toml"]

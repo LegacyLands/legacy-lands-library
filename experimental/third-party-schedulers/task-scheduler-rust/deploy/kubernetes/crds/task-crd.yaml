@@ -1,0 +1,232 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tasks.taskscheduler.io
+spec:
+  group: taskscheduler.io
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required:
+            - method
+            properties:
+              method:
+                type: string
+                description: The method/function to execute
+              args:
+                type: array
+                description: Arguments for the task
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    value:
+                      type: string
+              dependencies:
+                type: array
+                description: List of task IDs this task depends on
+                items:
+                  type: string
+              priority:
+                type: integer
+                description: Task priority (0-100)
+                minimum: 0
+                maximum: 100
+                default: 50
+              queueName:
+                type: string
+                description: Queue to submit the task to
+                default: default
+              retryConfig:
+                type: object
+                description: Retry configuration
+                properties:
+                  maxRetries:
+                    type: integer
+                    minimum: 0
+                    default: 3
+                  backoffStrategy:
+                    type: string
+                    enum: [fixed, exponential, linear]
+                    default: exponential
+                  initialBackoffMs:
+                    type: integer
+                    minimum: 0
+                    default: 1000
+                  maxBackoffMs:
+                    type: integer
+                    minimum: 0
+                    default: 60000
+              resources:
+                type: object
+                description: Resource requirements
+                properties:
+                  cpuRequest:
+                    type: string
+                  cpuLimit:
+                    type: string
+                  memoryRequest:
+                    type: string
+                  memoryLimit:
+                    type: string
+              timeout:
+                type: integer
+                description: Task timeout in seconds
+                minimum: 0
+              metadata:
+                type: object
+                description: Task metadata
+                additionalProperties:
+                  type: string
+              plugin:
+                type: object
+                description: Plugin configuration
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                  configMap:
+                    type: string
+                  pvc:
+                    type: string
+                  config:
+                    type: object
+                    additionalProperties:
+                      type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum: [Pending, Queued, Running, Succeeded, Failed, Cancelled]
+              taskId:
+                type: string
+              workerId:
+                type: string
+              startTime:
+                type: string
+                format: date-time
+              completionTime:
+                type: string
+                format: date-time
+              result:
+                type: string
+              error:
+                type: string
+              retries:
+                type: integer
+              lastUpdated:
+                type: string
+                format: date-time
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Method
+      type: string
+      jsonPath: .spec.method
+    - name: Status
+      type: string
+      jsonPath: .status.phase
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    - name: Duration
+      type: string
+      jsonPath: .status.duration
+  scope: Namespaced
+  names:
+    plural: tasks
+    singular: task
+    kind: Task
+    shortNames:
+    - tsk
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: taskresults.taskscheduler.io
+spec:
+  group: taskscheduler.io
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              taskName:
+                type: string
+                description: Reference to the Task resource
+              taskId:
+                type: string
+                description: The internal task ID
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum: [Succeeded, Failed]
+              result:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              error:
+                type: string
+              executionTime:
+                type: integer
+                description: Execution time in milliseconds
+              completedAt:
+                type: string
+                format: date-time
+              worker:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  node:
+                    type: string
+              metrics:
+                type: object
+                properties:
+                  cpuUsage:
+                    type: number
+                  memoryUsage:
+                    type: integer
+                  queueTimeMs:
+                    type: integer
+                  executionTimeMs:
+                    type: integer
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Task
+      type: string
+      jsonPath: .spec.taskName
+    - name: Status
+      type: string
+      jsonPath: .status.phase
+    - name: Duration
+      type: string
+      jsonPath: .status.executionTime
+    - name: Worker
+      type: string
+      jsonPath: .status.worker.id
+  scope: Namespaced
+  names:
+    plural: taskresults
+    singular: taskresult
+    kind: TaskResult
+    shortNames:
+    - tskr

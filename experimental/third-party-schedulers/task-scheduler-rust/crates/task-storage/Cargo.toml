@@ -1,0 +1,51 @@
+[package]
+name = "task-storage"
+version = "0.2.0"
+edition = "2021"
+authors = ["Legacy Lands <dev@legacylands.io>"]
+description = "Task result storage and persistence"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Database drivers
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "json", "uuid", "chrono"] }
+mongodb = { version = "3.1", optional = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+
+# Async utilities
+futures = "0.3"
+
+# Configuration
+config = "0.14"
+
+# Other
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Internal dependencies
+task-common = { path = "../task-common" }
+
+[features]
+default = ["postgres"]
+postgres = []
+mongodb = ["dep:mongodb"]
+all-stores = ["postgres", "mongodb"]
+
+[dev-dependencies]
+testcontainers = "0.23"
+tokio-test = "0.4"
+serial_test = "3.1"
+env_logger = "0.11"

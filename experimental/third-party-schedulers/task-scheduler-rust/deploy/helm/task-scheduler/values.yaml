@@ -1,0 +1,355 @@
+# Default values for task-scheduler
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  # Global image registry
+  imageRegistry: ""
+  # Global image pull secrets
+  imagePullSecrets: []
+  # Storage class for persistent volumes
+  storageClass: ""
+
+# Namespace configuration
+namespace:
+  # Create namespace if it doesn't exist
+  create: true
+  # Namespace name
+  name: task-scheduler
+
+# Task Manager configuration
+taskManager:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: task-manager
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    grpcPort: 50051
+    metricsPort: 9000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  
+  # Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity
+  affinity: {}
+  
+  # Configuration
+  config:
+    storage:
+      backend: memory  # memory, postgresql, mongodb
+      cacheSize: 10000
+    grpc:
+      maxConcurrentRequests: 1000
+      tls:
+        enabled: false
+
+# Task Worker configuration
+taskWorker:
+  enabled: true
+  # Deployment type: deployment or daemonset
+  deploymentType: deployment
+  replicaCount: 3
+  
+  image:
+    repository: task-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    metricsPort: 9001
+  
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  
+  # Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  
+  # Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+  
+  # Autoscaling configuration (only for deployment type)
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations (for daemonset)
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+    operator: Exists
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
+  
+  # Affinity
+  affinity: {}
+  
+  # Configuration
+  config:
+    maxConcurrentTasks: 10
+    plugins:
+      autoLoad: true
+      dirs:
+      - /plugins
+
+# Task Operator configuration
+taskOperator:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: task-operator
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    metricsPort: 9002
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  
+  # Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity
+  affinity: {}
+
+# NATS configuration
+nats:
+  enabled: true
+  
+  config:
+    cluster:
+      enabled: true
+      replicas: 3
+    jetstream:
+      enabled: true
+      memStorage:
+        enabled: true
+        size: 1Gi
+      fileStorage:
+        enabled: true
+        size: 10Gi
+        storageDirectory: /data
+    
+  natsBox:
+    enabled: false
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Observability configuration
+observability:
+  # Tracing configuration
+  tracing:
+    enabled: true
+    endpoint: "http://jaeger.task-scheduler.svc.cluster.local:4317"
+    samplingRatio: 1.0
+  
+  # Metrics configuration
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+      scrapeTimeout: 10s
+  
+  # Logging configuration
+  logging:
+    level: info
+    format: json
+
+# Monitoring configuration
+monitoring:
+  # Namespace where monitoring components are installed
+  namespace: monitoring
+  
+  # Grafana dashboards
+  grafana:
+    enabled: true
+    dashboards:
+      # Enable automatic dashboard provisioning
+      enabled: true
+      # Labels to add to dashboard ConfigMaps
+      labels:
+        grafana_dashboard: "1"
+  
+  # Prometheus configuration
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      labels:
+        prometheus: kube-prometheus
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: task-scheduler.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          service: task-manager
+          port: 50051
+  tls: []
+  #  - secretName: task-scheduler-tls
+  #    hosts:
+  #      - task-scheduler.local
+
+# Service Account configuration
+serviceAccount:
+  # Specifies whether service accounts should be created
+  create: true
+  # Annotations to add to the service accounts
+  annotations: {}
+
+# RBAC configuration
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+
+# PostgreSQL configuration (optional)
+postgresql:
+  enabled: false
+  auth:
+    database: taskscheduler
+    username: taskscheduler
+    password: changeme
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# MongoDB configuration (optional)
+mongodb:
+  enabled: false
+  auth:
+    enabled: true
+    database: taskscheduler
+    username: taskscheduler
+    password: changeme
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# Redis configuration (optional)
+redis:
+  enabled: false
+  auth:
+    enabled: true
+    password: changeme
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Extra environment variables
+extraEnvVars: []
+# - name: CUSTOM_VAR
+#   value: "custom-value"
+
+# Extra volumes
+extraVolumes: []
+# - name: custom-volume
+#   configMap:
+#     name: custom-config
+
+# Extra volume mounts
+extraVolumeMounts: []
+# - name: custom-volume
+#   mountPath: /custom
+#   readOnly: true

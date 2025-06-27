@@ -1,0 +1,58 @@
+[package]
+name = "task-tests"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+
+[dependencies]
+task-common = { path = "../task-common", features = ["test-utils"] }
+task-manager = { path = "../task-manager" }
+task-worker = { path = "../task-worker" }
+task-operator = { path = "../task-operator" }
+task-plugins = { path = "../task-plugins" }
+task-storage = { path = "../task-storage" }
+task-scheduler = { path = "../task-scheduler" }
+
+# Testing dependencies
+tokio = { workspace = true, features = ["test-util", "macros"] }
+tokio-test = "0.4"
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+prost-types = { workspace = true }
+
+# Test utilities
+testcontainers = "0.23"
+reqwest = { version = "0.12", features = ["json"] }
+tonic = { workspace = true }
+prost = { workspace = true }
+async-nats = { workspace = true }
+k8s-openapi = { workspace = true }
+kube = { workspace = true }
+
+# Benchmarking
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+# Metrics
+prometheus = "0.13"
+
+# Encoding
+base64 = "0.21"
+
+# Tests will be auto-discovered from tests/ directory
+
+[[bench]]
+name = "task_throughput"
+harness = false
+[dev-dependencies]
+hdrhistogram = "7.5"
+tempfile = "3.8"
+notify = "6.1"

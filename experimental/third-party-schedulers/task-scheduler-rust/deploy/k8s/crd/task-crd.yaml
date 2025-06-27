@@ -1,0 +1,188 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tasks.taskscheduler.legacylands.io
+spec:
+  group: taskscheduler.legacylands.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required: ["method", "args"]
+            properties:
+              method:
+                type: string
+                description: Task method name
+              args:
+                type: array
+                description: Task parameters (JSON encoded)
+                items:
+                  x-kubernetes-preserve-unknown-fields: true
+              dependencies:
+                type: array
+                description: Dependencies on other tasks (by name)
+                items:
+                  type: string
+              priority:
+                type: integer
+                description: Priority (0-100, higher is more important)
+                minimum: 0
+                maximum: 100
+                default: 50
+              retryPolicy:
+                type: object
+                properties:
+                  maxRetries:
+                    type: integer
+                    minimum: 0
+                    default: 3
+                  backoffStrategy:
+                    type: string
+                    enum: ["Fixed", "Exponential", "Linear"]
+                    default: "Exponential"
+                  initialBackoffSeconds:
+                    type: integer
+                    minimum: 1
+                    default: 1
+                  maxBackoffSeconds:
+                    type: integer
+                    minimum: 1
+                    default: 300
+                  backoffMultiplier:
+                    type: number
+                    minimum: 1.0
+                    default: 2.0
+              resources:
+                type: object
+                properties:
+                  cpuRequest:
+                    type: string
+                    pattern: '^(\d+m|\d+(\.\d+)?)$'
+                  cpuLimit:
+                    type: string
+                    pattern: '^(\d+m|\d+(\.\d+)?)$'
+                  memoryRequest:
+                    type: string
+                    pattern: '^(\d+([KMGTPE]i?)?)?$'
+                  memoryLimit:
+                    type: string
+                    pattern: '^(\d+([KMGTPE]i?)?)?$'
+                  ephemeralStorageRequest:
+                    type: string
+                    pattern: '^(\d+([KMGTPE]i?)?)?$'
+                  ephemeralStorageLimit:
+                    type: string
+                    pattern: '^(\d+([KMGTPE]i?)?)?$'
+              timeoutSeconds:
+                type: integer
+                minimum: 1
+                default: 3600
+              nodeSelector:
+                type: object
+                additionalProperties:
+                  type: string
+              plugin:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                  configMap:
+                    type: string
+                  pvc:
+                    type: string
+                  config:
+                    type: object
+                    additionalProperties:
+                      type: string
+              metadata:
+                type: object
+                additionalProperties:
+                  type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum: ["Pending", "Queued", "Running", "Succeeded", "Failed", "Cancelled"]
+              message:
+                type: string
+              startTime:
+                type: string
+                format: date-time
+              completionTime:
+                type: string
+                format: date-time
+              jobRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                  uid:
+                    type: string
+              result:
+                x-kubernetes-preserve-unknown-fields: true
+              error:
+                type: string
+              retryCount:
+                type: integer
+                minimum: 0
+                default: 0
+              workerNode:
+                type: string
+              metrics:
+                type: object
+                properties:
+                  queueTimeMs:
+                    type: integer
+                  executionTimeMs:
+                    type: integer
+                  cpuUsage:
+                    type: number
+                  memoryUsage:
+                    type: integer
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string
+    additionalPrinterColumns:
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Method
+      type: string
+      jsonPath: .spec.method
+    - name: Priority
+      type: integer
+      jsonPath: .spec.priority
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+  scope: Namespaced
+  names:
+    plural: tasks
+    singular: task
+    kind: Task
+    shortNames:
+    - tsk

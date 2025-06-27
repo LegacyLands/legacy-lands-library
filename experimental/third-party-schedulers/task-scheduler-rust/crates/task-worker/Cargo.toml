@@ -1,0 +1,76 @@
+[package]
+name = "task-worker"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+
+[[bin]]
+name = "task-worker"
+path = "src/main.rs"
+
+[dependencies]
+# Internal dependencies
+task-common = { path = "../task-common" }
+
+# Async runtime
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging and tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+opentelemetry = { workspace = true }
+
+# Kubernetes
+kube = { workspace = true }
+k8s-openapi = { workspace = true }
+
+# Message queue
+async-nats = { workspace = true }
+
+# Concurrency utilities
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+
+# CLI and configuration
+clap = { workspace = true }
+toml = "0.8"
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+humantime = { workspace = true }
+
+# Metrics
+prometheus = "0.13"
+axum = "0.8"
+
+# Plugin system
+libloading = "0.8"
+dlopen2 = "0.8"
+
+# System info
+sysinfo = "0.35"
+hostname = "0.4"
+num_cpus = "1.16"
+
+# Glob for plugin loading
+glob = "0.3"
+
+# File system watching for hot reload
+notify = "6.1"
+
+[dev-dependencies]
+tempfile = "3.8"

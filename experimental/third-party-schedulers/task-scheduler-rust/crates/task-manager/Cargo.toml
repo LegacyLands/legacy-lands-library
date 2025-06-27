@@ -1,0 +1,82 @@
+[package]
+name = "task-manager"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+
+[[bin]]
+name = "task-manager"
+path = "src/main.rs"
+
+[dependencies]
+# Internal dependencies
+task-common = { path = "../task-common" }
+
+# Async runtime
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+
+# gRPC
+tonic = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging and tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+opentelemetry = { workspace = true }
+
+# Kubernetes
+kube = { workspace = true }
+k8s-openapi = { workspace = true }
+
+# Message queue
+async-nats = { workspace = true }
+
+# Concurrency utilities
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+lru = { workspace = true }
+
+# CLI and configuration
+clap = { workspace = true }
+toml = "0.8"
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+humantime = { workspace = true }
+hostname = "0.4"
+
+# Metrics
+prometheus = "0.13"
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace"] }
+
+[build-dependencies]
+tonic-build = { workspace = true }
+
+[features]
+default = []
+test-utils = []
+
+[dev-dependencies]
+# For testing
+tokio-test = "0.4"
+proptest = "1.4"
+criterion = "0.5"
+task-common = { path = "../task-common", features = ["test-utils"] }

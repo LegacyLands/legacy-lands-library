@@ -1,0 +1,182 @@
+{{- if .Values.rbac.create -}}
+---
+# ServiceAccount for Task Manager
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-manager
+  namespace: {{ include "task-scheduler.namespace" . }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-manager
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+# ServiceAccount for Task Worker
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-worker
+  namespace: {{ include "task-scheduler.namespace" . }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-worker
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+# ServiceAccount for Task Operator
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-operator
+  namespace: {{ include "task-scheduler.namespace" . }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-operator
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+# ClusterRole for Task Manager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-manager
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+# ClusterRole for Task Worker
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-worker
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/status"]
+  verbs: ["get", "update", "patch"]
+---
+# ClusterRole for Task Operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-operator
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks"]
+  verbs: ["*"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/status"]
+  verbs: ["*"]
+- apiGroups: ["taskscheduler.legacylands.io"]
+  resources: ["tasks/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# ClusterRoleBinding for Task Manager
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-manager
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "task-scheduler.fullname" . }}-manager
+subjects:
+- kind: ServiceAccount
+  name: {{ include "task-scheduler.fullname" . }}-manager
+  namespace: {{ include "task-scheduler.namespace" . }}
+---
+# ClusterRoleBinding for Task Worker
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-worker
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "task-scheduler.fullname" . }}-worker
+subjects:
+- kind: ServiceAccount
+  name: {{ include "task-scheduler.fullname" . }}-worker
+  namespace: {{ include "task-scheduler.namespace" . }}
+---
+# ClusterRoleBinding for Task Operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-operator
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "task-scheduler.fullname" . }}-operator
+subjects:
+- kind: ServiceAccount
+  name: {{ include "task-scheduler.fullname" . }}-operator
+  namespace: {{ include "task-scheduler.namespace" . }}
+{{- end }}

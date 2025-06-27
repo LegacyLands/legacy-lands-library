@@ -1,0 +1,128 @@
+{{- if .Values.taskManager.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-manager
+  namespace: {{ include "task-scheduler.namespace" . }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-manager
+spec:
+  replicas: {{ .Values.taskManager.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "task-scheduler.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: task-manager
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/task-manager-configmap.yaml") . | sha256sum }}
+        {{- if .Values.observability.metrics.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.taskManager.service.metricsPort | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
+      labels:
+        {{- include "task-scheduler.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: task-manager
+    spec:
+      serviceAccountName: {{ include "task-scheduler.fullname" . }}-manager
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.taskManager.podSecurityContext | nindent 8 }}
+      containers:
+      - name: task-manager
+        securityContext:
+          {{- toYaml .Values.taskManager.securityContext | nindent 10 }}
+        image: {{ include "task-scheduler.image" .Values.taskManager.image }}
+        imagePullPolicy: {{ .Values.taskManager.image.pullPolicy }}
+        args:
+        - --config
+        - /etc/task-manager/config.toml
+        ports:
+        - name: grpc
+          containerPort: {{ .Values.taskManager.service.grpcPort }}
+          protocol: TCP
+        - name: metrics
+          containerPort: {{ .Values.taskManager.service.metricsPort }}
+          protocol: TCP
+        env:
+        {{- include "task-scheduler.observabilityEnvVars" . | nindent 8 }}
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NATS_URL
+          value: {{ include "task-scheduler.natsUrl" . | quote }}
+        {{- with .Values.extraEnvVars }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/task-manager
+          readOnly: true
+        {{- with .Values.extraVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: metrics
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: metrics
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.taskManager.resources | nindent 10 }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "task-scheduler.fullname" . }}-manager-config
+      {{- with .Values.extraVolumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.taskManager.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.taskManager.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - {{ include "task-scheduler.name" . }}
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - task-manager
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- with .Values.taskManager.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

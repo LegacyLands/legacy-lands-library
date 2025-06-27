@@ -1,0 +1,17 @@
+{{- if .Values.monitoring.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-dashboards
+  namespace: {{ .Values.monitoring.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  task-scheduler-overview.json: |
+{{ .Files.Get "dashboards/task-scheduler-overview.json" | indent 4 }}
+  task-performance.json: |
+{{ .Files.Get "dashboards/task-performance.json" | indent 4 }}
+  worker-resources.json: |
+{{ .Files.Get "dashboards/worker-resources.json" | indent 4 }}
+{{- end }}

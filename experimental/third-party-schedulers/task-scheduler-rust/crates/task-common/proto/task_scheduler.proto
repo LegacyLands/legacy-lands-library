@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package taskscheduler;
+
+service TaskScheduler {
+  // Submit task (supports async/blocking mode)
+  rpc SubmitTask(TaskRequest) returns (TaskResponse);
+
+  // Query task result
+  rpc GetResult(ResultRequest) returns (ResultResponse);
+  
+  // Cancel a task
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+  
+  // Pause a task
+  rpc PauseTask(PauseTaskRequest) returns (PauseTaskResponse);
+  
+  // Resume a paused task
+  rpc ResumeTask(ResumeTaskRequest) returns (ResumeTaskResponse);
+  
+  // Get task status
+  rpc GetTaskStatus(TaskStatusRequest) returns (TaskStatusResponse);
+}
+
+// Task request
+message TaskRequest {
+  // Task id
+  string task_id = 1;
+
+  // Method name
+  string method = 2;
+
+  // Parameters
+  repeated google.protobuf.Any args = 3;
+
+  // Dependent task IDs
+  repeated string deps = 4;
+
+  // Whether to execute asynchronously
+  bool is_async = 5;
+}
+
+// Task response
+message TaskResponse {
+  string task_id = 1;
+  enum Status {
+    PENDING = 0;
+    SUCCESS = 1;
+    FAILED = 2;
+  }
+  Status status = 2;
+  string result = 3;
+}
+
+// Result query request
+message ResultRequest {
+  string task_id = 1;
+}
+
+// Result query response
+message ResultResponse {
+  TaskResponse.Status status = 1;
+  string result = 2;
+}
+
+// Custom message to represent a list of values
+message ListValue {
+  repeated google.protobuf.Any values = 1;
+}
+
+// Custom message to represent a map (string keys, any values)
+message MapValue {
+  map<string, google.protobuf.Any> fields = 1;
+}
+
+// Cancel task request
+message CancelTaskRequest {
+  string task_id = 1;
+  string reason = 2;
+}
+
+// Cancel task response
+message CancelTaskResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Pause task request
+message PauseTaskRequest {
+  string task_id = 1;
+}
+
+// Pause task response
+message PauseTaskResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Resume task request
+message ResumeTaskRequest {
+  string task_id = 1;
+}
+
+// Resume task response
+message ResumeTaskResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Task status request
+message TaskStatusRequest {
+  string task_id = 1;
+}
+
+// Task status response
+message TaskStatusResponse {
+  enum TaskState {
+    UNKNOWN = 0;
+    PENDING = 1;
+    QUEUED = 2;
+    RUNNING = 3;
+    PAUSED = 4;
+    COMPLETED = 5;
+    FAILED = 6;
+    CANCELLED = 7;
+  }
+  
+  TaskState state = 1;
+  string worker_id = 2;
+  int64 created_at = 3;
+  int64 started_at = 4;
+  int64 completed_at = 5;
+  int32 retry_count = 6;
+  string message = 7;
+} 
