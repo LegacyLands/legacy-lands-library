@@ -23,6 +23,10 @@ dashmap = { workspace = true }
 libloading = "0.8"
 async-trait = "0.1"
 
+# For WebAssembly support
+wasmtime = "28.0"
+wasmtime-wasi = "28.0"
+
 # For K8s integration
 kube = { workspace = true }
 k8s-openapi = { workspace = true }
@@ -31,3 +35,8 @@ k8s-openapi = { workspace = true }
 mockall = { workspace = true }
 tempfile = "3.8"
 futures = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[[example]]
+name = "wasm-task-example"
+path = "../../examples/wasm-task-example.rs"

@@ -20,6 +20,54 @@ services:
       timeout: 5s
       retries: 5
 
+  # Task Manager
+  task-manager:
+    image: task-scheduler/manager:latest
+    container_name: task-scheduler-manager
+    ports:
+      - "50052:50051"  # gRPC
+      - "9000:9000"    # Metrics
+    environment:
+      - NATS_URL=nats://nats:4222
+      - RUST_LOG=info
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Task Worker (can scale this service)
+  task-worker:
+    image: task-scheduler/worker:latest
+    environment:
+      - NATS_URL=nats://nats:4222
+      - MANAGER_URL=http://task-manager:50051
+      - RUST_LOG=debug
+      - LOG_LEVEL=debug
+    depends_on:
+      task-manager:
+        condition: service_healthy
+    networks:
+      - task-scheduler-net
+    deploy:
+      replicas: 3  # Run 3 workers by default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
   # Jaeger for distributed tracing
   jaeger:
     image: jaegertracing/all-in-one:1.56
@@ -59,8 +107,8 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ../grafana/datasources:/etc/grafana/provisioning/datasources
     networks:
       - task-scheduler-net
     depends_on:
@@ -101,6 +149,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
 
 volumes:
   nats-data:

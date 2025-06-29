@@ -1,0 +1,47 @@
+# Prometheus Stack values for task-scheduler monitoring
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    
+grafana:
+  enabled: true
+  adminPassword: admin
+  service:
+    type: NodePort
+    nodePort: 30030
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'task-scheduler'
+        orgId: 1
+        folder: 'Task Scheduler'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/task-scheduler
+  dashboardsConfigMaps:
+    task-scheduler: task-scheduler-dashboards
+    
+  additionalDataSources:
+  - name: Prometheus
+    type: prometheus
+    url: http://monitoring-kube-prometheus-prometheus:9090
+    access: proxy
+    isDefault: true
+
+alertmanager:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: false
+
+prometheusOperator:
+  enabled: true

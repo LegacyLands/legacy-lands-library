@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # NATS JetStream
+  nats:
+    image: nats:2.10-alpine
+    container_name: task-scheduler-nats
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: task-scheduler-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # PostgreSQL for persistent storage
+  postgres:
+    image: postgres:16-alpine
+    container_name: task-scheduler-postgres
+    environment:
+      POSTGRES_DB: task_scheduler
+      POSTGRES_USER: task_scheduler
+      POSTGRES_PASSWORD: task_scheduler_pass
+    ports:
+      - "5432:5432"
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U task_scheduler"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Task Manager
+  task-manager:
+    image: task-scheduler/manager:latest
+    container_name: task-scheduler-manager
+    ports:
+      - "50051:50051"  # gRPC
+      - "9000:9000"    # Metrics
+    environment:
+      - NATS_URL=nats://nats:4222
+      - RUST_LOG=info
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - task-scheduler-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Task Worker (can scale this service)
+  task-worker:
+    image: task-scheduler/worker:latest
+    environment:
+      - NATS_URL=nats://nats:4222
+      - MANAGER_URL=http://task-manager:50051
+      - RUST_LOG=info
+    depends_on:
+      task-manager:
+        condition: service_healthy
+    networks:
+      - task-scheduler-net
+    deploy:
+      replicas: 2  # Run 2 workers
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  nats-data:
+
+networks:
+  task-scheduler-net:
+    driver: bridge

@@ -7,13 +7,13 @@ tls_enabled = false
 # tls_cert_path = "/path/to/server.crt"
 # tls_key_path = "/path/to/server.key"
 # tls_ca_path = "/path/to/ca.crt"
-max_concurrent_requests = 1000
+max_concurrent_requests = 50000
 
 [storage]
-backend = "memory"  # Options: memory, postgresql, mongodb
+backend = "memory"  # Options: memory, postgresql
 cache_size = 10000
 # postgres_url = "postgres://user:password@localhost/taskdb"
-# mongodb_url = "mongodb://localhost:27017/taskdb"
+# redis_url = "redis://localhost:6379"
 
 [queue]
 nats_url = "nats://localhost:4222"
@@ -31,3 +31,10 @@ otlp_endpoint = "http://localhost:4317"
 service_name = "task-manager"
 log_level = "info"
 sampling_ratio = 1.0
+
+[security]
+auth_enabled = false
+audit_enabled = false
+rbac_enabled = false
+# jwt_secret = "your-secret-key"
+# token_expiry = "24h"

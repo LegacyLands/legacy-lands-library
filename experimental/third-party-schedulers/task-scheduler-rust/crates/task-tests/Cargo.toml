@@ -28,6 +28,7 @@ futures = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 prost-types = { workspace = true }
+clap = { version = "4", features = ["derive"] }
 
 # Test utilities
 testcontainers = "0.23"
@@ -48,6 +49,14 @@ prometheus = "0.13"
 base64 = "0.21"
 
 # Tests will be auto-discovered from tests/ directory
+
+[[bin]]
+name = "submit-test-task"
+path = "src/bin/submit_test_task.rs"
+
+[[bin]]
+name = "event-listener"
+path = "src/bin/event-listener.rs"
 
 [[bench]]
 name = "task_throughput"

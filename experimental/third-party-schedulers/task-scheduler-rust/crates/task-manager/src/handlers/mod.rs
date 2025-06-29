@@ -1,5 +1,5 @@
 use crate::api::proto::TaskRequest;
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 use task_common::{
     error::{TaskError, TaskResult},
     Uuid,
@@ -100,7 +100,7 @@ impl TaskValidator {
     pub async fn check_dependencies(
         &self,
         dependencies: &[Uuid],
-        storage: &crate::storage::TaskStorage,
+        storage: &Arc<dyn crate::storage::StorageBackend>,
     ) -> TaskResult<bool> {
         if dependencies.is_empty() {
             return Ok(true);
@@ -109,7 +109,7 @@ impl TaskValidator {
         debug!("Checking {} dependencies", dependencies.len());
 
         for dep_id in dependencies {
-            match storage.get(dep_id).await {
+            match storage.get_task(*dep_id).await.ok().flatten() {
                 Some(dep_task) => {
                     use task_common::models::TaskStatus;
                     match &dep_task.status {
@@ -153,6 +153,8 @@ mod tests {
     use super::*;
     use task_common::models::{TaskInfo, TaskMetadata, TaskStatus};
     use chrono::Utc;
+    use crate::storage::StorageBackend;
+    use prost_types;
 
     #[tokio::test]
     async fn test_task_validator_new() {
@@ -274,12 +276,15 @@ mod tests {
         
         // Create large arguments
         let large_value = "x".repeat(1024 * 1024 + 1);
-        let _args = vec![serde_json::json!(large_value)];
+        
+        // Create a protobuf Any with the large value
+        let mut any = prost_types::Any::default();
+        any.value = large_value.into_bytes();
         
         let request = TaskRequest {
             task_id: Uuid::new_v4().to_string(),
             method: "test_method".to_string(),
-            args: vec![], // Proto expects google.protobuf.Any, simplified for test
+            args: vec![any], // Now contains the large argument
             deps: vec![],
             is_async: true,
         };
@@ -312,7 +317,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_dependencies_empty() {
         let validator = TaskValidator::new();
-        let storage = crate::storage::TaskStorage::new(100);
+        let storage: Arc<dyn StorageBackend> = Arc::new(crate::storage::MemoryStorage::new(100));
         
         let result = validator.check_dependencies(&[], &storage).await;
         assert!(result.is_ok());
@@ -322,7 +327,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_dependencies_all_succeeded() {
         let validator = TaskValidator::new();
-        let storage = crate::storage::TaskStorage::new(100);
+        let storage: Arc<dyn StorageBackend> = Arc::new(crate::storage::MemoryStorage::new(100));
         
         // Create succeeded tasks
         let dep1 = Uuid::new_v4();
@@ -369,7 +374,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_dependencies_failed() {
         let validator = TaskValidator::new();
-        let storage = crate::storage::TaskStorage::new(100);
+        let storage: Arc<dyn StorageBackend> = Arc::new(crate::storage::MemoryStorage::new(100));
         
         let dep_id = Uuid::new_v4();
         let task = TaskInfo {
@@ -398,7 +403,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_dependencies_cancelled() {
         let validator = TaskValidator::new();
-        let storage = crate::storage::TaskStorage::new(100);
+        let storage: Arc<dyn StorageBackend> = Arc::new(crate::storage::MemoryStorage::new(100));
         
         let dep_id = Uuid::new_v4();
         let task = TaskInfo {
@@ -426,7 +431,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_dependencies_not_found() {
         let validator = TaskValidator::new();
-        let storage = crate::storage::TaskStorage::new(100);
+        let storage: Arc<dyn StorageBackend> = Arc::new(crate::storage::MemoryStorage::new(100));
         
         let result = validator.check_dependencies(&[Uuid::new_v4()], &storage).await;
         assert!(result.is_ok());
@@ -436,7 +441,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_dependencies_not_completed() {
         let validator = TaskValidator::new();
-        let storage = crate::storage::TaskStorage::new(100);
+        let storage: Arc<dyn StorageBackend> = Arc::new(crate::storage::MemoryStorage::new(100));
         
         let dep_id = Uuid::new_v4();
         let task = TaskInfo {

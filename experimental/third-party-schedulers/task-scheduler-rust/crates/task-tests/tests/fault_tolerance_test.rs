@@ -7,7 +7,7 @@ use task_common::{
     error::TaskError,
 };
 use task_manager::{
-    storage::TaskStorage,
+    storage::{TaskStorage, StorageBackend},
     cancellation::CancellationManager,
 };
 use task_worker::plugins::PluginManager;

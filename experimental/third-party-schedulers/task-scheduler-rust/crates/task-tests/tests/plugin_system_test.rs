@@ -33,10 +33,10 @@ async fn test_builtin_plugins() -> Result<(), Box<dyn std::error::Error + Send +
 /// Test plugin registry functionality
 #[test]
 fn test_plugin_registry() {
-    let mut registry = PluginRegistry::new();
+    let registry = PluginRegistry::new();
     
     // Test registration
-    let plugin_info = PluginInfo {
+    let _plugin_info = PluginInfo {
         id: Uuid::new_v4(),
         name: "test-plugin".to_string(),
         version: "1.0.0".to_string(),
@@ -54,7 +54,7 @@ fn test_plugin_registry() {
 /// Test plugin loader
 #[test]
 fn test_plugin_loader() {
-    let plugin_dir = PathBuf::from("test_plugins");
+    let _plugin_dir = PathBuf::from("test_plugins");
     let loader = PluginLoader::new();
     
     // Test that loader can be created
@@ -67,7 +67,7 @@ fn test_plugin_loader() {
 #[tokio::test]
 async fn test_plugin_method_execution() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let env = TestEnvironment::new().await?;
-    let mut client = env.create_grpc_client().await?;
+    let _client = env.create_grpc_client().await?;
     
     println!("Testing plugin method execution...");
     

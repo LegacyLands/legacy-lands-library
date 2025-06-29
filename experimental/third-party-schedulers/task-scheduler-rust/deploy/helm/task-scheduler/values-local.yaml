@@ -1,0 +1,43 @@
+replicaCount:
+  manager: 1
+  worker: 3
+
+image:
+  repository: task-manager
+  tag: latest
+  pullPolicy: Never  # Use local images
+
+worker:
+  image:
+    repository: task-worker
+    tag: latest
+
+service:
+  type: NodePort
+  grpc:
+    nodePort: 30051
+  metrics:
+    nodePort: 30090
+
+postgresql:
+  enabled: false  # We deployed it manually
+  external:
+    host: postgres.task-scheduler.svc.cluster.local
+    port: 5432
+    database: taskscheduler
+    username: taskscheduler
+    password: taskscheduler
+
+nats:
+  enabled: false  # We deployed it manually
+  external:
+    url: nats://nats.task-scheduler.svc.cluster.local:4222
+
+monitoring:
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+    service:
+      type: NodePort
+      nodePort: 30030

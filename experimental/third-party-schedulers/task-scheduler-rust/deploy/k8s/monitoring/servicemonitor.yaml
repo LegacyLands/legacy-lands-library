@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-scheduler-manager-metrics
+  namespace: task-scheduler
+  labels:
+    app: task-scheduler-manager
+    monitoring: enabled
+spec:
+  selector:
+    app.kubernetes.io/component: task-manager
+  ports:
+  - name: metrics
+    port: 9000
+    targetPort: 9000
+---
+apiVersion: v1
+kind: Service  
+metadata:
+  name: task-scheduler-worker-metrics
+  namespace: task-scheduler
+  labels:
+    app: task-scheduler-worker
+    monitoring: enabled
+spec:
+  selector:
+    app.kubernetes.io/component: task-worker
+  ports:
+  - name: metrics
+    port: 9001
+    targetPort: 9001

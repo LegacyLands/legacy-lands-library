@@ -8,6 +8,7 @@ use tonic::transport::Channel;
 use base64::Engine;
 
 /// Connect to the server
+#[allow(dead_code)]
 pub async fn connect_to_server(server_address: &str) -> TaskSchedulerClient<Channel> {
     let channel = tonic::transport::Channel::from_shared(server_address.to_string())
         .expect("Failed to create shared endpoint")
@@ -19,6 +20,7 @@ pub async fn connect_to_server(server_address: &str) -> TaskSchedulerClient<Chan
 }
 
 /// Convert i32 to Any message
+#[allow(dead_code)]
 pub fn any_i32(val: i32) -> Any {
     // Encode as JSON for simplicity
     Any {
@@ -82,6 +84,7 @@ pub fn any_map(map: HashMap<String, Any>) -> Any {
 }
 
 /// Create task request
+#[allow(dead_code)]
 pub fn create_task_request(
     task_id: &str,
     method: &str,

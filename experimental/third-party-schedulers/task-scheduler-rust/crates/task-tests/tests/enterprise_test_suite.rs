@@ -15,7 +15,7 @@ use uuid::Uuid;
 #[cfg(test)]
 mod enterprise_tests {
     use super::*;
-    use task_manager::storage::TaskStorage;
+    use task_manager::storage::{TaskStorage, StorageBackend};
 
     /// Test concurrent task submission and execution
     #[tokio::test]
@@ -398,6 +398,7 @@ mod performance_benchmarks {
     use task_manager::storage::TaskStorage;
 
     /// Benchmark task serialization
+    #[allow(dead_code)]
     pub fn bench_task_serialization(c: &mut Criterion) {
         let task = TaskInfo {
             id: Uuid::new_v4(),
@@ -420,6 +421,7 @@ mod performance_benchmarks {
     }
 
     /// Benchmark task storage
+    #[allow(dead_code)]
     pub fn bench_task_storage(c: &mut Criterion) {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let storage = Arc::new(TaskStorage::new(10000));

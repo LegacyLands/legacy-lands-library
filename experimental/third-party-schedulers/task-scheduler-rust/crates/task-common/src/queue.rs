@@ -128,10 +128,12 @@ impl QueueManager {
             TaskEvent::Started { .. } => subjects::TASK_STARTED,
             TaskEvent::Completed { .. } => subjects::TASK_COMPLETED,
             TaskEvent::Failed { .. } => subjects::TASK_FAILED,
+            TaskEvent::Retrying { .. } => subjects::TASK_RETRYING,
             TaskEvent::Cancelled { .. } => subjects::TASK_CANCELLED,
             TaskEvent::WorkerHeartbeat { .. } => subjects::WORKER_HEARTBEAT,
             TaskEvent::WorkerJoined { .. } => subjects::WORKER_JOINED,
             TaskEvent::WorkerLeft { .. } => subjects::WORKER_LEFT,
+            TaskEvent::UnsupportedMethod { .. } => subjects::TASK_UNSUPPORTED_METHOD,
             _ => subjects::TASK_EVENTS,
         };
 
@@ -182,6 +184,17 @@ impl QueueManager {
         worker_id: &str,
         max_concurrent: usize,
     ) -> TaskResult<TaskConsumer> {
+        self.create_task_consumer_with_config(worker_id, max_concurrent, 10, 1).await
+    }
+    
+    /// Create a task queue consumer with custom configuration
+    pub async fn create_task_consumer_with_config(
+        &self,
+        worker_id: &str,
+        max_concurrent: usize,
+        batch_size: usize,
+        fetch_timeout_ms: u64,
+    ) -> TaskResult<TaskConsumer> {
         let stream = self.jetstream.get_stream("TASK_QUEUE").await.map_err(|e| {
             TaskError::QueueError(format!("Failed to get task queue stream: {}", e))
         })?;
@@ -192,7 +205,7 @@ impl QueueManager {
             durable_name: Some("task-workers".to_string()),
             ack_policy: consumer::AckPolicy::Explicit,
             ack_wait: Duration::from_secs(300), // 5 minutes
-            max_deliver: 3,
+            max_deliver: 4,  // Allow 1 initial delivery + 3 retries
             max_ack_pending: max_concurrent as i64,
             filter_subject: subjects::TASK_QUEUE.to_string(),
             ..Default::default()
@@ -207,6 +220,8 @@ impl QueueManager {
         Ok(TaskConsumer {
             consumer,
             worker_id: worker_id.to_string(),
+            batch_size,
+            fetch_timeout_ms,
         })
     }
 
@@ -265,13 +280,26 @@ impl EventSubscriber {
     pub async fn next(&mut self) -> TaskResult<Option<EventEnvelope>> {
         match self.subscriber.next().await {
             Some(msg) => {
-                let envelope: EventEnvelope = serde_json::from_slice(&msg.payload)
-                    .map_err(|e| TaskError::SerializationError(e.to_string()))?;
-
-                // Regular NATS subscriptions don't have acknowledgments
-                // Only JetStream messages have ack()
-
-                Ok(Some(envelope))
+                // Skip empty messages
+                if msg.payload.is_empty() {
+                    debug!("Received empty message on subject: {}", msg.subject);
+                    return Ok(None);
+                }
+                
+                // Try to deserialize
+                match serde_json::from_slice::<EventEnvelope>(&msg.payload) {
+                    Ok(envelope) => Ok(Some(envelope)),
+                    Err(e) => {
+                        // Log the error but don't fail - just skip this message
+                        debug!(
+                            "Failed to deserialize event on subject {}: {}. Payload: {:?}",
+                            msg.subject,
+                            e,
+                            String::from_utf8_lossy(&msg.payload)
+                        );
+                        Ok(None)
+                    }
+                }
             }
             None => Ok(None),
         }
@@ -282,6 +310,8 @@ impl EventSubscriber {
 pub struct TaskConsumer {
     consumer: consumer::Consumer<consumer::pull::Config>,
     worker_id: String,
+    batch_size: usize,
+    fetch_timeout_ms: u64,
 }
 
 impl TaskConsumer {
@@ -292,8 +322,8 @@ impl TaskConsumer {
         let messages = self
             .consumer
             .fetch()
-            .max_messages(batch_size)
-            .expires(Duration::from_secs(30))
+            .max_messages(batch_size.max(self.batch_size))
+            .expires(Duration::from_millis(self.fetch_timeout_ms))
             .messages()
             .await
             .map_err(|e| TaskError::QueueError(format!("Failed to fetch tasks: {}", e)))?;
@@ -334,6 +364,15 @@ pub struct MessageHandle {
 }
 
 impl MessageHandle {
+    /// Get the delivery count (number of times this message has been delivered)
+    pub fn delivery_count(&self) -> u64 {
+        // NATS JetStream messages have an info() method that provides metadata
+        match self.inner.info() {
+            Ok(info) => info.delivered as u64,
+            Err(_) => 1, // Default to 1 if no info available
+        }
+    }
+
     /// Acknowledge successful processing
     pub async fn ack(self) -> TaskResult<()> {
         self.inner

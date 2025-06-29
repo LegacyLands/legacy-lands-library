@@ -1,0 +1,38 @@
+{{- if .Values.taskManager.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-manager-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-manager
+data:
+  config.toml: |
+    [server]
+    grpc_address = "0.0.0.0:{{ .Values.taskManager.service.grpcPort }}"
+    metrics_address = "0.0.0.0:{{ .Values.taskManager.service.metricsPort }}"
+    
+    [queue]
+    nats_url = "{{ .Values.nats.external.url | default (printf "nats://%s-nats:4222" .Release.Name) }}"
+    
+    [storage]
+    backend = "postgresql"
+    postgres_url = "postgres://{{ .Values.postgresql.external.username }}:{{ .Values.postgresql.external.password }}@{{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }}/{{ .Values.postgresql.external.database }}"
+    
+    [observability]
+    tracing_enabled = {{ .Values.observability.tracing.enabled }}
+    otlp_endpoint = "{{ .Values.observability.tracing.otlpEndpoint }}"
+    service_name = "task-manager"
+    log_level = "info"
+    sampling_ratio = 1.0
+    
+    [kubernetes]
+    enabled = true
+    namespace = "{{ .Release.Namespace }}"
+    
+    [security]
+    auth_enabled = false
+    rbac_enabled = false
+    audit_enabled = false
+{{- end }}

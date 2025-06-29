@@ -6,14 +6,15 @@ mod test;
 use std::time::{Duration, Instant};
 use sysinfo::System;
 use task_common::{
-    error::TaskResult,
+    error::{TaskError, TaskResult},
     events::{HardwareInfo, SoftwareInfo, TaskEvent, WorkerCapabilities, WorkerCapacity},
     models::{ExecutionMetrics, TaskStatus as ModelTaskStatus},
     queue::{MessageHandle, QueueManager, QueuedTask, TaskResultMessage},
     Utc,
 };
 use tokio::sync::Semaphore;
-use tracing::{error, info, instrument, warn};
+use tracing::{debug, error, info, instrument, warn};
+use uuid::Uuid;
 
 /// Task executor that processes tasks from the queue
 pub struct TaskExecutor {
@@ -34,6 +35,12 @@ pub struct TaskExecutor {
 
     /// System info for metrics
     system: System,
+    
+    /// Batch size for fetching tasks
+    batch_size: usize,
+    
+    /// Fetch timeout in milliseconds
+    fetch_timeout_ms: u64,
 }
 
 impl TaskExecutor {
@@ -44,6 +51,18 @@ impl TaskExecutor {
         plugin_manager: Arc<PluginManager>,
         max_concurrent_tasks: usize,
     ) -> Self {
+        Self::with_config(worker_id, queue, plugin_manager, max_concurrent_tasks, 10, 1)
+    }
+    
+    /// Create a new task executor with configuration
+    pub fn with_config(
+        worker_id: String,
+        queue: Arc<QueueManager>,
+        plugin_manager: Arc<PluginManager>,
+        max_concurrent_tasks: usize,
+        batch_size: usize,
+        fetch_timeout_ms: u64,
+    ) -> Self {
         Self {
             worker_id,
             queue,
@@ -51,6 +70,8 @@ impl TaskExecutor {
             semaphore: Arc::new(Semaphore::new(max_concurrent_tasks)),
             max_concurrent_tasks,
             system: System::new_all(),
+            batch_size,
+            fetch_timeout_ms,
         }
     }
 
@@ -71,9 +92,15 @@ impl TaskExecutor {
         info!("Creating task consumer for worker {}", self.worker_id);
         let consumer = self
             .queue
-            .create_task_consumer(&self.worker_id, self.max_concurrent_tasks)
+            .create_task_consumer_with_config(
+                &self.worker_id, 
+                self.max_concurrent_tasks,
+                self.batch_size,
+                self.fetch_timeout_ms
+            )
             .await?;
-        info!("Task consumer created successfully");
+        info!("Task consumer created successfully with batch_size={} and fetch_timeout_ms={}", 
+            self.batch_size, self.fetch_timeout_ms);
 
         // Start heartbeat task
         let heartbeat_handle = self.start_heartbeat();
@@ -91,21 +118,21 @@ impl TaskExecutor {
         loop {
             loop_count += 1;
             // Fetch tasks from queue with timeout
-            info!("Fetching tasks from queue (attempt {})...", loop_count);
+            debug!("Fetching tasks from queue (attempt {})...", loop_count);
             let fetch_result = tokio::select! {
                 _ = &mut shutdown_signal => {
                     info!("Received shutdown signal");
                     break;
                 }
-                result = consumer.fetch(10) => {
-                    info!("Fetch completed with result: {:?}", result.is_ok());
+                result = consumer.fetch(self.batch_size) => {
+                    debug!("Fetch completed with result: {:?}", result.is_ok());
                     result
                 }
             };
 
             let tasks = match fetch_result {
                 Ok(tasks) => {
-                    info!("Fetched {} tasks from queue", tasks.len());
+                    debug!("Fetched {} tasks from queue", tasks.len());
                     tasks
                 }
                 Err(e) => {
@@ -116,12 +143,16 @@ impl TaskExecutor {
             };
 
             if tasks.is_empty() {
-                info!("No tasks available, waiting 1 second...");
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                // No sleep needed - fetch already has a timeout
                 continue;
             }
 
             info!("Fetched {} tasks from queue", tasks.len());
+            
+            // Log details about fetched tasks for debugging
+            for (task, _) in &tasks {
+                debug!("Fetched task {} with method {}", task.task_id, task.method);
+            }
 
             // Process tasks concurrently
             let mut handles = Vec::new();
@@ -170,7 +201,7 @@ impl TaskExecutor {
     /// Process a single task
     #[instrument(skip(handle, queue, plugin_manager), fields(task_id = %task.task_id))]
     async fn process_task(
-        task: QueuedTask,
+        mut task: QueuedTask,
         handle: MessageHandle,
         queue: Arc<QueueManager>,
         plugin_manager: Arc<PluginManager>,
@@ -178,6 +209,33 @@ impl TaskExecutor {
     ) -> TaskResult<()> {
         let task_id = task.task_id;
         let start_time = Instant::now();
+        
+        // Check if method is supported BEFORE sending Started event
+        let is_supported = plugin_manager.get_task_info(&task.method).is_some();
+        
+        if !is_supported {
+            info!(
+                "Task {} has unsupported method '{}', rejecting immediately",
+                task_id, task.method
+            );
+            
+            // Handle unsupported method without sending Started event
+            return Self::handle_unsupported_method(
+                task_id,
+                task.method.clone(),
+                handle,
+                queue,
+                worker_id,
+                start_time.elapsed(),
+            ).await;
+        }
+        
+        // Get the actual retry count from the message delivery count
+        // Subtract 1 because the first delivery is not a retry
+        let delivery_count = handle.delivery_count();
+        task.retry_count = if delivery_count > 0 { (delivery_count - 1) as u32 } else { 0 };
+        
+        debug!("Task {} delivery_count={}, retry_count={}", task_id, delivery_count, task.retry_count);
 
         info!("Processing task {} with method {}", task_id, task.method);
 
@@ -204,6 +262,55 @@ impl TaskExecutor {
         let execution_time = start_time.elapsed();
 
         match execution_result {
+            Err(TaskError::MethodNotFound(method)) => {
+                // Handle unsupported method specially
+                warn!(
+                    "Task {} uses unsupported method '{}', marking as failed immediately",
+                    task_id, method
+                );
+                
+                // Send unsupported method event
+                let event = TaskEvent::UnsupportedMethod {
+                    task_id,
+                    method: method.clone(),
+                    worker_id: worker_id.clone(),
+                    timestamp: Utc::now(),
+                };
+                
+                if let Err(e) = queue.publish_event(event, worker_id.clone()).await {
+                    warn!("Failed to publish unsupported method event: {}", e);
+                }
+                
+                // ACK the message to remove it from queue (no retry for unsupported methods)
+                handle.ack().await?;
+                
+                // Publish failure result
+                let result_message = TaskResultMessage {
+                    task_id,
+                    success: false,
+                    result: None,
+                    error: Some(format!("Unsupported method: {}", method)),
+                    execution_time_ms: execution_time.as_millis() as u64,
+                    worker_id: worker_id.clone(),
+                };
+                
+                queue.publish_result(result_message).await?;
+                
+                // Send failure event
+                let event = TaskEvent::Failed {
+                    task_id,
+                    error: format!("Unsupported method: {}", method),
+                    retry_count: 0,
+                    will_retry: false,
+                    timestamp: Utc::now(),
+                };
+                
+                if let Err(e) = queue.publish_event(event, worker_id).await {
+                    warn!("Failed to publish task failed event: {}", e);
+                }
+                
+                Ok(())
+            }
             Ok(result) => {
                 info!(
                     "Task {} completed successfully in {:?}",
@@ -312,6 +419,63 @@ impl TaskExecutor {
                 Ok(())
             }
         }
+    }
+
+    /// Handle unsupported method without going through normal execution
+    async fn handle_unsupported_method(
+        task_id: Uuid,
+        method: String,
+        handle: MessageHandle,
+        queue: Arc<QueueManager>,
+        worker_id: String,
+        execution_time: Duration,
+    ) -> TaskResult<()> {
+        warn!(
+            "Task {} uses unsupported method '{}', marking as failed immediately",
+            task_id, method
+        );
+        
+        // Send unsupported method event
+        let event = TaskEvent::UnsupportedMethod {
+            task_id,
+            method: method.clone(),
+            worker_id: worker_id.clone(),
+            timestamp: Utc::now(),
+        };
+        
+        if let Err(e) = queue.publish_event(event, worker_id.clone()).await {
+            warn!("Failed to publish unsupported method event: {}", e);
+        }
+        
+        // ACK the message to remove it from queue (no retry for unsupported methods)
+        handle.ack().await?;
+        
+        // Publish failure result
+        let result_message = TaskResultMessage {
+            task_id,
+            success: false,
+            result: None,
+            error: Some(format!("Unsupported method: {}", method)),
+            execution_time_ms: execution_time.as_millis() as u64,
+            worker_id: worker_id.clone(),
+        };
+        
+        queue.publish_result(result_message).await?;
+        
+        // Send failure event
+        let event = TaskEvent::Failed {
+            task_id,
+            error: format!("Unsupported method: {}", method),
+            retry_count: 0,
+            will_retry: false,
+            timestamp: Utc::now(),
+        };
+        
+        if let Err(e) = queue.publish_event(event, worker_id).await {
+            warn!("Failed to publish task failed event: {}", e);
+        }
+        
+        Ok(())
     }
 
     /// Start heartbeat task

@@ -6,6 +6,10 @@ use tempfile::TempDir;
 #[cfg(test)]
 mod config_tests {
     use super::*;
+    use std::sync::Mutex;
+    
+    // Mutex to prevent concurrent environment variable modifications in tests
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_default_config() {
@@ -178,6 +182,8 @@ nats_url = "nats://custom:4222"
 
     #[test]
     fn test_config_from_env() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        
         // Save current env values
         let saved_nats = std::env::var("NATS_URL").ok();
         let saved_log = std::env::var("LOG_LEVEL").ok();
@@ -231,6 +237,8 @@ nats_url = "nats://custom:4222"
 
     #[test]
     fn test_config_from_env_invalid_values() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        
         // Use a struct to ensure cleanup on drop
         struct CleanupGuard {
             saved: Option<String>,

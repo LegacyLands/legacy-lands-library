@@ -43,6 +43,7 @@ async-nats = { workspace = true }
 # Concurrency utilities
 dashmap = { workspace = true }
 parking_lot = { workspace = true }
+async-trait = "0.1"
 
 # CLI and configuration
 clap = { workspace = true }

@@ -1,12 +1,12 @@
 {{- if .Values.rbac.create -}}
 ---
 # ServiceAccount for Task Manager
-{{- if .Values.serviceAccount.create -}}
+{{- if .Values.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "task-scheduler.fullname" . }}-manager
-  namespace: {{ include "task-scheduler.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "task-scheduler.labels" . | nindent 4 }}
     app.kubernetes.io/component: task-manager
@@ -17,12 +17,12 @@ metadata:
 {{- end }}
 ---
 # ServiceAccount for Task Worker
-{{- if .Values.serviceAccount.create -}}
+{{- if .Values.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "task-scheduler.fullname" . }}-worker
-  namespace: {{ include "task-scheduler.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "task-scheduler.labels" . | nindent 4 }}
     app.kubernetes.io/component: task-worker
@@ -33,12 +33,12 @@ metadata:
 {{- end }}
 ---
 # ServiceAccount for Task Operator
-{{- if .Values.serviceAccount.create -}}
+{{- if .Values.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "task-scheduler.fullname" . }}-operator
-  namespace: {{ include "task-scheduler.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "task-scheduler.labels" . | nindent 4 }}
     app.kubernetes.io/component: task-operator
@@ -146,7 +146,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ include "task-scheduler.fullname" . }}-manager
-  namespace: {{ include "task-scheduler.namespace" . }}
+  namespace: {{ .Release.Namespace }}
 ---
 # ClusterRoleBinding for Task Worker
 apiVersion: rbac.authorization.k8s.io/v1
@@ -162,7 +162,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ include "task-scheduler.fullname" . }}-worker
-  namespace: {{ include "task-scheduler.namespace" . }}
+  namespace: {{ .Release.Namespace }}
 ---
 # ClusterRoleBinding for Task Operator
 apiVersion: rbac.authorization.k8s.io/v1
@@ -178,5 +178,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ include "task-scheduler.fullname" . }}-operator
-  namespace: {{ include "task-scheduler.namespace" . }}
+  namespace: {{ .Release.Namespace }}
 {{- end }}

@@ -178,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let rx = Arc::new(tokio::sync::Mutex::new(rx));
 
-    for (i, client) in clients.into_iter().enumerate() {
+    for (_i, client) in clients.into_iter().enumerate() {
         let _tx = tx.clone();
         let rx = rx.clone();
         let methods = methods.clone();
@@ -198,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let method = methods[rand::thread_rng().gen_range(0..methods.len())].clone();
                 let payload = generate_payload(payload_size);
-                let task_id = format!("load-test-{}-{}", i, uuid::Uuid::new_v4());
+                let task_id = uuid::Uuid::new_v4().to_string();
 
                 let start = Instant::now();
                 metrics.active_requests.inc();

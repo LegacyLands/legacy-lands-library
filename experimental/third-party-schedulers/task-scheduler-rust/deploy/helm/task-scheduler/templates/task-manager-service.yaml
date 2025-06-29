@@ -1,0 +1,28 @@
+{{- if .Values.taskManager.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-manager
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - name: grpc
+    port: {{ .Values.taskManager.service.grpcPort }}
+    targetPort: grpc
+    {{- if and (eq .Values.service.type "NodePort") .Values.service.grpc.nodePort }}
+    nodePort: {{ .Values.service.grpc.nodePort }}
+    {{- end }}
+  - name: metrics
+    port: {{ .Values.taskManager.service.metricsPort }}
+    targetPort: metrics
+    {{- if and (eq .Values.service.type "NodePort") .Values.service.metrics.nodePort }}
+    nodePort: {{ .Values.service.metrics.nodePort }}
+    {{- end }}
+  selector:
+    {{- include "task-scheduler.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: task-manager
+{{- end }}

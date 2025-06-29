@@ -91,11 +91,11 @@ async fn test_throughput_single_client() -> Result<(), Box<dyn std::error::Error
 #[tokio::test]
 #[ignore]
 async fn test_concurrent_clients() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let env = TestEnvironment::new().await?;
+    let _env = TestEnvironment::new().await?;
     let metrics = Arc::new(Mutex::new(PerformanceMetrics::new()));
     
     let client_count = 10;
-    let test_duration = Duration::from_secs(30);
+    let _test_duration = Duration::from_secs(30);
     let requests_per_client = 100;
     
     println!("Running {} concurrent clients test...", client_count);
@@ -250,7 +250,7 @@ async fn test_burst_load() -> Result<(), Box<dyn std::error::Error + Send + Sync
 #[tokio::test]
 #[ignore]
 async fn test_mixed_workload() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let env = TestEnvironment::new().await?;
+    let _env = TestEnvironment::new().await?;
     let metrics = Arc::new(Mutex::new(PerformanceMetrics::new()));
     
     let test_duration = Duration::from_secs(60);

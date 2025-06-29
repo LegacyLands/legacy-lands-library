@@ -5,7 +5,6 @@ use prometheus::{Encoder, TextEncoder};
 use std::sync::Arc;
 use task_common::{
     queue::QueueManager,
-    tracing::{init_tracing, shutdown_tracing, TracingConfig},
 };
 use task_operator::{ResultListener, TaskController};
 use tracing::{error, info};
@@ -43,25 +42,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     // Initialize tracing
-    if args.tracing_enabled {
-        let tracing_config = TracingConfig {
-            service_name: "task-operator".to_string(),
-            service_version: env!("CARGO_PKG_VERSION").to_string(),
-            otlp_endpoint: args.otlp_endpoint,
-            environment: "production".to_string(),
-            sampling_ratio: 1.0,
-            export_timeout: std::time::Duration::from_secs(10),
-            log_level: args.log_level.clone(),
-        };
-
-        init_tracing(tracing_config)?;
-    } else {
-        // Just initialize basic logging
-        tracing_subscriber::fmt()
-            .with_env_filter(&args.log_level)
-            .json()
-            .init();
-    }
+    // TODO: Initialize tracing when the module is fixed
+    tracing_subscriber::fmt()
+        .with_env_filter(&args.log_level)
+        .json()
+        .init();
 
     info!("Starting Task Operator v{}", env!("CARGO_PKG_VERSION"));
 
@@ -127,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Shutdown tracing
     if args.tracing_enabled {
-        shutdown_tracing();
+        // TODO: shutdown_tracing();
     }
 
     info!("Task Operator shut down successfully");

@@ -289,6 +289,36 @@ impl Scheduler for PriorityScheduler {
 
         if let Some(task) = tasks.get_mut(&task_id) {
             task.active = true;
+            let priority = task.priority;
+            let next_exec = task.next_execution_at;
+            drop(tasks);
+            
+            // Re-add to appropriate queue if it was removed
+            let ready_queue = self.ready_queue.read();
+            let scheduled_queue = self.scheduled_queue.read();
+            
+            // Check if task is not in any queue
+            let in_ready = ready_queue.iter().any(|(id, _)| *id == task_id);
+            let in_scheduled = scheduled_queue.iter().any(|(id, _)| *id == task_id);
+            
+            drop(ready_queue);
+            drop(scheduled_queue);
+            
+            if !in_ready && !in_scheduled {
+                // Re-add to appropriate queue
+                if let Some(next_exec_time) = next_exec {
+                    if next_exec_time <= Utc::now() {
+                        self.ready_queue.write().push(task_id, priority);
+                    } else {
+                        let timestamp = next_exec_time.timestamp_millis();
+                        self.scheduled_queue.write().push(task_id, Reverse(timestamp));
+                    }
+                } else {
+                    // Immediate task
+                    self.ready_queue.write().push(task_id, priority);
+                }
+            }
+            
             debug!("Resumed task {}", task_id);
             Ok(())
         } else {

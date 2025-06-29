@@ -5,7 +5,7 @@ set -e
 
 # Source common utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+source "$SCRIPT_DIR/../common.sh"
 
 # Configuration
 NAMESPACE=${NAMESPACE:-$DEFAULT_NAMESPACE}
@@ -19,7 +19,7 @@ kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f 
 
 # Deploy CRDs
 echo -e "\n2️⃣ Deploying CRDs..."
-kubectl apply -f "$PROJECT_ROOT/deploy/k8s/crd/"
+kubectl apply -f "$PROJECT_ROOT/deploy/k8s/crds/"
 
 # Deploy RBAC
 echo -e "\n3️⃣ Deploying RBAC..."

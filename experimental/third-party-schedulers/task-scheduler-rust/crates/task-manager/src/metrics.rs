@@ -1,9 +1,13 @@
+pub mod enhanced;
+
 use axum::{response::IntoResponse, routing::get, Router};
 use prometheus::{
-    CounterVec, GaugeVec, HistogramOpts, HistogramVec, Registry,
+    CounterVec, GaugeVec, HistogramOpts, HistogramVec, Registry, IntCounterVec, IntGaugeVec,
 };
 use std::net::SocketAddr;
 use tracing::info;
+
+pub use enhanced::EnhancedMetrics;
 
 /// Metrics for the Task Manager
 pub struct Metrics {
@@ -12,6 +16,9 @@ pub struct Metrics {
 
     /// Total tasks by status
     pub tasks_by_status: CounterVec,
+    
+    /// Total task errors by category
+    pub tasks_errors_by_category: CounterVec,
 
     /// Task submission duration
     pub task_submission_duration: HistogramVec,
@@ -27,6 +34,34 @@ pub struct Metrics {
 
     /// Storage operation duration
     pub storage_duration: HistogramVec,
+    
+    /// Task execution duration by method
+    pub task_execution_duration: HistogramVec,
+    
+    /// Worker pool metrics
+    pub worker_pool_size: IntGaugeVec,
+    pub worker_active_tasks: IntGaugeVec,
+    
+    /// Queue metrics
+    pub queue_operations: IntCounterVec,
+    pub queue_latency: HistogramVec,
+    
+    /// Dependency resolution metrics
+    pub dependency_checks: IntCounterVec,
+    pub dependency_resolution_duration: HistogramVec,
+    
+    /// System resource metrics
+    pub memory_usage_bytes: IntGaugeVec,
+    pub cpu_usage_percent: GaugeVec,
+    
+    /// Task retry metrics
+    pub task_retries: CounterVec,
+
+    /// Task lifecycle duration (submission to completion)
+    pub task_lifecycle_duration: HistogramVec,
+    
+    /// Tasks with unsupported methods
+    pub unsupported_method_tasks: CounterVec,
 }
 
 impl Metrics {
@@ -49,6 +84,15 @@ impl Metrics {
             &["status"]
         )?;
         registry.register(Box::new(tasks_by_status.clone()))?;
+        
+        let tasks_errors_by_category = CounterVec::new(
+            prometheus::Opts::new(
+                "task_manager_tasks_errors_by_category_total",
+                "Total number of task errors by category"
+            ),
+            &["error_category"]
+        )?;
+        registry.register(Box::new(tasks_errors_by_category.clone()))?;
 
         let task_submission_duration = HistogramVec::new(
             HistogramOpts::new(
@@ -92,14 +136,136 @@ impl Metrics {
         )?;
         registry.register(Box::new(storage_duration.clone()))?;
 
+        let task_execution_duration = HistogramVec::new(
+            HistogramOpts::new(
+                "task_manager_task_execution_duration_seconds",
+                "Task execution duration in seconds",
+            ),
+            &["method", "status"],
+        )?;
+        registry.register(Box::new(task_execution_duration.clone()))?;
+
+        let worker_pool_size = IntGaugeVec::new(
+            prometheus::Opts::new("task_manager_worker_pool_size", "Number of workers in pool"),
+            &["pool"],
+        )?;
+        registry.register(Box::new(worker_pool_size.clone()))?;
+
+        let worker_active_tasks = IntGaugeVec::new(
+            prometheus::Opts::new("task_manager_worker_active_tasks", "Number of active tasks per worker"),
+            &["worker_id"],
+        )?;
+        registry.register(Box::new(worker_active_tasks.clone()))?;
+
+        let queue_operations = IntCounterVec::new(
+            prometheus::Opts::new(
+                "task_manager_queue_operations_total",
+                "Total queue operations"
+            ),
+            &["operation", "status"],
+        )?;
+        registry.register(Box::new(queue_operations.clone()))?;
+
+        let queue_latency = HistogramVec::new(
+            HistogramOpts::new(
+                "task_manager_queue_latency_seconds",
+                "Queue operation latency in seconds",
+            ),
+            &["operation"],
+        )?;
+        registry.register(Box::new(queue_latency.clone()))?;
+
+        let dependency_checks = IntCounterVec::new(
+            prometheus::Opts::new(
+                "task_manager_dependency_checks_total",
+                "Total dependency checks"
+            ),
+            &["result"],
+        )?;
+        registry.register(Box::new(dependency_checks.clone()))?;
+
+        let dependency_resolution_duration = HistogramVec::new(
+            HistogramOpts::new(
+                "task_manager_dependency_resolution_duration_seconds",
+                "Dependency resolution duration in seconds",
+            ),
+            &["task_count"],
+        )?;
+        registry.register(Box::new(dependency_resolution_duration.clone()))?;
+
+        let memory_usage_bytes = IntGaugeVec::new(
+            prometheus::Opts::new("task_manager_memory_usage_bytes", "Memory usage in bytes"),
+            &["type"],
+        )?;
+        registry.register(Box::new(memory_usage_bytes.clone()))?;
+
+        let cpu_usage_percent = GaugeVec::new(
+            prometheus::Opts::new("task_manager_cpu_usage_percent", "CPU usage percentage"),
+            &["core"],
+        )?;
+        registry.register(Box::new(cpu_usage_percent.clone()))?;
+
+        let task_retries = CounterVec::new(
+            prometheus::Opts::new(
+                "task_manager_task_retries_total",
+                "Total number of task retries"
+            ),
+            &["method", "attempt"],
+        )?;
+        registry.register(Box::new(task_retries.clone()))?;
+
+        let task_lifecycle_duration = HistogramVec::new(
+            HistogramOpts::new(
+                "task_manager_task_lifecycle_duration_seconds",
+                "Task lifecycle duration from submission to completion in seconds",
+            ),
+            &["method", "status"],
+        )?;
+        registry.register(Box::new(task_lifecycle_duration.clone()))?;
+        
+        let unsupported_method_tasks = CounterVec::new(
+            prometheus::Opts::new(
+                "task_manager_unsupported_method_tasks_total",
+                "Total number of tasks with unsupported methods"
+            ),
+            &["method"],
+        )?;
+        registry.register(Box::new(unsupported_method_tasks.clone()))?;
+
+        // Initialize gauges with default values so they appear in /metrics
+        queue_depth.with_label_values(&["default"]).set(0.0);
+        grpc_connections.with_label_values(&["active"]).set(0.0);
+        worker_pool_size.with_label_values(&["default"]).set(0);
+        memory_usage_bytes.with_label_values(&["used"]).set(0);
+        memory_usage_bytes.with_label_values(&["total"]).set(0);
+        memory_usage_bytes.with_label_values(&["available"]).set(0);
+        cpu_usage_percent.with_label_values(&["total"]).set(0.0);
+        
+        // Initialize at least one worker_active_tasks metric
+        // This ensures the metric appears in /metrics even before any workers join
+        worker_active_tasks.with_label_values(&["placeholder"]).set(0);
+
         Ok(Self {
             tasks_submitted,
             tasks_by_status,
+            tasks_errors_by_category,
             task_submission_duration,
             queue_depth,
             grpc_connections,
             storage_operations,
             storage_duration,
+            task_execution_duration,
+            worker_pool_size,
+            worker_active_tasks,
+            queue_operations,
+            queue_latency,
+            dependency_checks,
+            dependency_resolution_duration,
+            memory_usage_bytes,
+            cpu_usage_percent,
+            task_retries,
+            task_lifecycle_duration,
+            unsupported_method_tasks,
         })
     }
 }

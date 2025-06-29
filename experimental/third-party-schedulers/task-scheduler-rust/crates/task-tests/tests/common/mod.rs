@@ -5,7 +5,7 @@ use std::time::Duration;
 pub mod utils;
 pub mod test_environment;
 
-pub use test_environment::{TestEnvironment, TestClient};
+pub use test_environment::TestEnvironment;
 
 // Define base test port
 pub const TEST_PORT: u16 = 50051;
@@ -25,6 +25,7 @@ pub struct TestServer {
 }
 
 impl TestServer {
+    #[allow(dead_code)]
     pub fn address(&self) -> String {
         format!("http://127.0.0.1:{}", self.port)
     }
@@ -65,6 +66,7 @@ impl Drop for TestServer {
 
 /// Set up test server with automatically assigned port
 #[allow(clippy::zombie_processes)]
+#[allow(dead_code)]
 pub async fn setup() -> TestServer {
     // Ensure binary is built only once
     INIT.call_once(|| {

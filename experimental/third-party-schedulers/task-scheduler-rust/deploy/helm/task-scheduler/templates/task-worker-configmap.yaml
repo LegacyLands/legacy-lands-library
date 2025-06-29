@@ -1,0 +1,37 @@
+{{- if .Values.taskWorker.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-worker-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-worker
+data:
+  config.toml: |
+    [worker]
+    grpc_address = "0.0.0.0:{{ .Values.taskWorker.service.grpcPort }}"
+    metrics_address = "0.0.0.0:{{ .Values.taskWorker.service.metricsPort }}"
+    
+    [queue]
+    nats_url = "{{ .Values.nats.external.url | default (printf "nats://%s-nats:4222" .Release.Name) }}"
+    
+    [storage]
+    backend = "postgresql"
+    postgres_url = "postgres://{{ .Values.postgresql.external.username }}:{{ .Values.postgresql.external.password }}@{{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }}/{{ .Values.postgresql.external.database }}"
+    
+    [plugins]
+    enabled = true
+    
+    [observability]
+    tracing_enabled = {{ .Values.observability.tracing.enabled }}
+    otlp_endpoint = "{{ .Values.observability.tracing.otlpEndpoint }}"
+    service_name = "task-worker"
+    log_level = "info"
+    sampling_ratio = 1.0
+    
+    [security]
+    auth_enabled = false
+    rbac_enabled = false
+    audit_enabled = false
+{{- end }}

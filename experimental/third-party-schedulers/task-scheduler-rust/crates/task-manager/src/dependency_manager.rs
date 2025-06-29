@@ -8,6 +8,7 @@ use task_common::{
 };
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use crate::metrics::Metrics;
 
 /// Manages task dependencies and triggers dependent tasks when dependencies complete
 pub struct DependencyManager {
@@ -15,19 +16,23 @@ pub struct DependencyManager {
     dependents: Arc<RwLock<HashMap<Uuid, HashSet<Uuid>>>>,
 
     /// Storage reference
-    storage: Arc<crate::storage::TaskStorage>,
+    storage: Arc<dyn crate::storage::StorageBackend>,
 
     /// Queue reference
     queue: Arc<QueueManager>,
+    
+    /// Metrics
+    metrics: Arc<Metrics>,
 }
 
 impl DependencyManager {
     /// Create a new dependency manager
-    pub fn new(storage: Arc<crate::storage::TaskStorage>, queue: Arc<QueueManager>) -> Self {
+    pub fn new(storage: Arc<dyn crate::storage::StorageBackend>, queue: Arc<QueueManager>, metrics: Arc<Metrics>) -> Self {
         Self {
             dependents: Arc::new(RwLock::new(HashMap::new())),
             storage,
             queue,
+            metrics,
         }
     }
 
@@ -105,8 +110,8 @@ impl DependencyManager {
         // Get task info
         let task_info = self
             .storage
-            .get(&task_id)
-            .await
+            .get_task(task_id)
+            .await?
             .ok_or_else(|| TaskError::TaskNotFound(task_id.to_string()))?;
 
         // Check if task is in WaitingDependencies state
@@ -115,8 +120,13 @@ impl DependencyManager {
         }
 
         // Check all dependencies
+        let dependency_timer = self.metrics.dependency_resolution_duration
+            .with_label_values(&[&task_info.dependencies.len().to_string()])
+            .start_timer();
+            
+        let mut all_satisfied = true;
         for dep_id in &task_info.dependencies {
-            match self.storage.get(dep_id).await {
+            match self.storage.get_task(*dep_id).await.ok().flatten() {
                 Some(dep_task) => {
                     match &dep_task.status {
                         ModelTaskStatus::Succeeded { .. } => {
@@ -135,11 +145,13 @@ impl DependencyManager {
                                     },
                                 )
                                 .await?;
-                            return Ok(false);
+                            all_satisfied = false;
+                            break;
                         }
                         _ => {
                             // Dependency not yet complete
-                            return Ok(false);
+                            all_satisfied = false;
+                            break;
                         }
                     }
                 }
@@ -155,9 +167,24 @@ impl DependencyManager {
                             },
                         )
                         .await?;
-                    return Ok(false);
+                    all_satisfied = false;
+                    break;
                 }
             }
+        }
+        
+        dependency_timer.observe_duration();
+        
+        // Record dependency check result
+        if all_satisfied {
+            self.metrics.dependency_checks
+                .with_label_values(&["satisfied"])
+                .inc();
+        } else {
+            self.metrics.dependency_checks
+                .with_label_values(&["failed"])
+                .inc();
+            return Ok(false);
         }
 
         // All dependencies satisfied, queue the task
@@ -204,18 +231,36 @@ mod tests {
     use super::*;
     use task_common::models::{TaskInfo, TaskMetadata};
     use chrono::Utc;
+    
+    macro_rules! skip_without_nats {
+        ($components:expr) => {
+            match $components {
+                Some(c) => c,
+                None => return,
+            }
+        };
+    }
 
-    async fn create_test_storage_and_queue() -> (Arc<crate::storage::TaskStorage>, Arc<QueueManager>) {
-        let storage = Arc::new(crate::storage::TaskStorage::new(100));
+    async fn create_test_storage_queue_and_metrics() -> Option<(Arc<dyn crate::storage::StorageBackend>, Arc<QueueManager>, Arc<Metrics>)> {
+        let storage = Arc::new(crate::storage::MemoryStorage::new(100));
         // Skip NATS-dependent tests when not available
-        if std::env::var("TEST_NATS_URL").is_err() {
+        if std::env::var("TEST_NATS_URL").is_err() && std::env::var("CI").is_err() {
             eprintln!("Skipping test - NATS not available. Set TEST_NATS_URL to run.");
-            std::process::exit(0);
+            return None;
         }
         
         let nats_url = std::env::var("TEST_NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
-        let queue = QueueManager::new(&nats_url).await.expect("Failed to connect to NATS");
-        (storage, Arc::new(queue))
+        match QueueManager::new(&nats_url).await {
+            Ok(queue) => {
+                let registry = prometheus::Registry::new();
+                let metrics = Arc::new(Metrics::new(&registry).expect("Failed to create metrics"));
+                Some((storage, Arc::new(queue), metrics))
+            }
+            Err(_) => {
+                eprintln!("Failed to connect to NATS at {}. Skipping test.", nats_url);
+                None
+            }
+        }
     }
 
     async fn create_test_task(id: Uuid, status: ModelTaskStatus, deps: Vec<Uuid>) -> TaskInfo {
@@ -234,8 +279,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_new() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         // Check that dependents map is empty
         let deps = manager.dependents.read().await;
@@ -244,8 +289,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_task_dependencies_empty() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let task_id = Uuid::new_v4();
         let result = manager.register_task_dependencies(task_id, &[]).await;
@@ -259,8 +304,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_task_dependencies_single() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let task_id = Uuid::new_v4();
         let dep_id = Uuid::new_v4();
@@ -276,8 +321,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_task_dependencies_multiple() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let task_id = Uuid::new_v4();
         let dep1 = Uuid::new_v4();
@@ -296,8 +341,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_multiple_tasks_same_dependency() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let task1 = Uuid::new_v4();
         let task2 = Uuid::new_v4();
@@ -320,8 +365,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_dependent_tasks_no_dependents() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let completed_task = Uuid::new_v4();
         let result = manager.check_dependent_tasks(completed_task).await;
@@ -332,8 +377,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_dependent_tasks_success() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage.clone(), queue.clone());
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage.clone(), queue.clone(), metrics);
         
         // Create dependency task
         let dep_id = Uuid::new_v4();
@@ -370,8 +415,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_dependent_tasks_failed_dependency() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage.clone(), queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage.clone(), queue, metrics);
         
         // Create failed dependency
         let dep_id = Uuid::new_v4();
@@ -410,8 +455,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_and_queue_task_not_waiting() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage.clone(), queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage.clone(), queue, metrics);
         
         // Create task that's already running
         let task_id = Uuid::new_v4();
@@ -427,8 +472,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_and_queue_task_not_found() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let result = manager.check_and_queue_task(Uuid::new_v4()).await;
         assert!(result.is_err());
@@ -440,8 +485,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_and_queue_complex_dependencies() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage.clone(), queue.clone());
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage.clone(), queue.clone(), metrics);
         
         // Create a complex dependency graph:
         // dep1 -> dep2 -> task
@@ -488,8 +533,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_and_queue_partial_dependencies() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage.clone(), queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage.clone(), queue, metrics);
         
         let dep1 = Uuid::new_v4();
         let dep2 = Uuid::new_v4();
@@ -524,8 +569,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_remove_task() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage, queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage, queue, metrics);
         
         let task1 = Uuid::new_v4();
         let task2 = Uuid::new_v4();
@@ -548,8 +593,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_dependency_not_found() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = DependencyManager::new(storage.clone(), queue);
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = DependencyManager::new(storage.clone(), queue, metrics);
         
         let missing_dep = Uuid::new_v4();
         let task_id = Uuid::new_v4();
@@ -578,8 +623,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_dependency_registration() {
-        let (storage, queue) = create_test_storage_and_queue().await;
-        let manager = Arc::new(DependencyManager::new(storage, queue));
+        let (storage, queue, metrics) = skip_without_nats!(create_test_storage_queue_and_metrics().await);
+        let manager = Arc::new(DependencyManager::new(storage, queue, metrics));
         
         let dep_id = Uuid::new_v4();
         let mut handles = vec![];

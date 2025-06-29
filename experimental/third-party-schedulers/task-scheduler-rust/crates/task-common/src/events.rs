@@ -100,6 +100,14 @@ pub enum TaskEvent {
         reassigned_tasks: Vec<Uuid>,
         timestamp: DateTime<Utc>,
     },
+    
+    /// Task rejected due to unsupported method
+    UnsupportedMethod {
+        task_id: Uuid,
+        method: String,
+        worker_id: String,
+        timestamp: DateTime<Utc>,
+    },
 }
 
 /// Worker capacity information
@@ -248,8 +256,14 @@ pub mod subjects {
     /// Task failed
     pub const TASK_FAILED: &str = "tasks.events.failed";
 
+    /// Task retrying
+    pub const TASK_RETRYING: &str = "tasks.events.retrying";
+
     /// Task cancelled
     pub const TASK_CANCELLED: &str = "tasks.events.cancelled";
+    
+    /// Task has unsupported method
+    pub const TASK_UNSUPPORTED_METHOD: &str = "tasks.events.unsupported_method";
 
     /// Worker events
     pub const WORKER_EVENTS: &str = "workers.events";

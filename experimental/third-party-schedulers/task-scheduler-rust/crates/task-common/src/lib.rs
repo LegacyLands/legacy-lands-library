@@ -5,6 +5,7 @@ pub mod events;
 pub mod models;
 pub mod proto;
 pub mod queue;
+pub mod security;
 pub mod tracing;
 
 pub use error::{TaskError, TaskResult};

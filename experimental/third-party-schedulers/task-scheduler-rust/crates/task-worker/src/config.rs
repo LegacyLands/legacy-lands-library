@@ -85,9 +85,13 @@ pub struct QueueConfig {
     #[serde(default = "default_batch_size")]
     pub batch_size: usize,
 
-    /// Queue fetch timeout
+    /// Queue fetch timeout in seconds
     #[serde(default = "default_fetch_timeout")]
     pub fetch_timeout_seconds: u64,
+    
+    /// Queue fetch timeout in milliseconds (for low latency)
+    #[serde(default = "default_fetch_timeout_ms")]
+    pub fetch_timeout_ms: u64,
 }
 
 /// Kubernetes configuration
@@ -178,6 +182,10 @@ fn default_fetch_timeout() -> u64 {
     30
 }
 
+fn default_fetch_timeout_ms() -> u64 {
+    1000  // 1000ms (1 second) for reasonable timeout
+}
+
 fn default_namespace() -> String {
     "task-scheduler".to_string()
 }
@@ -239,6 +247,7 @@ impl Default for QueueConfig {
             nats_url: default_nats_url(),
             batch_size: default_batch_size(),
             fetch_timeout_seconds: default_fetch_timeout(),
+            fetch_timeout_ms: default_fetch_timeout_ms(),
         }
     }
 }

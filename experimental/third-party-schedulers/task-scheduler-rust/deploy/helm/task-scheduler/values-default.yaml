@@ -1,0 +1,105 @@
+# Default values for task-scheduler
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  repository: task-manager
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Worker image
+worker:
+  image:
+    repository: task-worker
+    tag: latest
+
+# Replica counts
+replicaCount:
+  manager: 1
+  worker: 3
+
+# Service configuration
+service:
+  type: ClusterIP
+  grpc:
+    nodePort: 30051
+  metrics:
+    nodePort: 30090
+
+# Task Manager configuration
+taskManager:
+  enabled: true
+  service:
+    grpcPort: 50051
+    metricsPort: 9000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# Task Worker configuration  
+taskWorker:
+  enabled: true
+  service:
+    grpcPort: 50052
+    metricsPort: 9001
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  external:
+    host: postgres
+    port: 5432
+    database: taskscheduler
+    username: taskscheduler
+    password: taskscheduler
+
+# NATS configuration
+nats:
+  enabled: true
+  external:
+    url: nats://nats:4222
+
+# Service Account
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# RBAC
+rbac:
+  create: true
+
+# Observability
+observability:
+  metrics:
+    enabled: true
+  tracing:
+    enabled: false
+    otlpEndpoint: ""
+
+# Monitoring
+monitoring:
+  namespace: ""  # Use release namespace by default
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+    service:
+      type: NodePort
+      nodePort: 30030

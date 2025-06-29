@@ -18,12 +18,10 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 
 # Build only dependencies first (for better caching)
-RUN HTTP_PROXY=http://127.0.0.1:10808 HTTPS_PROXY=http://127.0.0.1:10808 \
-    cargo build --release -p task-manager --no-default-features
+RUN cargo build --release -p task-manager --no-default-features
 
 # Build the application
-RUN HTTP_PROXY=http://127.0.0.1:10808 HTTPS_PROXY=http://127.0.0.1:10808 \
-    cargo build --release -p task-manager
+RUN cargo build --release -p task-manager
 
 # Runtime stage
 FROM debian:bookworm-slim

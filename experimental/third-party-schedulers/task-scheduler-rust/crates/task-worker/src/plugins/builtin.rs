@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use std::future::Future;
 use std::pin::Pin;
 use task_common::error::{TaskError, TaskResult};
-use tracing::debug;
+use tracing::{debug, error};
 
 /// Builtin tasks container
 pub struct BuiltinTasks;
@@ -268,4 +268,71 @@ mod tests {
         assert!(elapsed.as_millis() >= 100);
         assert!(result.is_object());
     }
+}
+
+/// Fail task - always fails for testing error metrics
+pub fn fail_task(args: Vec<Value>) -> TaskResult<Value> {
+    debug!("Executing fail task with {} args", args.len());
+
+    let reason = args.get(0)
+        .and_then(|v| v.as_str())
+        .unwrap_or("Intentional failure for testing");
+    
+    error!("Task failing with reason: {}", reason);
+    
+    // Simulate different types of errors with more specific messages
+    let error_msg = match reason {
+        r if r.contains("timeout") => {
+            Err(TaskError::Timeout(30))
+        }
+        r if r.contains("network") => {
+            Err(TaskError::ExecutionFailed("Network connection failed: unable to reach remote host".to_string()))
+        }
+        r if r.contains("validation") => {
+            Err(TaskError::InvalidArguments("Input validation failed: required field missing".to_string()))
+        }
+        r if r.contains("permission") => {
+            Err(TaskError::ExecutionFailed("Permission denied: insufficient privileges to access resource".to_string()))
+        }
+        r if r.contains("memory") => {
+            Err(TaskError::ExecutionFailed("Out of memory: failed to allocate required resources".to_string()))
+        }
+        r if r.contains("database") => {
+            Err(TaskError::ExecutionFailed("Database connection lost: unable to execute query".to_string()))
+        }
+        r if r.contains("concurrency") => {
+            Err(TaskError::ExecutionFailed("Deadlock detected: concurrent operation conflict".to_string()))
+        }
+        r if r.contains("resource") => {
+            Err(TaskError::ExecutionFailed("Resource limit exceeded: too many open files".to_string()))
+        }
+        _ => {
+            Err(TaskError::ExecutionFailed(format!("Task failed: {}", reason)))
+        }
+    };
+    
+    error_msg
+}
+
+/// Init task - initializes a system or component with provided configuration
+pub fn init(args: Vec<Value>) -> TaskResult<Value> {
+    debug!("Executing init task with {} args", args.len());
+
+    if args.is_empty() {
+        return Ok(json!({
+            "status": "initialized",
+            "config": "default",
+            "message": "System initialized with default configuration"
+        }));
+    }
+
+    // Parse configuration from first argument
+    let config = &args[0];
+    
+    Ok(json!({
+        "status": "initialized",
+        "config": config,
+        "message": format!("System initialized with custom configuration"),
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
 }

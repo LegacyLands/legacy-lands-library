@@ -10,9 +10,6 @@ use task_storage::{
     models::{PageInfo, StoredTaskResult, TaskExecutionHistory, TaskQuery, TaskStatus},
     TaskStorage,
 };
-
-#[cfg(feature = "mongodb")]
-use task_storage::config::MongoDBConfig;
 use uuid::Uuid;
 
 /// Helper to create a test task result
@@ -90,20 +87,6 @@ async fn create_test_storage() -> Option<Arc<dyn TaskStorage>> {
         }
     }
 
-    // Check for MongoDB configuration
-    #[cfg(feature = "mongodb")]
-    if let Ok(mongo_url) = env::var("TEST_MONGODB_URL") {
-        let database = env::var("TEST_MONGODB_DATABASE").unwrap_or_else(|_| "test_tasks".to_string());
-        let config = StorageConfig::MongoDB(MongoDBConfig {
-            url: mongo_url,
-            database,
-            collections: Default::default(),
-        });
-        match create_storage(&config).await {
-            Ok(storage) => return Some(storage),
-            Err(e) => eprintln!("Failed to connect to MongoDB: {}", e),
-        }
-    }
 
     None
 }

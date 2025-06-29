@@ -1,10 +1,8 @@
-# Runtime stage only - assumes binary is built locally
-# Use Ubuntu 24.04 which has newer glibc
-FROM ubuntu:24.04
+# Runtime stage only - assumes binary is already built locally
+FROM debian:bookworm-slim
 
-# Configure Aliyun mirror for Ubuntu
-RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list.d/ubuntu.sources && \
-    sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list.d/ubuntu.sources
+# Configure apt sources for China
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -14,25 +12,28 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN useradd -m -u 1001 -s /bin/bash appuser
+RUN useradd -m -u 1000 -s /bin/bash appuser
 
 WORKDIR /app
 
-# Create plugin directory
-RUN mkdir -p /app/plugins
+# Copy pre-built binary from local build
+COPY target/release/task-worker /app/task-worker
 
-# Copy locally built binary and set ownership
-COPY --chown=appuser:appuser target/release/task-worker /app/task-worker
+# Copy default configuration
+COPY crates/task-worker/config.example.toml /app/config.toml
+
+# Change ownership
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-# Expose metrics port
-EXPOSE 9003
+# Expose ports
+EXPOSE 50052 9001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/bin/sh", "-c", "curl -f http://localhost:9003/health || exit 1"]
+    CMD ["/bin/sh", "-c", "curl -f http://localhost:9001/health || exit 1"]
 
 # Run the application
 ENTRYPOINT ["/app/task-worker"]
+CMD ["--config", "/app/config.toml"]

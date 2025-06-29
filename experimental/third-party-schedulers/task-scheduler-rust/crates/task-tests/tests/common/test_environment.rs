@@ -7,7 +7,9 @@ use tonic::transport::Channel;
 
 pub struct TestEnvironment {
     manager_endpoint: String,
+    #[allow(dead_code)]
     nats_url: String,
+    #[allow(dead_code)]
     manager_metrics_port: u16,
 }
 
@@ -21,7 +23,7 @@ impl TestEnvironment {
             "http://task-manager:50051".to_string()
         } else {
             std::env::var("GRPC_ADDRESS")
-                .unwrap_or_else(|_| "http://localhost:50051".to_string())
+                .unwrap_or_else(|_| "http://localhost:50052".to_string())
         };
         
         let nats_url = if is_ci {
@@ -45,6 +47,7 @@ impl TestEnvironment {
         Ok(TestClient { client })
     }
     
+    #[allow(dead_code)]
     pub fn manager_metrics_url(&self) -> String {
         let host = if std::env::var("CI").is_ok() {
             "task-manager"
@@ -61,22 +64,25 @@ pub struct TestClient {
 }
 
 impl TestClient {
+    #[allow(dead_code)]
     pub async fn submit_echo_task(&mut self, message: &str) -> Result<TaskResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let task_id = uuid::Uuid::new_v4();
         let request = TaskRequest {
-            task_id: uuid::Uuid::new_v4().to_string(),
+            task_id: task_id.to_string(),
             method: "echo".to_string(),
             args: vec![Any {
                 type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
                 value: serde_json::to_vec(&message).unwrap(),
             }],
             deps: vec![],
-            is_async: false,
+            is_async: false,  // Keep synchronous for simple echo tasks
         };
         
         let response = self.client.submit_task(request).await?;
         Ok(response.into_inner())
     }
     
+    #[allow(dead_code)]
     pub async fn submit_async_sleep_task(&mut self, seconds: u32) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let request = TaskRequest {
             task_id: uuid::Uuid::new_v4().to_string(),
@@ -93,6 +99,7 @@ impl TestClient {
         Ok(response.into_inner().task_id)
     }
     
+    #[allow(dead_code)]
     pub async fn submit_computation_task(&mut self, a: i32, b: i32) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let request = TaskRequest {
             task_id: uuid::Uuid::new_v4().to_string(),
@@ -115,10 +122,12 @@ impl TestClient {
         Ok(response.into_inner().task_id)
     }
     
+    #[allow(dead_code)]
     pub async fn submit_async_computation_task(&mut self, a: i32, b: i32) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         self.submit_computation_task(a, b).await
     }
     
+    #[allow(dead_code)]
     pub async fn submit_dependent_task(&mut self, dep_task_id: &str, multiplier: i32) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let request = TaskRequest {
             task_id: uuid::Uuid::new_v4().to_string(),
@@ -141,19 +150,21 @@ impl TestClient {
         Ok(response.into_inner().task_id)
     }
     
+    #[allow(dead_code)]
     pub async fn submit_invalid_task(&mut self) -> Result<TaskResponse, Box<dyn std::error::Error + Send + Sync>> {
         let request = TaskRequest {
             task_id: uuid::Uuid::new_v4().to_string(),
             method: "non_existent_method".to_string(),
             args: vec![],
             deps: vec![],
-            is_async: false,
+            is_async: true,
         };
         
         let response = self.client.submit_task(request).await?;
         Ok(response.into_inner())
     }
     
+    #[allow(dead_code)]
     pub async fn get_task_result(&mut self, task_id: &str) -> Result<ResultResponse, Box<dyn std::error::Error + Send + Sync>> {
         let request = ResultRequest {
             task_id: task_id.to_string(),

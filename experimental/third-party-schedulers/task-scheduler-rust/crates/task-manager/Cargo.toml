@@ -29,6 +29,7 @@ prost-types = { workspace = true }
 
 # gRPC
 tonic = { workspace = true }
+tonic-reflection = "0.13"
 
 # Error handling
 thiserror = { workspace = true }
@@ -61,11 +62,18 @@ chrono = { workspace = true }
 humantime = { workspace = true }
 hostname = "0.4"
 
+# Database
+redis = { version = "0.27", features = ["aio", "tokio-comp", "connection-manager"] }
+
 # Metrics
 prometheus = "0.13"
 axum = "0.8"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace"] }
+
+# System info
+sysinfo = "0.35"
+num_cpus = "1.16"
 
 [build-dependencies]
 tonic-build = { workspace = true }

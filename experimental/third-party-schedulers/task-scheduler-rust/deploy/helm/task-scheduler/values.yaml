@@ -74,7 +74,7 @@ taskManager:
   # Configuration
   config:
     storage:
-      backend: memory  # memory, postgresql, mongodb
+      backend: memory  # memory, postgresql
       cacheSize: 10000
     grpc:
       maxConcurrentRequests: 1000
@@ -313,18 +313,6 @@ postgresql:
     persistence:
       enabled: true
       size: 10Gi
-
-# MongoDB configuration (optional)
-mongodb:
-  enabled: false
-  auth:
-    enabled: true
-    database: taskscheduler
-    username: taskscheduler
-    password: changeme
-  persistence:
-    enabled: true
-    size: 10Gi
 
 # Redis configuration (optional)
 redis:

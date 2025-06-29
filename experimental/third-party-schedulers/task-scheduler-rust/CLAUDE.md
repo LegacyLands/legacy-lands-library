@@ -11,32 +11,48 @@
 > - 面对复杂需求，先拆分为若干可管理子任务，在输出中按子任务顺序呈现，便于用户跟进；
 >
 > 所有技术输出必须建立在准确、思考过的基础之上，拒绝机械生成与无脑填充。
-> 如果你已经了解所有的规范，你需要在用户第一次进行对话时先说明 "我已充分了解 Rust 开发与写作规范。"，随后再执行用户需求。
+> 如果你已经了解所有的规范，你需要在用户第一次进行对话时先说明 "我已充分了解 Rust 开发与写作规范（1.1）。"，使用 PromptX MCP
+> 读取目前所有记忆，随后再执行用户需求。
 
-## 1. 当你尝试编写新功能、添加新类型或书写文档注释时
+## 1. 代码与文档编写规范
 
-1. 你需要先查看其他模块的实现，尤其是相同 crate 中的模块；
+1. 你需要先查看其他模块的实现，从整个项目目录中查找并学习所有模块；
 2. 主动学习、模仿现有代码的结构与风格，包括：
     - 缩进与换行格式（4个空格缩进）；
     - 命名习惯（snake_case、PascalCase 等）；
     - 文档注释风格（`///` 格式）；
     - 错误处理模式（`Result<T, E>` 和 `?` 操作符）。
 
-## 2. 你必须制定清晰的 ToDo 任务清单，并在开发完成后遵循以下规则：
+## 2. 规范流程
 
-1. 在开始任务之前，必须详细深入了解整个项目；
-1. 使用 `cargo build` 和 `cargo check` 进行编译检查；
-2. 若出现编译错误，必须修复后重新编译，直至编译通过；
-3. 编写测试前，先熟悉项目中已有的测试模块和 `#[cfg(test)]` 结构；
-4. 编写基于功能的单元测试和集成测试，测试内容不得流于无意义断言，需覆盖核心业务逻辑与边界条件；
-5. 测试通过后，使用 `cargo test` 或使用脚本运行全部测试确保无回归；
-6. 若需要为当前 crate 引入其他 crate 作为依赖：
-   - 先检查是否会造成循环依赖；
-   - 优先使用 `[dependencies]` 方式声明生产依赖；
-   - 测试依赖使用 `[dev-dependencies]` 声明；
-7. 使用 `cargo fmt` 格式化代码，使用 `cargo clippy` 检查代码质量；
-8. 编译全部通过后，你需要完成整个测试流程，并根据测试进行修复，确保全部通过。
-9. 除非用户有明确说明，否则你不应撰写任何示例（example）或额外文档，以及 README。
+1. 在开始任务之前，必须先深入阅读并理解完整源代码（而非仅依赖文档），借助 TodoWrite/TodoRead
+   等内建工具，将任务拆分到文件／函数级别，生成颗粒度清晰、精细且标准的 ToDo 清单，并在整个开发过程中持续细化和实时更新。
+2. 使用 `cargo build` 和 `cargo check` 进行编译检查；若出现错误必须修复后重新编译，直至编译通过。
+    - 若构建目录过大导致磁盘空间不足，可执行 `cargo clean` 释放空间。
+3. 测试规范
+    1. 准备阶段：在编写测试之前，先熟悉项目中已有的测试模块和 `#[cfg(test)]` 结构；阅读 `scripts/` 目录下现有 Bash
+       脚本，避免重复编写。
+    2. 组织形式：
+        - 单元测试：放在与代码同文件的 `#[cfg(test)]` 模块中；
+        - 集成测试：放在 `tests/` 目录；
+    3. 编写要求：
+        - 使用描述性测试函数名，确保每个测试仅验证一个功能点；
+        - 覆盖核心业务逻辑与边界条件，避免无意义断言；
+        - 保证测试覆盖率充分，力求核心业务代码接近 100% 覆盖；
+        - 使用 `assert_eq!`、`assert_ne!` 等断言宏；
+    4. 测试工具与运行：
+        - 首选使用 `scripts` 目录中的 Bash 脚本运行测试，若无合适脚本再编写新的脚本运行测试；
+        - 可使用 `proptest` 进行属性测试，`mockall` 进行模拟测试；
+        - 调试专用脚本在使用后必须删除；
+    5. 通过标准：全部测试通过后再次运行完整测试流程确保无回归。
+4. 若需要为当前 crate 引入其他 crate 作为依赖：
+    - 先检查是否会造成循环依赖；
+    - 优先使用 `[dependencies]` 声明生产依赖；
+    - 测试依赖使用 `[dev-dependencies]` 声明。
+5. 使用 `cargo fmt` 格式化代码，使用 `cargo clippy` 检查代码质量；所有警告应被修复或合理忽略。
+6. 除非用户有明确说明，否则不应撰写任何示例（example）、README、部署文档。若有必要可使用 PromptX MCP 记录详细内容；
+7. 当完成新的任务或积累经验时，使用 PromptX MCP 记录详细内容（如经验、踩坑记录等），并在项目的 `TODO.md`
+   同步更新已完成事项与待办事项的详细具体说明。
 
 ## 3. 命名规范（类型、字段、变量、函数、模块）
 
@@ -149,15 +165,15 @@
     - 所有新的命名风格、设计结构，必须与项目现有命名方式协调一致；
     - 若存在不确定性，可暂时标记 `// TODO: 确认风格规范` 后告诉开发组。
 3. 在开始编码前，必须熟悉并优先使用以下 Rust 生态系统功能，避免重复实现：
-   - 异步处理：优先使用 `tokio` 或 `async-std` 等成熟运行时；
-   - 错误处理：使用 `thiserror`、`anyhow` 等标准错误处理库；
-   - 序列化：使用 `serde` 进行数据序列化/反序列化；
-   - 日志记录：使用 `log`、`tracing` 等日志框架；
-   - HTTP 客户端/服务器：使用 `reqwest`、`axum`、`actix-web` 等；
+    - 异步处理：优先使用 `tokio` 或 `async-std` 等成熟运行时；
+    - 错误处理：使用 `thiserror`、`anyhow` 等标准错误处理库；
+    - 序列化：使用 `serde` 进行数据序列化/反序列化；
+    - 日志记录：使用 `log`、`tracing` 等日志框架；
+    - HTTP 客户端/服务器：使用 `reqwest`、`axum`、`actix-web` 等；
 4. 若现有依赖已满足需求，禁止自写替代实现；如确认存在缺口，需在 Pull Request 描述中说明：
-   - 已检索过的相关 crate 或功能；
-   - 为什么现有实现不足；
-   - 新实现的范围与改进点。
+    - 已检索过的相关 crate 或功能；
+    - 为什么现有实现不足；
+    - 新实现的范围与改进点。
 
 ## 9. 注释与回答语言规范
 
@@ -312,7 +328,7 @@
 
 ## 19. TODO 与 FIXME 约定
 
-1. 每个 `TODO` 或 `FIXME` 必须包含责任人标识或任务链接：  
+1. 每个 `TODO` 或 `FIXME` 必须包含责任人标识或任务链接：
    ```rust
    // TODO(username): implement retry logic for failed tasks
    // FIXME(issue-123): handle edge case in parser
@@ -320,17 +336,73 @@
 2. `TODO` 代表可延后但需完成的功能，`FIXME` 表示已知问题，优先级高于 `TODO`；
 3. 禁止出现无上下文信息的注释，如 `// TODO: fix`。
 
-## 20. 测试规范
+## 20. Unsafe 与 FFI 代码约定
 
-1. 测试组织：
-    - 单元测试：使用 `#[cfg(test)]` 模块；
-    - 集成测试：放在 `tests/` 目录；
-    - 文档测试：在文档注释中提供可运行示例；
-2. 测试编写：
-    - 使用描述性的测试函数名；
-    - 每个测试只验证一个功能点；
-    - 使用 `assert_eq!`、`assert_ne!` 等断言宏；
-3. 测试工具：
-    - 使用 `cargo test` 运行测试；
-    - 考虑使用 `proptest` 进行属性测试；
-    - 使用 `mockall` 等工具进行模拟测试。
+1. 基本原则
+    - 必须最小化 `unsafe` 代码范围，并尽可能将其隔离到单一模块。
+    - 在可能的情况下，优先使用社区成熟的绑定库（如 `libc`、`windows-sys`、`openssl-sys` 等），避免手写 FFI 声明。
+2. 注释要求（// SAFETY:）
+    - 每个 `unsafe` 代码块都必须紧随一行 `// SAFETY:` 注释，清晰说明为什么此处安全、调用者需要保证的前提以及违反前提会导致的后果。
+      ```rust
+      // SAFETY: `ptr` comes from `Vec::into_raw_parts`, hence non-null and properly aligned.
+      unsafe { ptr.write_bytes(0, len) };
+      ```  
+3. FFI 边界
+    - 所有 `extern "C"` 函数必须放在 `ffi` 模块或带有 `ffi` 后缀的文件中，并导出最小必要接口；
+    - 如果需要跨语言共享数据结构，应使用 `#[repr(C)]` 或 `#[repr(transparent)]` 并避免包含 `Vec<T>`、`String` 等具有内部指针的类型；
+    - 禁止直接操作裸指针或手写 `mem::transmute`，应封装在安全抽象中：
+      ```rust
+      pub struct FooHandle(*mut ffi::Foo); // Opaque handle
+ 
+      impl Drop for FooHandle {
+          fn drop(&mut self) {
+              unsafe { ffi::foo_destroy(self.0) }; // SAFETY: handle created by foo_create
+          }
+      }
+      ```  
+4. 资源管理
+    - 对外部资源（文件句柄、C 结构体指针、socket 等）必须封装成 RAII 类型，实现 `Drop` 以确保正确释放；
+    - 对同一资源的多次释放（double-free）或使用后释放（use-after-free）属于严重安全缺陷，CI 必须启用 Miri 或 Address
+      Sanitizer 进行检测。
+5. 错误传播与异常边界
+    - C API 返回错误码时，Rust 侧应映射为 `Result<T, Error>`；
+    - 如果 C 函数可能抛出异常或 `longjmp`，必须在文档中标注并通过信号/回调等方式处理；
+    - 禁止在 FFI 回调跨越语言边界传播 Rust panic，也禁止让 C 异常直接进入 Rust 代码。
+6. 编译与 LTO 设置
+    - 在 Release 配置中启用 `lto = "thin"`、`codegen-units = 1` 以减小二进制与符号暴露面；
+    - 使用 `cargo-deny` 或 `cargo auditable` 检查 FFI 依赖的许可证和安全公告。
+7. 安全审计流程
+    - 新增或修改 `unsafe`/FFI 代码时，PR 描述必须列出：
+        - 触及的 `unsafe` 块位置及行号；
+        - 每个 `// SAFETY:` 注释的简要摘要；
+        - 引入外部库名称、版本及其许可证；
+
+## 21. 运行环境与部署规范
+
+1. Script-first 原则
+    - 仅允许使用 Bash 脚本，且若明确只会执行一次，则直接自行执行而不要写没有意义的多于脚本；
+    - 部署相关任务（Docker 镜像构建、Kubernetes 资源、Grafana 监控等）必须先检查 `scripts/` 目录是否已有对应 Bash 脚本；
+    - 若已有脚本，可复用或扩展；若不存在，再新建脚本，并放入 `scripts/` 目录。所有自动化步骤都应通过脚本完成，而非手动或临时命令。
+2. Docker 构建
+    - 使用多阶段（multi-stage）构建精简镜像体积，并固定基础镜像标签（如 `rust:1.76-slim`）；
+    - 镜像内运行进程须使用非 root 用户，必要时在 `Dockerfile` 中创建并切换用户；
+    - 构建产物应符合 OCI 规范，镜像标签包含版本与 Git 提交哈希，例如 `my-app:${VERSION}-${GIT_SHA}`；
+    - 若需额外构建参数，应通过 `--build-arg` 或环境变量传入，而非硬编码。
+3. Kubernetes 部署
+    - 推荐使用 Helm Chart 或 Kustomize 管理清单；文件放在 `deploy/` 对应目录；
+    - 必须为每个 Pod 配置 `readinessProbe`、`livenessProbe`、`resources.requests/limits`；
+    - 机密信息一律通过 Kubernetes Secret 或外部密钥管理（如 Vault）注入，不得写入镜像或仓库；
+    - 部署脚本应支持 `kubectl apply` 与回滚（`kubectl rollout undo`），并在 CI 中可自动执行。
+4. 监控与日志（Grafana / Prometheus）
+    - 若项目已有监控脚本（如 `scripts/setup_grafana.sh`），优先复用；无则编写脚本创建数据源、仪表盘 JSON 并自动导入；
+    - 应暴露 Prometheus 指标端点（默认 `/metrics`），并在 Helm/Kustomize 中配置 `ServiceMonitor` 或 `PodMonitor`；
+    - 日志统一输出到 stdout/stderr，保证容器环境下可被采集。
+5. CI/CD 集成
+    - 在 CI 中：
+        1. 执行 `cargo build --release` → 单元/集成测试 → `docker build` → 推送镜像到 Registry；
+        2. 触发部署脚本更新 Kubernetes（滚动更新）并校验健康状态；
+        3. 若部署失败则自动回滚并标红流水线。
+    - 所有 CI/CD YAML 或 Workflow 文件放置于 `.github/workflows/`、`.gitlab/ci.yml` 或 `.ci/`。
+6. 环境变量与配置管理
+    - 非机密配置通过环境变量或 `config/{env}.toml` 注入；机密配置通过 Secret 管理器；
+    - 创建脚本 `scripts/render_env.sh`（示例）统一生成或校验 `.env` 文件，避免手动遗漏。  

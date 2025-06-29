@@ -87,6 +87,12 @@ impl PluginManager {
         // Async tasks
         self.register_async_task("sleep", builtin::sleep, None);
         self.register_async_task("http_get", builtin::http_get, None);
+        
+        // Fail task for testing error metrics
+        self.register_sync_task("fail", builtin::fail_task, None);
+        
+        // Init task
+        self.register_sync_task("init", builtin::init, None);
 
         info!(
             "Registered {} builtin tasks",
@@ -172,9 +178,10 @@ impl PluginManager {
             self.async_tasks.remove(task);
         }
 
-        // Unload plugin
+        // Try to unload plugin from dynamic loader (if it was dynamically loaded)
+        // If the plugin wasn't dynamically loaded, just ignore the error
         let mut loader = self.dynamic_loader.write();
-        loader.unload_plugin(name)?;
+        let _ = loader.unload_plugin(name);
 
         info!(
             "Unloaded plugin {} ({} tasks removed)",

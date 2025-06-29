@@ -1,0 +1,22 @@
+{{- if .Values.taskWorker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-worker
+spec:
+  type: ClusterIP
+  ports:
+  - name: grpc
+    port: {{ .Values.taskWorker.service.grpcPort }}
+    targetPort: grpc
+  - name: metrics
+    port: {{ .Values.taskWorker.service.metricsPort }}
+    targetPort: metrics
+  selector:
+    {{- include "task-scheduler.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: task-worker
+{{- end }}

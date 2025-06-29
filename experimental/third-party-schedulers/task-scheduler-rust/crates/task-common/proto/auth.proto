@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package taskscheduler;
+
+// Authentication service
+service AuthService {
+  // Login with credentials
+  rpc Login(LoginRequest) returns (LoginResponse);
+  
+  // Logout and revoke token
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // Refresh token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // Create new user (admin only)
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  
+  // Update user roles (admin only)
+  rpc UpdateUserRoles(UpdateUserRolesRequest) returns (UpdateUserRolesResponse);
+  
+  // Delete user (admin only)
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  
+  // List users (admin only)
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}
+
+// Login request
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+// Login response
+message LoginResponse {
+  string token = 1;
+  string user_id = 2;
+  string username = 3;
+  repeated string roles = 4;
+  int64 expires_at = 5;
+}
+
+// Logout request
+message LogoutRequest {
+  string token = 1;
+}
+
+// Logout response
+message LogoutResponse {
+  bool success = 1;
+}
+
+// Refresh token request
+message RefreshTokenRequest {
+  string token = 1;
+}
+
+// Refresh token response
+message RefreshTokenResponse {
+  string token = 1;
+  int64 expires_at = 2;
+}
+
+// Create user request
+message CreateUserRequest {
+  string username = 1;
+  string password = 2;
+  repeated string roles = 3;
+}
+
+// Create user response
+message CreateUserResponse {
+  string user_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// Update user roles request
+message UpdateUserRolesRequest {
+  string username = 1;
+  repeated string roles = 2;
+}
+
+// Update user roles response
+message UpdateUserRolesResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Delete user request
+message DeleteUserRequest {
+  string username = 1;
+}
+
+// Delete user response
+message DeleteUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List users request
+message ListUsersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+// User info
+message UserInfo {
+  string user_id = 1;
+  string username = 2;
+  repeated string roles = 3;
+  int64 created_at = 4;
+}
+
+// List users response
+message ListUsersResponse {
+  repeated UserInfo users = 1;
+  string next_page_token = 2;
+}

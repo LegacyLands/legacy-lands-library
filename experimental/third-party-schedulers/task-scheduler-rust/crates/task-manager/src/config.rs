@@ -18,6 +18,9 @@ pub struct Config {
 
     /// Observability configuration
     pub observability: ObservabilityConfig,
+
+    /// Security configuration
+    pub security: SecurityConfig,
 }
 
 /// Server configuration
@@ -63,8 +66,8 @@ pub struct StorageConfig {
     /// PostgreSQL connection string (if using PostgreSQL)
     pub postgres_url: Option<String>,
 
-    /// MongoDB connection string (if using MongoDB)
-    pub mongodb_url: Option<String>,
+    /// Redis connection string (if using Redis for caching)
+    pub redis_url: Option<String>,
 }
 
 /// Storage backend type
@@ -131,6 +134,43 @@ pub struct ObservabilityConfig {
     pub sampling_ratio: f64,
 }
 
+/// Security configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityConfig {
+    /// Enable authentication
+    #[serde(default = "default_auth_enabled")]
+    pub auth_enabled: bool,
+
+    /// Enable RBAC (Role-Based Access Control)
+    #[serde(default = "default_rbac_enabled")]
+    pub rbac_enabled: bool,
+
+    /// Enable audit logging
+    #[serde(default = "default_audit_enabled")]
+    pub audit_enabled: bool,
+
+    /// Audit log path
+    #[serde(default = "default_audit_log_path")]
+    pub audit_log_path: String,
+
+    /// Minimum audit severity level
+    #[serde(default = "default_audit_min_severity")]
+    pub audit_min_severity: String,
+
+    /// JWT secret for token validation (if using JWT)
+    pub jwt_secret: Option<String>,
+
+    /// Default admin user (for initial setup)
+    pub default_admin_user: Option<String>,
+
+    /// Default admin password (for initial setup)
+    pub default_admin_password: Option<String>,
+
+    /// Session timeout in seconds
+    #[serde(default = "default_session_timeout")]
+    pub session_timeout: u64,
+}
+
 // Default value functions
 fn default_grpc_address() -> String {
     "0.0.0.0:50051".to_string()
@@ -188,6 +228,30 @@ fn default_sampling_ratio() -> f64 {
     1.0
 }
 
+fn default_auth_enabled() -> bool {
+    false
+}
+
+fn default_rbac_enabled() -> bool {
+    false
+}
+
+fn default_audit_enabled() -> bool {
+    true
+}
+
+fn default_audit_log_path() -> String {
+    "/var/log/task-scheduler/audit.log".to_string()
+}
+
+fn default_audit_min_severity() -> String {
+    "info".to_string()
+}
+
+fn default_session_timeout() -> u64 {
+    3600 // 1 hour
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -204,7 +268,7 @@ impl Default for Config {
                 backend: default_storage_backend(),
                 cache_size: default_cache_size(),
                 postgres_url: None,
-                mongodb_url: None,
+                redis_url: None,
             },
             queue: QueueConfig {
                 nats_url: default_nats_url(),
@@ -222,6 +286,17 @@ impl Default for Config {
                 service_name: default_service_name(),
                 log_level: default_log_level(),
                 sampling_ratio: default_sampling_ratio(),
+            },
+            security: SecurityConfig {
+                auth_enabled: default_auth_enabled(),
+                rbac_enabled: default_rbac_enabled(),
+                audit_enabled: default_audit_enabled(),
+                audit_log_path: default_audit_log_path(),
+                audit_min_severity: default_audit_min_severity(),
+                jwt_secret: None,
+                default_admin_user: None,
+                default_admin_password: None,
+                session_timeout: default_session_timeout(),
             },
         }
     }

@@ -3,7 +3,7 @@ use crate::api::proto::{
     PauseTaskRequest, PauseTaskResponse, ResultRequest, ResultResponse, ResumeTaskRequest,
     ResumeTaskResponse, TaskRequest, TaskResponse, TaskStatusRequest, TaskStatusResponse,
 };
-use crate::{handlers::TaskValidator, storage::TaskStorage};
+use crate::{handlers::TaskValidator, storage::StorageBackend, metrics::Metrics};
 use std::sync::Arc;
 use task_common::{
     error::TaskError,
@@ -17,21 +17,23 @@ use tracing::{debug, info, instrument, warn};
 
 /// gRPC service implementation for the Task Scheduler
 pub struct TaskSchedulerService {
-    storage: Arc<TaskStorage>,
+    storage: Arc<dyn StorageBackend>,
     queue: Arc<QueueManager>,
     validator: Arc<TaskValidator>,
     dependency_manager: Arc<crate::dependency_manager::DependencyManager>,
     cancellation_manager: Arc<crate::cancellation::CancellationManager>,
+    metrics: Arc<Metrics>,
 }
 
 impl TaskSchedulerService {
     /// Create a new TaskSchedulerService
     pub fn new(
-        storage: Arc<TaskStorage>,
+        storage: Arc<dyn StorageBackend>,
         queue: Arc<QueueManager>,
         validator: Arc<TaskValidator>,
         dependency_manager: Arc<crate::dependency_manager::DependencyManager>,
         cancellation_manager: Arc<crate::cancellation::CancellationManager>,
+        metrics: Arc<Metrics>,
     ) -> Self {
         Self {
             storage,
@@ -39,6 +41,7 @@ impl TaskSchedulerService {
             validator,
             dependency_manager,
             cancellation_manager,
+            metrics,
         }
     }
 }
@@ -63,6 +66,15 @@ impl TaskScheduler for TaskSchedulerService {
             task_id, task_request.method
         );
 
+        // Record metrics
+        self.metrics.tasks_submitted
+            .with_label_values(&[&task_request.method, "true"])
+            .inc();
+        
+        let timer = self.metrics.task_submission_duration
+            .with_label_values(&[&task_request.method])
+            .start_timer();
+
         // Validate the task request
         self.validator
             .validate(&task_request)
@@ -81,8 +93,15 @@ impl TaskScheduler for TaskSchedulerService {
             .into_iter()
             .map(|any| {
                 // Convert protobuf Any to JSON value
-                // This is simplified - in production you'd need proper type handling
-                serde_json::Value::String(format!("{:?}", any))
+                // For now, we expect the value to be JSON encoded
+                match serde_json::from_slice(&any.value) {
+                    Ok(value) => value,
+                    Err(e) => {
+                        // Fallback: try to interpret as string
+                        debug!("Failed to parse Any value as JSON: {}", e);
+                        serde_json::Value::String(String::from_utf8_lossy(&any.value).to_string())
+                    }
+                }
             })
             .collect();
 
@@ -108,10 +127,29 @@ impl TaskScheduler for TaskSchedulerService {
         };
 
         // Store task in database
-        self.storage
+        let storage_timer = self.metrics.storage_duration
+            .with_label_values(&["create"])
+            .start_timer();
+        
+        let storage_result = self.storage
             .create_task(&task_info)
-            .await
-            .map_err(|e| Status::internal(format!("Failed to store task: {}", e)))?;
+            .await;
+            
+        storage_timer.observe_duration();
+        
+        match storage_result {
+            Ok(_) => {
+                self.metrics.storage_operations
+                    .with_label_values(&["create", "success"])
+                    .inc();
+            }
+            Err(e) => {
+                self.metrics.storage_operations
+                    .with_label_values(&["create", "error"])
+                    .inc();
+                return Err(Status::internal(format!("Failed to store task: {}", e)));
+            }
+        }
 
         // Register task dependencies with dependency manager
         if !task_info.dependencies.is_empty() {
@@ -139,6 +177,10 @@ impl TaskScheduler for TaskSchedulerService {
         if task_request.is_async {
             // Check if dependencies are satisfied before queueing
             if !task_info.dependencies.is_empty() {
+                let dependency_timer = self.metrics.dependency_resolution_duration
+                    .with_label_values(&[&task_info.dependencies.len().to_string()])
+                    .start_timer();
+                    
                 let deps_satisfied = self
                     .validator
                     .check_dependencies(&task_info.dependencies, &self.storage)
@@ -146,6 +188,19 @@ impl TaskScheduler for TaskSchedulerService {
                     .map_err(|e| {
                         Status::internal(format!("Failed to check dependencies: {}", e))
                     })?;
+                    
+                dependency_timer.observe_duration();
+                
+                // Record dependency check result
+                if deps_satisfied {
+                    self.metrics.dependency_checks
+                        .with_label_values(&["satisfied"])
+                        .inc();
+                } else {
+                    self.metrics.dependency_checks
+                        .with_label_values(&["failed"])
+                        .inc();
+                }
 
                 if !deps_satisfied {
                     // Update task status to waiting for dependencies
@@ -179,10 +234,29 @@ impl TaskScheduler for TaskSchedulerService {
                 dependencies: task_info.dependencies.clone(),
             };
 
-            self.queue
+            // Record queue operation metrics
+            let queue_result = self.queue
                 .queue_task(queued_task)
-                .await
-                .map_err(|e| Status::internal(format!("Failed to queue task: {}", e)))?;
+                .await;
+                
+            match queue_result {
+                Ok(_) => {
+                    self.metrics.queue_operations
+                        .with_label_values(&["enqueue", "success"])
+                        .inc();
+                    
+                    // Increment queue depth when task is successfully queued
+                    self.metrics.queue_depth
+                        .with_label_values(&["default"])
+                        .inc();
+                }
+                Err(e) => {
+                    self.metrics.queue_operations
+                        .with_label_values(&["enqueue", "error"])
+                        .inc();
+                    return Err(Status::internal(format!("Failed to queue task: {}", e)));
+                }
+            }
 
             // Update status to queued
             self.storage
@@ -205,20 +279,117 @@ impl TaskScheduler for TaskSchedulerService {
                 warn!("Failed to publish task queued event: {}", e);
             }
 
+            // Record task status metric
+            self.metrics.tasks_by_status
+                .with_label_values(&["queued"])
+                .inc();
+            
+            // Stop the timer
+            timer.observe_duration();
+
             Ok(Response::new(TaskResponse {
                 task_id: task_id.to_string(),
                 status: task_response::Status::Pending as i32,
                 result: String::new(),
             }))
         } else {
-            // For synchronous tasks, we need to wait for execution
-            // In the distributed version, this would involve waiting for the result
-            // For now, return a pending status
-            Ok(Response::new(TaskResponse {
-                task_id: task_id.to_string(),
-                status: task_response::Status::Pending as i32,
-                result: "Task submitted for synchronous execution".to_string(),
-            }))
+            // For synchronous tasks, queue the task and wait for result
+            let queued_task = QueuedTask {
+                task_id: task_info.id,
+                method: task_info.method.clone(),
+                args: task_info.args.clone(),
+                priority: task_info.priority,
+                retry_count: 0,
+                max_retries: 3,
+                timeout_seconds: 3600,
+                metadata: Default::default(),
+                dependencies: task_info.dependencies.clone(),
+            };
+
+            // Record queue operation metrics
+            let queue_result = self.queue
+                .queue_task(queued_task)
+                .await;
+                
+            match queue_result {
+                Ok(_) => {
+                    self.metrics.queue_operations
+                        .with_label_values(&["enqueue", "success"])
+                        .inc();
+                    
+                    // Increment queue depth when task is successfully queued
+                    self.metrics.queue_depth
+                        .with_label_values(&["default"])
+                        .inc();
+                }
+                Err(e) => {
+                    self.metrics.queue_operations
+                        .with_label_values(&["enqueue", "error"])
+                        .inc();
+                    return Err(Status::internal(format!("Failed to queue task: {}", e)));
+                }
+            }
+
+            // Update status to queued
+            self.storage
+                .update_task_status(task_id, ModelTaskStatus::Queued)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to update task status: {}", e)))?;
+
+            // For synchronous tasks, wait for completion (with timeout)
+            let start_time = std::time::Instant::now();
+            let timeout = std::time::Duration::from_secs(30); // 30 second timeout
+
+            loop {
+                if start_time.elapsed() > timeout {
+                    return Ok(Response::new(TaskResponse {
+                        task_id: task_id.to_string(),
+                        status: task_response::Status::Failed as i32,
+                        result: "Task execution timeout".to_string(),
+                    }));
+                }
+
+                // Check task status
+                let task = self
+                    .storage
+                    .get_task(task_id)
+                    .await
+                    .map_err(|e| Status::internal(format!("Failed to get task: {}", e)))?
+                    .ok_or_else(|| Status::not_found(format!("Task {} not found", task_id)))?;
+
+                match &task.status {
+                    ModelTaskStatus::Succeeded { .. } => {
+                        // Get result
+                        let result = self
+                            .storage
+                            .get_task_result(task_id)
+                            .await
+                            .map_err(|e| Status::internal(format!("Failed to get task result: {}", e)))?;
+
+                        let result_str = result
+                            .and_then(|r| r.result)
+                            .map(|v| v.to_string())
+                            .unwrap_or_default();
+
+                        return Ok(Response::new(TaskResponse {
+                            task_id: task_id.to_string(),
+                            status: task_response::Status::Success as i32,
+                            result: result_str,
+                        }));
+                    }
+                    ModelTaskStatus::Failed { error, .. } => {
+                        return Ok(Response::new(TaskResponse {
+                            task_id: task_id.to_string(),
+                            status: task_response::Status::Failed as i32,
+                            result: error.clone(),
+                        }));
+                    }
+                    _ => {
+                        // Still pending/running, wait a bit
+                        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+                    }
+                }
+            }
         }
     }
 

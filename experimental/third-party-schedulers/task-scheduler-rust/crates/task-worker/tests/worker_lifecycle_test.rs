@@ -1,5 +1,5 @@
 use serde_json::json;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use task_worker::plugins::PluginManager;
@@ -90,81 +90,87 @@ mod worker_lifecycle_tests {
         let plugin_manager = Arc::new(PluginManager::new());
         let registration_count = Arc::new(AtomicUsize::new(0));
         let execution_count = Arc::new(AtomicUsize::new(0));
-        let should_stop = Arc::new(AtomicBool::new(false));
+        
+        // Pre-register some test tasks to ensure we have something to execute
+        for i in 0..5 {
+            let task_name = format!("preregistered_task_{}", i);
+            fn test_task(_: Vec<serde_json::Value>) -> task_common::error::TaskResult<serde_json::Value> {
+                Ok(json!({ "preregistered": true }))
+            }
+            plugin_manager.register_sync_task(&task_name, test_task, Some("test_plugin".to_string()));
+        }
         
         // Spawn tasks that continuously register new methods
-        let mut register_handles = vec![];
-        for i in 0..3 {
+        let mut handles = vec![];
+        
+        // Registration tasks
+        for i in 0..2 {
             let pm = plugin_manager.clone();
             let reg_count = registration_count.clone();
-            let stop = should_stop.clone();
             
             let handle = tokio::spawn(async move {
-                let mut task_num = 0;
-                while !stop.load(Ordering::Relaxed) {
-                    let task_name = format!("dynamic_task_{}_{}", i, task_num);
+                for task_num in 0..10 {
+                    let task_name = format!("concurrent_task_{}_{}", i, task_num);
                     
-                    fn dynamic_task(_: Vec<serde_json::Value>) -> task_common::error::TaskResult<serde_json::Value> {
-                        Ok(json!({ "dynamic": true }))
+                    fn concurrent_task(_: Vec<serde_json::Value>) -> task_common::error::TaskResult<serde_json::Value> {
+                        Ok(json!({ "concurrent": true }))
                     }
                     
-                    pm.register_sync_task(&task_name, dynamic_task, Some(format!("dynamic_plugin_{}", i)));
+                    pm.register_sync_task(&task_name, concurrent_task, Some(format!("concurrent_plugin_{}", i)));
                     reg_count.fetch_add(1, Ordering::SeqCst);
-                    task_num += 1;
                     
                     tokio::time::sleep(Duration::from_millis(10)).await;
                 }
             });
-            register_handles.push(handle);
+            handles.push(handle);
         }
         
-        // Spawn tasks that execute random methods
-        let mut execute_handles = vec![];
-        for _ in 0..5 {
+        // Execute tasks concurrently
+        for _i in 0..3 {
             let pm = plugin_manager.clone();
             let exec_count = execution_count.clone();
-            let stop = should_stop.clone();
             
             let handle = tokio::spawn(async move {
-                while !stop.load(Ordering::Relaxed) {
+                for j in 0..20 {
                     let methods = pm.list_methods();
                     if !methods.is_empty() {
-                        // Pick a random method
-                        let idx = (exec_count.load(Ordering::Relaxed) % methods.len().max(1)) as usize;
-                        if let Some(method) = methods.get(idx) {
-                            let result = pm
-                                .execute_task(method, vec![json!("test")], Duration::from_secs(1))
-                                .await;
-                            
-                            if result.is_ok() {
-                                exec_count.fetch_add(1, Ordering::SeqCst);
-                            }
+                        // Try to execute both preregistered and newly registered tasks
+                        let method_name = if j < 10 {
+                            // First, execute preregistered tasks
+                            format!("preregistered_task_{}", j % 5)
+                        } else {
+                            // Then try some concurrent tasks
+                            let idx = j % methods.len();
+                            methods.get(idx).cloned().unwrap_or_else(|| "echo".to_string())
+                        };
+                        
+                        let result = pm
+                            .execute_task(&method_name, vec![json!("test")], Duration::from_secs(1))
+                            .await;
+                        
+                        if result.is_ok() {
+                            exec_count.fetch_add(1, Ordering::SeqCst);
                         }
                     }
                     
                     tokio::time::sleep(Duration::from_millis(5)).await;
                 }
             });
-            execute_handles.push(handle);
+            handles.push(handle);
         }
-        
-        // Let the chaos run for a bit
-        tokio::time::sleep(Duration::from_millis(500)).await;
-        
-        // Stop all tasks
-        should_stop.store(true, Ordering::Relaxed);
         
         // Wait for all tasks to complete
-        for handle in register_handles {
-            handle.await.unwrap();
-        }
-        for handle in execute_handles {
+        for handle in handles {
             handle.await.unwrap();
         }
         
         // Verify we registered and executed tasks
-        assert!(registration_count.load(Ordering::SeqCst) > 0);
-        assert!(execution_count.load(Ordering::SeqCst) > 0);
+        assert!(registration_count.load(Ordering::SeqCst) >= 20, 
+                "Expected at least 20 registrations, got {}", 
+                registration_count.load(Ordering::SeqCst));
+        assert!(execution_count.load(Ordering::SeqCst) > 0, 
+                "Expected some executions, got {}", 
+                execution_count.load(Ordering::SeqCst));
         
         // Verify the plugin manager is still functional
         let final_methods = plugin_manager.list_methods();

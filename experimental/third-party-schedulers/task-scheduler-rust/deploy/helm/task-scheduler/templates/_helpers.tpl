@@ -122,13 +122,13 @@ Create environment variables for observability
 */}}
 {{- define "task-scheduler.observabilityEnvVars" -}}
 - name: RUST_LOG
-  value: {{ .Values.observability.logging.level | quote }}
+  value: "info"
 - name: LOG_LEVEL
-  value: {{ .Values.observability.logging.level | quote }}
+  value: "info"
 - name: TRACING_ENABLED
   value: {{ .Values.observability.tracing.enabled | quote }}
 - name: OTLP_ENDPOINT
-  value: {{ .Values.observability.tracing.endpoint | quote }}
+  value: {{ .Values.observability.tracing.endpoint | default .Values.observability.tracing.otlpEndpoint | default "" | quote }}
 {{- end }}
 
 {{/*

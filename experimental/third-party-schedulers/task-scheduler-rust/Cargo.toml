@@ -47,6 +47,7 @@ tracing-opentelemetry = "0.31"
 opentelemetry = { version = "0.30", features = ["trace"] }
 opentelemetry-otlp = { version = "0.30", features = ["grpc-tonic"] }
 opentelemetry_sdk = { version = "0.30", features = ["rt-tokio"] }
+opentelemetry-semantic-conventions = "0.30"
 
 # Kubernetes
 kube = { version = "0.95", features = ["client", "runtime", "derive"] }

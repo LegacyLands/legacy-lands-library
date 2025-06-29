@@ -230,7 +230,7 @@ async fn test_graceful_degradation() -> Result<(), Box<dyn std::error::Error + S
     
     // Submit many resource-intensive tasks
     let mut handles = vec![];
-    for i in 0..100 {
+    for _i in 0..100 {
         let mut client_clone = client.clone();
         let handle = tokio::spawn(async move {
             // Simulate resource-intensive task

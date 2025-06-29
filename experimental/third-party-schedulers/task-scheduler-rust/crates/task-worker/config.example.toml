@@ -3,7 +3,7 @@
 [worker]
 # Worker ID (defaults to hostname-pid)
 # worker_id = "worker-1"
-max_concurrent_tasks = 10
+max_concurrent_tasks = 1000
 metrics_address = "0.0.0.0:9001"
 mode = "worker"  # Options: worker, job
 

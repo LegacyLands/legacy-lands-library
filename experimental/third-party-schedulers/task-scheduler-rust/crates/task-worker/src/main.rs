@@ -3,7 +3,6 @@ use clap::Parser;
 use std::{path::PathBuf, sync::Arc};
 use task_common::{
     queue::QueueManager,
-    tracing::{init_tracing, shutdown_tracing, TracingConfig},
 };
 use task_worker::{
     config::{Config, OperationMode},
@@ -82,18 +81,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Initialize tracing
-    let tracing_config = TracingConfig {
-        service_name: config.observability.service_name.clone(),
-        service_version: env!("CARGO_PKG_VERSION").to_string(),
-        otlp_endpoint: config.observability.otlp_endpoint.clone(),
-        environment: "production".to_string(),
-        sampling_ratio: config.observability.sampling_ratio,
-        export_timeout: std::time::Duration::from_secs(10),
-        log_level: config.observability.log_level.clone(),
-    };
-
     if config.observability.tracing_enabled {
-        init_tracing(tracing_config)?;
+        // TODO: Initialize Jaeger tracing when the module is fixed
+        tracing_subscriber::fmt()
+            .with_env_filter(&config.observability.log_level)
+            .json()
+            .init();
     } else {
         // Just initialize basic logging
         tracing_subscriber::fmt()
@@ -179,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Shutdown tracing
     if tracing_enabled {
-        shutdown_tracing();
+        // TODO: Shutdown tracing when the module is fixed
     }
 
     info!("Task Worker shut down successfully");
@@ -199,11 +192,13 @@ async fn run_worker_mode(
     queue.initialize().await?;
 
     // Create and start executor
-    let mut executor = TaskExecutor::new(
+    let mut executor = TaskExecutor::with_config(
         worker_id,
         queue,
         plugin_manager,
         config.worker.max_concurrent_tasks,
+        config.queue.batch_size,
+        config.queue.fetch_timeout_ms,
     );
 
     // Start metrics server

@@ -22,7 +22,7 @@ pub struct DistributedDependencyManager {
     node_registry: Arc<RwLock<HashMap<String, NodeInfo>>>,
     
     /// Storage reference
-    storage: Arc<crate::storage::TaskStorage>,
+    storage: Arc<dyn crate::storage::StorageBackend>,
     
     /// Queue reference
     queue: Arc<QueueManager>,
@@ -49,7 +49,7 @@ pub struct NodeCapacity {
 impl DistributedDependencyManager {
     /// Create a new distributed dependency manager
     pub fn new(
-        storage: Arc<crate::storage::TaskStorage>,
+        storage: Arc<dyn crate::storage::StorageBackend>,
         queue: Arc<QueueManager>,
         node_id: String,
     ) -> Self {
@@ -197,7 +197,7 @@ impl DistributedDependencyManager {
         
         for dep_id in dependencies {
             // Check if dependency is local or remote
-            match self.storage.get(dep_id).await {
+            match self.storage.get_task(*dep_id).await.ok().flatten() {
                 Some(_task_info) => {
                     // Local dependency
                     local_deps
@@ -325,7 +325,7 @@ mod tests {
         // Test with mock queue
         use task_common::queue::mock::MockQueueManager;
         
-        let _storage = Arc::new(crate::storage::TaskStorage::new(100));
+        let _storage = Arc::new(crate::storage::MemoryStorage::new(100));
         let _mock_queue = Arc::new(MockQueueManager::new());
         
         // Test can't directly create DistributedDependencyManager with mock
@@ -375,7 +375,7 @@ mod tests {
     async fn test_distributed_dependency_with_real_nats() {
         // Only run if NATS is available
         if let Ok(nats_url) = std::env::var("NATS_URL") {
-            let storage = Arc::new(crate::storage::TaskStorage::new(100));
+            let storage = Arc::new(crate::storage::MemoryStorage::new(100));
             match QueueManager::new(&nats_url).await {
                 Ok(queue) => {
                     let manager = DistributedDependencyManager::new(

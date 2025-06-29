@@ -1,0 +1,33 @@
+[server]
+grpc_address = "0.0.0.0:50051"
+metrics_address = "0.0.0.0:9000"
+tls_enabled = false
+max_concurrent_requests = 50000
+
+[storage]
+backend = "memory"
+cache_size = 10000
+
+[queue]
+nats_url = "nats://task-scheduler-nats:4222"
+jetstream_enabled = true
+queue_prefix = "tasks"
+
+[kubernetes]
+namespace = "task-scheduler"
+enabled = false
+
+[observability]
+tracing_enabled = true
+otlp_endpoint = "http://task-scheduler-jaeger:4317"
+service_name = "task-manager"
+log_level = "info"
+sampling_ratio = 1.0
+
+[security]
+auth_enabled = false
+rbac_enabled = false
+audit_enabled = false
+audit_log_path = "/var/log/task-scheduler/audit.log"
+audit_min_severity = "info"
+session_timeout = 3600

@@ -1,0 +1,72 @@
+{{- if .Values.taskWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "task-scheduler.fullname" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "task-scheduler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: task-worker
+spec:
+  replicas: {{ .Values.replicaCount.worker }}
+  selector:
+    matchLabels:
+      {{- include "task-scheduler.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: task-worker
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/task-worker-configmap.yaml") . | sha256sum }}
+        {{- if .Values.observability.metrics.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.taskWorker.service.metricsPort | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
+      labels:
+        {{- include "task-scheduler.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: task-worker
+    spec:
+      serviceAccountName: {{ include "task-scheduler.serviceAccountName" . }}
+      containers:
+      - name: task-worker
+        image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - --config
+        - /app/config/config.toml
+        ports:
+        - name: grpc
+          containerPort: {{ .Values.taskWorker.service.grpcPort }}
+        - name: metrics
+          containerPort: {{ .Values.taskWorker.service.metricsPort }}
+        env:
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        {{- if .Values.taskWorker.env }}
+        {{- toYaml .Values.taskWorker.env | nindent 8 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: metrics
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: metrics
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.taskWorker.resources | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "task-scheduler.fullname" . }}-worker-config
+{{- end }}

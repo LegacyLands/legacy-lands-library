@@ -1,14 +1,8 @@
-use k8s_openapi::api::core::v1::{ConfigMap, PersistentVolumeClaim, Pod};
-use k8s_openapi::api::batch::v1::Job;
 use kube::{
-    api::{Api, ListParams, Patch, PatchParams, PostParams},
-    runtime::controller::{Action, Controller},
-    Client, CustomResource, Resource, ResourceExt,
+    Client, CustomResource,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::time::{sleep, Duration};
 
 // Mock CRD definitions for testing
 #[derive(CustomResource, Debug, Clone, Deserialize, Serialize, JsonSchema)]
@@ -78,6 +72,7 @@ pub struct TaskStatus {
 }
 
 // Mock controller context
+#[allow(dead_code)]
 struct Context {
     client: Client,
     task_manager_endpoint: String,
@@ -235,10 +230,52 @@ mod tests {
 }
 
 // Integration tests (require Kubernetes cluster)
-#[cfg(all(test, feature = "integration"))]
+#[cfg(test)]
+#[allow(unused_imports)]
 mod integration_tests {
     use super::*;
     use futures::StreamExt;
+    use kube::{Api, api::{PostParams, ListParams, PatchParams, Patch, WatchParams}, runtime::{controller::{Controller, Action}, watcher::Config}};
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::time::sleep;
+    
+    // Helper to create a test task for integration tests
+    fn create_test_task(name: &str) -> Task {
+        Task {
+            metadata: kube::api::ObjectMeta {
+                name: Some(name.to_string()),
+                namespace: Some("default".to_string()),
+                ..Default::default()
+            },
+            spec: TaskSpec {
+                method: "test.method".to_string(),
+                args: vec![TaskArg {
+                    r#type: "string".to_string(),
+                    value: "test".to_string(),
+                }],
+                dependencies: None,
+                priority: Some(5),
+                queue_name: Some("default".to_string()),
+                retry_config: Some(RetryConfig {
+                    max_retries: 3,
+                    backoff_strategy: "exponential".to_string(),
+                    initial_backoff_ms: 1000,
+                    max_backoff_ms: 60000,
+                }),
+                resources: Some(ResourceRequirements {
+                    cpu_request: Some("100m".to_string()),
+                    cpu_limit: Some("500m".to_string()),
+                    memory_request: Some("128Mi".to_string()),
+                    memory_limit: Some("512Mi".to_string()),
+                }),
+                timeout: Some(300),
+                metadata: None,
+                plugin: None,
+            },
+            status: None,
+        }
+    }
 
     #[tokio::test]
     async fn test_create_task_in_cluster() {
@@ -286,11 +323,11 @@ mod integration_tests {
             .unwrap();
         
         // Watch for changes
-        let lp = ListParams::default()
+        let wp = WatchParams::default()
             .fields(&format!("metadata.name={}", "watch-test-task"))
             .timeout(10);
         
-        let mut stream = tasks.watch(&lp, "0").await.unwrap().boxed();
+        let mut stream = tasks.watch(&wp, "0").await.unwrap().boxed();
         
         // Update the task
         let patch = serde_json::json!({
@@ -334,7 +371,7 @@ mod integration_tests {
         let client = Client::try_default().await.unwrap();
         
         // Mock reconcile function
-        async fn reconcile(task: Arc<Task>, ctx: Arc<Context>) -> Result<Action, kube::Error> {
+        async fn reconcile(task: Arc<Task>, _ctx: Arc<Context>) -> Result<Action, kube::Error> {
             let name = task.metadata.name.as_ref().unwrap();
             println!("Reconciling task: {}", name);
             
@@ -372,7 +409,7 @@ mod integration_tests {
         
         // Create controller
         let tasks: Api<Task> = Api::all(client.clone());
-        let _controller = Controller::new(tasks, ListParams::default())
+        let _controller = Controller::new(tasks, Config::default())
             .run(reconcile, error_policy, context)
             .for_each(|res| async move {
                 match res {
