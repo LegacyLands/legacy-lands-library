@@ -1,5 +1,6 @@
 use task_common::proto::{TaskRequest, taskscheduler::task_scheduler_client::TaskSchedulerClient};
-use prost_types::Any;
+use base64::Engine;
+use bincode;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,25 +26,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Echo expects a string argument, let's give it none
         ("echo_no_args", vec![]),
         // Echo with null value
-        ("echo_null", vec![Any {
-            type_url: "type.googleapis.com/google.protobuf.Value".to_string(),
-            value: vec![], // Invalid value
-        }]),
+        ("echo_null", {
+            let value = bincode::serialize(&"").unwrap();
+            vec![base64::engine::general_purpose::STANDARD.encode(&value)]
+        }),
         // Echo with too many arguments
-        ("echo_too_many", vec![
-            Any {
-                type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-                value: serde_json::to_vec(&"arg1").unwrap(),
-            },
-            Any {
-                type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-                value: serde_json::to_vec(&"arg2").unwrap(),
-            },
-            Any {
-                type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-                value: serde_json::to_vec(&"arg3").unwrap(),
-            },
-        ]),
+        ("echo_too_many", {
+            let mut args = vec![];
+            for arg in ["arg1", "arg2", "arg3"] {
+                let value = bincode::serialize(&arg).unwrap();
+                args.push(base64::engine::general_purpose::STANDARD.encode(&value));
+            }
+            args
+        }),
     ];
     
     for (scenario, args) in error_scenarios {
@@ -71,12 +66,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Also submit some tasks with methods that exist but will fail
     let failing_methods = vec![
         ("http_get", vec![]), // http_get without URL
-        ("multiply", vec![   // multiply with non-numeric args
-            Any {
-                type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-                value: serde_json::to_vec(&"not_a_number").unwrap(),
-            }
-        ]),
+        ("multiply", {      // multiply with non-numeric args
+            let value = bincode::serialize(&"not_a_number").unwrap();
+            vec![base64::engine::general_purpose::STANDARD.encode(&value)]
+        }),
     ];
     
     for (method, args) in failing_methods {

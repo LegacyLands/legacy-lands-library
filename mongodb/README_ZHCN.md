@@ -3,12 +3,23 @@
 本模块仅基于 [Morphia](https://morphia.dev/landing/index.html) 封装了一个更方便的 `MongoConfig`，
 其实现非常简单。我们建议直接使用 `Datastore` 进行任何 `CRUD` 操作。
 
-### 永远不会支持其他数据库
+### MongoDB 作为 player 模块的主要选择
 
-无计划支持其他任何类型的数据库（如 `MySQL`、`PostgreSQL`、`SQLite` 等）。
+`player` 模块是专门围绕 MongoDB 设计的，目前没有计划为该模块添加对其他数据库类型（如 `MySQL`、`PostgreSQL`、`SQLite` 等）的支持。
 
-这一设计决策是基于对 `Minecraft` 插件开发需求的深入分析和对 `MongoDB` 特性的充分考量而做出的。
-至于这是为什么，已经有非常多的文档可供参考，但我们依然进行简单的说明，是基于以下几个关键理由：
+这一设计决策是基于对 `player` 模块架构和数据需求的深入分析。该模块的数据模型（`LegacyPlayerData` 和 `LegacyEntityData`
+）具有以下特点：
+
+- **动态属性系统**，使用灵活的键值对存储
+- **复杂的关系映射**（Map<String, Set<UUID>>），在 SQL 中需要多个关联表
+- **版本控制和时间戳**，用于分布式环境下的冲突解决
+- **文档级原子操作**，用于合并来自不同服务器的更改
+- **多级缓存架构**（L1 Caffeine + L2 Redis + MongoDB），受益于文档序列化
+
+然而，我们认识到 SQL 数据库在某些场景下表现卓越。未来，我们将在必要时引入 SQL 数据库支持，以确保不同用例的最佳性能（例如事务性操作、
+复杂分析查询或需要严格 ACID 合规性的模块）。
+
+以下是 MongoDB 特别适合 Minecraft 插件开发的关键理由：
 
 1. 为 Minecraft 插件量身定制的灵活性 (Schema-less)
 

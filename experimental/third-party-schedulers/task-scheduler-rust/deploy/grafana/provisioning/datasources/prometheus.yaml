@@ -4,6 +4,6 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://prometheus:9090
+    url: http://task-scheduler-prometheus:9090
     isDefault: true
     editable: true

@@ -1,12 +1,15 @@
 syntax = "proto3";
 
-import "google/protobuf/any.proto";
 
 package taskscheduler;
+
 
 service TaskScheduler {
   // Submit task (supports async/blocking mode)
   rpc SubmitTask(TaskRequest) returns (TaskResponse);
+  
+  // Submit multiple tasks in batch for extreme performance
+  rpc BatchSubmitTasks(BatchTaskRequest) returns (BatchTaskResponse);
 
   // Query task result
   rpc GetResult(ResultRequest) returns (ResultResponse);
@@ -32,8 +35,8 @@ message TaskRequest {
   // Method name
   string method = 2;
 
-  // Parameters
-  repeated google.protobuf.Any args = 3;
+  // Parameters as JSON strings
+  repeated string args = 3;
 
   // Dependent task IDs
   repeated string deps = 4;
@@ -65,15 +68,6 @@ message ResultResponse {
   string result = 2;
 }
 
-// Custom message to represent a list of values
-message ListValue {
-  repeated google.protobuf.Any values = 1;
-}
-
-// Custom message to represent a map (string keys, any values)
-message MapValue {
-  map<string, google.protobuf.Any> fields = 1;
-}
 
 // Cancel task request
 message CancelTaskRequest {
@@ -134,4 +128,18 @@ message TaskStatusResponse {
   int64 completed_at = 5;
   int32 retry_count = 6;
   string message = 7;
+}
+
+// Batch task submission request
+message BatchTaskRequest {
+  repeated TaskRequest tasks = 1;
+  bool is_async = 2;  // Apply to all tasks in batch
+}
+
+// Batch task submission response
+message BatchTaskResponse {
+  repeated TaskResponse responses = 1;
+  int32 total_submitted = 2;
+  int32 total_failed = 3;
+  string batch_id = 4;  // Optional batch identifier for tracking
 } 

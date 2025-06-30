@@ -25,8 +25,8 @@ pub struct TaskCrdSpec {
     /// Task method name
     pub method: String,
 
-    /// Task parameters (JSON encoded)
-    pub args: Vec<serde_json::Value>,
+    /// Task parameters (base64-encoded bincode)
+    pub args: Vec<String>,
 
     /// Dependencies on other tasks (by name)
     #[serde(default)]
@@ -80,8 +80,8 @@ pub struct TaskCrdStatus {
     /// Kubernetes Job reference
     pub job_ref: Option<JobReference>,
 
-    /// Result of the task (JSON encoded)
-    pub result: Option<serde_json::Value>,
+    /// Result of the task (base64-encoded bincode)
+    pub result: Option<String>,
 
     /// Error message if failed
     pub error: Option<String>,

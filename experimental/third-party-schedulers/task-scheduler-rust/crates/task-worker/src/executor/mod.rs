@@ -5,6 +5,8 @@ use std::sync::Arc;
 mod test;
 use std::time::{Duration, Instant};
 use sysinfo::System;
+use base64;
+use bincode;
 use task_common::{
     error::{TaskError, TaskResult},
     events::{HardwareInfo, SoftwareInfo, TaskEvent, WorkerCapabilities, WorkerCapacity},
@@ -250,11 +252,46 @@ impl TaskExecutor {
             warn!("Failed to publish task started event: {}", e);
         }
 
+        // Deserialize args - try bincode first, then JSON as fallback
+        let mut decoded_args = Vec::new();
+        
+        for arg in &task.args {
+            // Try to decode as base64-encoded bincode first
+            if let Ok(decoded_bytes) = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, arg) {
+                if let Ok(value) = bincode::deserialize::<serde_json::Value>(&decoded_bytes) {
+                    decoded_args.push(value);
+                    continue;
+                }
+            }
+            
+            // Fallback to JSON parsing
+            match serde_json::from_str::<serde_json::Value>(arg) {
+                Ok(value) => decoded_args.push(value),
+                Err(e) => {
+                    error!("Failed to deserialize argument '{}': {}", arg, e);
+                    return Self::handle_task_error(
+                        task_id,
+                        format!("Failed to deserialize argument: {}", e),
+                        handle,
+                        queue,
+                        worker_id,
+                        0, // No execution time yet
+                        task.retry_count,
+                        task.max_retries,
+                    ).await;
+                }
+            }
+        }
+        
+        let args = decoded_args;
+        
+        debug!("Executing task {} with {} args", task_id, args.len());
+
         // Execute the task
         let execution_result = plugin_manager
             .execute_task(
                 &task.method,
-                task.args.clone(),
+                args,
                 Duration::from_secs(task.timeout_seconds),
             )
             .await;
@@ -320,11 +357,20 @@ impl TaskExecutor {
                 // Acknowledge the message
                 handle.ack().await?;
 
+                // Serialize result to JSON string
+                let result_string = match serde_json::to_string(&result) {
+                    Ok(json) => Some(json),
+                    Err(e) => {
+                        warn!("Failed to serialize result: {}", e);
+                        None
+                    }
+                };
+                
                 // Publish result
                 let result_message = TaskResultMessage {
                     task_id,
                     success: true,
-                    result: Some(result.clone()),
+                    result: result_string,
                     error: None,
                     execution_time_ms: execution_time.as_millis() as u64,
                     worker_id: worker_id.clone(),
@@ -332,6 +378,15 @@ impl TaskExecutor {
 
                 queue.publish_result(result_message).await?;
 
+                // Serialize result for event
+                let result_for_event = match serde_json::to_string(&result) {
+                    Ok(json) => Some(json),
+                    Err(e) => {
+                        warn!("Failed to serialize result for event: {}", e);
+                        None
+                    }
+                };
+                
                 // Send completion event
                 let event = TaskEvent::Completed {
                     result: task_common::models::TaskResult {
@@ -340,7 +395,7 @@ impl TaskExecutor {
                             completed_at: Utc::now(),
                             duration_ms: execution_time.as_millis() as u64,
                         },
-                        result: Some(result),
+                        result: result_for_event,
                         error: None,
                         metrics: ExecutionMetrics {
                             execution_time_ms: execution_time.as_millis() as u64,
@@ -419,6 +474,78 @@ impl TaskExecutor {
                 Ok(())
             }
         }
+    }
+
+    /// Handle task error with retry logic
+    async fn handle_task_error(
+        task_id: Uuid,
+        error: String,
+        handle: MessageHandle,
+        queue: Arc<QueueManager>,
+        worker_id: String,
+        execution_time_ms: u64,
+        retry_count: u32,
+        max_retries: u32,
+    ) -> TaskResult<()> {
+        error!("Task {} failed: {}", task_id, error);
+
+        // Check if we should retry
+        if retry_count < max_retries {
+            warn!(
+                "Retrying task {} (attempt {}/{})",
+                task_id,
+                retry_count + 1,
+                max_retries
+            );
+
+            // Calculate backoff delay
+            let delay = Duration::from_secs((retry_count + 1) as u64 * 5);
+
+            // NAK with delay
+            handle.nack(Some(delay)).await?;
+
+            // Send retry event
+            let event = TaskEvent::Retrying {
+                task_id,
+                attempt: retry_count + 1,
+                delay_seconds: delay.as_secs(),
+                reason: error,
+            };
+
+            if let Err(e) = queue.publish_event(event, worker_id.clone()).await {
+                warn!("Failed to publish task retrying event: {}", e);
+            }
+        } else {
+            // Max retries exceeded, acknowledge to remove from queue
+            handle.ack().await?;
+
+            // Publish failure result
+            let result_message = TaskResultMessage {
+                task_id,
+                success: false,
+                result: None,
+                error: Some(error.clone()),
+                execution_time_ms,
+                worker_id: worker_id.clone(),
+            };
+
+            queue.publish_result(result_message).await?;
+
+            // Send failure event
+            let event = TaskEvent::Failed {
+                task_id,
+                error,
+                retry_count,
+                will_retry: false,
+                timestamp: Utc::now(),
+            };
+
+            if let Err(e) = queue.publish_event(event, worker_id).await {
+                warn!("Failed to publish task failed event: {}", e);
+            }
+        }
+
+        Ok(())
     }
 
     /// Handle unsupported method without going through normal execution

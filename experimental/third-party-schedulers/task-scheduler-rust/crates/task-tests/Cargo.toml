@@ -46,7 +46,8 @@ criterion = { version = "0.5", features = ["async_tokio"] }
 prometheus = "0.13"
 
 # Encoding
-base64 = "0.21"
+base64 = { workspace = true }
+bincode = { workspace = true }
 
 # Tests will be auto-discovered from tests/ directory
 

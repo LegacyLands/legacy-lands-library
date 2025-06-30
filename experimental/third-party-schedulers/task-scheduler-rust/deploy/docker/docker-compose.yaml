@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # NATS JetStream
   nats:
@@ -9,15 +7,20 @@ services:
       - "4222:4222"   # Client connections
       - "6222:6222"   # Cluster connections
       - "8222:8222"   # HTTP monitoring
-    command: ["-js", "-sd", "/data", "-m", "8222"]
+    command:
+      - "-js"
+      - "-sd"
+      - "/data"
+      - "-m"
+      - "8222"
     volumes:
       - nats-data:/data
     networks:
       - task-scheduler-net
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
 
   # Task Manager
@@ -25,11 +28,14 @@ services:
     image: task-scheduler/manager:latest
     container_name: task-scheduler-manager
     ports:
-      - "50052:50051"  # gRPC
+      - "50051:50051"  # gRPC
       - "9000:9000"    # Metrics
     environment:
-      - NATS_URL=nats://nats:4222
       - RUST_LOG=info
+      - TOKIO_WORKER_THREADS=32
+    volumes:
+      - ./manager-config-extreme.toml:/app/config.toml:ro
+    command: ["--config", "/app/config.toml"]
     depends_on:
       nats:
         condition: service_healthy
@@ -40,31 +46,47 @@ services:
     networks:
       - task-scheduler-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 3s
+      test: ["CMD", "curl", "-f", "http://localhost:9000/metrics"]
+      interval: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
 
   # Task Worker (can scale this service)
   task-worker:
     image: task-scheduler/worker:latest
     environment:
-      - NATS_URL=nats://nats:4222
-      - MANAGER_URL=http://task-manager:50051
-      - RUST_LOG=debug
-      - LOG_LEVEL=debug
+      - RUST_LOG=info
+      - TOKIO_WORKER_THREADS=16
+    volumes:
+      - ./worker-config-extreme.toml:/app/config.toml:ro
+    command: ["--config", "/app/config.toml"]
     depends_on:
       task-manager:
         condition: service_healthy
     networks:
       - task-scheduler-net
     deploy:
-      replicas: 3  # Run 3 workers by default
+      replicas: 50  # Extreme scale for 100K+ RPS
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
-      interval: 30s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
 
@@ -105,21 +127,31 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PROVISIONING_ENABLED=true
     volumes:
       - grafana-data:/var/lib/grafana
-      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ../grafana/datasources:/etc/grafana/provisioning/datasources
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - ../grafana/dashboards:/var/lib/grafana/dashboards
     networks:
       - task-scheduler-net
     depends_on:
       - prometheus
 
-  # Redis for caching (optional)
+  # Redis for caching (required)
   redis:
     image: redis:7-alpine
     container_name: task-scheduler-redis
     ports:
       - "6379:6379"
+    command:
+      - redis-server
+      - --maxmemory 2gb
+      - --maxmemory-policy allkeys-lru
+      - --save ""
+      - --appendonly no
+      - --tcp-backlog 511
+      - --tcp-keepalive 60
+      - --timeout 0
     volumes:
       - redis-data:/data
     networks:
@@ -129,8 +161,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
 
-  # PostgreSQL for persistent storage (optional)
+  # PostgreSQL for persistent storage (required)
   postgres:
     image: postgres:16-alpine
     container_name: task-scheduler-postgres
@@ -138,6 +175,33 @@ services:
       POSTGRES_DB: task_scheduler
       POSTGRES_USER: task_scheduler
       POSTGRES_PASSWORD: task_scheduler_pass
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    command:
+      - postgres
+      - -c
+      - max_connections=1000
+      - -c
+      - shared_buffers=2GB
+      - -c
+      - effective_cache_size=6GB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - default_statistics_target=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - work_mem=10MB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - max_wal_size=4GB
     ports:
       - "5432:5432"
     volumes:
@@ -149,6 +213,46 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    shm_size: '2gb'
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  # Optional: PgBouncer for connection pooling
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: task-scheduler-pgbouncer
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER: task_scheduler
+      DATABASES_PASSWORD: task_scheduler_pass
+      DATABASES_DBNAME: task_scheduler
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 10000
+      DEFAULT_POOL_SIZE: 100
+      MIN_POOL_SIZE: 50
+      RESERVE_POOL_SIZE: 50
+      RESERVE_POOL_TIMEOUT: 5
+      SERVER_LIFETIME: 3600
+      SERVER_IDLE_TIMEOUT: 600
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - task-scheduler-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
 
 
 volumes:
@@ -160,4 +264,7 @@ volumes:
 
 networks:
   task-scheduler-net:
+    name: task-scheduler-extreme
     driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000  # Jumbo frames for better throughput

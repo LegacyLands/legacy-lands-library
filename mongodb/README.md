@@ -4,13 +4,26 @@ This module only encapsulates a more convenient `MongoConfig` based
 on [Morphia](https://morphia.dev/landing/index.html),
 and its implementation is very simple. We recommend using `Datastore` directly for any `CRUD` operations.
 
-### never supporting other databases
+### MongoDB as the primary choice for player module
 
-There are no plans to support any other types of databases (such as `MySQL`, `PostgreSQL`, `SQLite`, etc.).
+The `player` module is specifically designed around MongoDB as its primary database, with no current plans to add
+support
+for other database types (such as `MySQL`, `PostgreSQL`, `SQLite`, etc.) for this module.
 
-This design decision is based on an in-depth analysis of the needs of `Minecraft` plugin development and careful
-consideration of the features of `MongoDB`. While there are numerous documents available explaining this choice, we'll
-provide a brief summary, highlighting the key reasons:
+This design decision is based on an in-depth analysis of the `player` module's architecture and data requirements. The
+module's data models (`LegacyPlayerData` and `LegacyEntityData`) feature:
+
+- **Dynamic attribute systems** with flexible key-value pairs
+- **Complex relationship mappings** (Map<String, Set<UUID>>) that would require multiple junction tables in SQL
+- **Version control and timestamps** for distributed conflict resolution
+- **Document-level atomic operations** for merging changes from different servers
+- **Multi-level caching architecture** (L1 Caffeine + L2 Redis + MongoDB) that benefits from document serialization
+
+However, we recognize that SQL databases excel in certain scenarios. In the future, we will introduce SQL database
+support where necessary to ensure optimal performance for different use cases (e.g., transactional operations,
+complex analytical queries, or modules requiring strict ACID compliance).
+
+Below are the key reasons why MongoDB is particularly well-suited for Minecraft plugin development in general:
 
 1. Tailor-Made Flexibility for Minecraft Plugins (Schema-less)
 

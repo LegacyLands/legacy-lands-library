@@ -1,0 +1,44 @@
+[worker]
+id = "worker-extreme"
+max_concurrent_tasks = 200
+heartbeat_interval_seconds = 5
+task_timeout_seconds = 300
+enable_plugins = true
+plugin_dir = "/app/plugins"
+resource_monitoring_interval_seconds = 5
+
+# Performance tuning
+task_buffer_size = 1000
+result_buffer_size = 1000
+enable_task_prefetch = true
+prefetch_count = 100
+
+[queue]
+nats_url = "nats://task-scheduler-nats:4222"
+stream_name = "TASKS"
+consumer_name = "worker-extreme"
+prefetch_count = 100
+ack_wait_seconds = 30
+
+[executor]
+type = "threaded"
+thread_pool_size = 50
+enable_async = true
+async_runtime_threads = 16
+
+[storage]
+backend = "postgresql"
+postgresql_url = "postgresql://task_scheduler:task_scheduler_pass@task-scheduler-postgres:5432/task_scheduler"
+max_connections = 20
+min_connections = 5
+
+[plugins]
+builtin_enabled = true
+wasm_enabled = true
+wasm_cache_size = 100
+wasm_memory_limit_mb = 512
+
+[monitoring]
+enable_metrics = true
+metrics_port = 9001
+enable_tracing = false

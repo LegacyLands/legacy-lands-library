@@ -80,8 +80,8 @@ impl TaskValidator {
             .args
             .iter()
             .map(|arg| {
-                // Estimate size - in production, you'd serialize and measure
-                arg.value.len()
+                // Each arg is a base64-encoded bincode string
+                arg.len()
             })
             .sum();
 
@@ -154,7 +154,6 @@ mod tests {
     use task_common::models::{TaskInfo, TaskMetadata, TaskStatus};
     use chrono::Utc;
     use crate::storage::StorageBackend;
-    use prost_types;
 
     #[tokio::test]
     async fn test_task_validator_new() {
@@ -274,17 +273,13 @@ mod tests {
     async fn test_validate_args_too_large() {
         let validator = TaskValidator::new();
         
-        // Create large arguments
+        // Create large arguments (base64-encoded bincode would be larger)
         let large_value = "x".repeat(1024 * 1024 + 1);
-        
-        // Create a protobuf Any with the large value
-        let mut any = prost_types::Any::default();
-        any.value = large_value.into_bytes();
         
         let request = TaskRequest {
             task_id: Uuid::new_v4().to_string(),
             method: "test_method".to_string(),
-            args: vec![any], // Now contains the large argument
+            args: vec![large_value], // Now contains the large argument
             deps: vec![],
             is_async: true,
         };

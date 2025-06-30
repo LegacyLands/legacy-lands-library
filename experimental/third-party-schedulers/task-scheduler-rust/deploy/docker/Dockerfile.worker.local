@@ -28,7 +28,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose ports
-EXPOSE 50052 9001
+EXPOSE 50051 9001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

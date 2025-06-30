@@ -1,7 +1,8 @@
 use crate::api::proto::{
-    task_response, task_scheduler_server::TaskScheduler, CancelTaskRequest, CancelTaskResponse,
-    PauseTaskRequest, PauseTaskResponse, ResultRequest, ResultResponse, ResumeTaskRequest,
-    ResumeTaskResponse, TaskRequest, TaskResponse, TaskStatusRequest, TaskStatusResponse,
+    task_response, task_scheduler_server::TaskScheduler, BatchTaskRequest, BatchTaskResponse,
+    CancelTaskRequest, CancelTaskResponse, PauseTaskRequest, PauseTaskResponse, ResultRequest,
+    ResultResponse, ResumeTaskRequest, ResumeTaskResponse, TaskRequest, TaskResponse,
+    TaskStatusRequest, TaskStatusResponse,
 };
 use crate::{handlers::TaskValidator, storage::StorageBackend, metrics::Metrics};
 use std::sync::Arc;
@@ -14,6 +15,7 @@ use task_common::{
 };
 use tonic::{Request, Response, Status};
 use tracing::{debug, info, instrument, warn};
+
 
 /// gRPC service implementation for the Task Scheduler
 pub struct TaskSchedulerService {
@@ -87,23 +89,8 @@ impl TaskScheduler for TaskSchedulerService {
                 _ => Status::internal(e.to_string()),
             })?;
 
-        // Parse arguments
-        let args: Vec<serde_json::Value> = task_request
-            .args
-            .into_iter()
-            .map(|any| {
-                // Convert protobuf Any to JSON value
-                // For now, we expect the value to be JSON encoded
-                match serde_json::from_slice(&any.value) {
-                    Ok(value) => value,
-                    Err(e) => {
-                        // Fallback: try to interpret as string
-                        debug!("Failed to parse Any value as JSON: {}", e);
-                        serde_json::Value::String(String::from_utf8_lossy(&any.value).to_string())
-                    }
-                }
-            })
-            .collect();
+        // Arguments are JSON strings
+        let args: Vec<String> = task_request.args;
 
         // Parse dependencies
         let dependencies: Vec<Uuid> = task_request
@@ -596,6 +583,202 @@ impl TaskScheduler for TaskSchedulerService {
             completed_at,
             retry_count,
             message,
+        }))
+    }
+    
+    #[instrument(skip(self, request), fields(batch_size = %request.get_ref().tasks.len()))]
+    async fn batch_submit_tasks(
+        &self,
+        request: Request<BatchTaskRequest>,
+    ) -> Result<Response<BatchTaskResponse>, Status> {
+        let batch_request = request.into_inner();
+        let batch_id = Uuid::new_v4().to_string();
+        let _is_async = batch_request.is_async;
+        let total_tasks = batch_request.tasks.len();
+        
+        info!(
+            "Batch submitting {} tasks, batch_id: {}",
+            total_tasks,
+            batch_id
+        );
+        
+        let timer = self.metrics.task_submission_duration
+            .with_label_values(&["batch"])
+            .start_timer();
+        
+        // Convert all task requests to TaskInfo structs
+        let mut task_infos = Vec::with_capacity(batch_request.tasks.len());
+        let mut responses = Vec::with_capacity(batch_request.tasks.len());
+        let mut total_failed = 0;
+        
+        for task_request in batch_request.tasks {
+            let task_id = if task_request.task_id.is_empty() {
+                Uuid::new_v4()
+            } else {
+                match Uuid::parse_str(&task_request.task_id) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        total_failed += 1;
+                        responses.push(TaskResponse {
+                            task_id: task_request.task_id.clone(),
+                            status: task_response::Status::Failed as i32,
+                            result: format!("Invalid task ID: {}", e),
+                        });
+                        continue;
+                    }
+                }
+            };
+            
+            // Validate the task request
+            match self.validator.validate(&task_request).await {
+                Ok(_) => {},
+                Err(e) => {
+                    total_failed += 1;
+                    responses.push(TaskResponse {
+                        task_id: task_id.to_string(),
+                        status: task_response::Status::Failed as i32,
+                        result: format!("Validation failed: {}", e),
+                    });
+                    continue;
+                }
+            }
+            
+            // Arguments are already base64-encoded bincode strings
+            let args: Vec<String> = task_request.args;
+            
+            // Parse dependencies
+            let dependencies = match task_request
+                .deps
+                .into_iter()
+                .map(|dep| Uuid::parse_str(&dep))
+                .collect::<Result<Vec<_>, _>>() {
+                Ok(deps) => deps,
+                Err(e) => {
+                    total_failed += 1;
+                    responses.push(TaskResponse {
+                        task_id: task_id.to_string(),
+                        status: task_response::Status::Failed as i32,
+                        result: format!("Invalid dependency ID: {}", e),
+                    });
+                    continue;
+                }
+            };
+            
+            // Create task info
+            let task_info = TaskInfo {
+                id: task_id,
+                method: task_request.method.clone(),
+                args,
+                dependencies,
+                priority: 50, // Default priority
+                metadata: TaskMetadata::default(),
+                status: ModelTaskStatus::Pending,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            
+            task_infos.push(task_info);
+            responses.push(TaskResponse {
+                task_id: task_id.to_string(),
+                status: task_response::Status::Pending as i32,
+                result: String::new(),
+            });
+        }
+        
+        // Batch insert all valid tasks
+        if !task_infos.is_empty() {
+            let storage_timer = self.metrics.storage_duration
+                .with_label_values(&["batch_create"])
+                .start_timer();
+            
+            match self.storage.create_tasks_batch(&task_infos).await {
+                Ok(_) => {
+                    self.metrics.storage_operations
+                        .with_label_values(&["batch_create", "success"])
+                        .inc();
+                    
+                    // Register dependencies in batch
+                    let mut dependency_futures = Vec::new();
+                    for task_info in &task_infos {
+                        if !task_info.dependencies.is_empty() {
+                            let dep_future = self.dependency_manager
+                                .register_task_dependencies(task_info.id, &task_info.dependencies);
+                            dependency_futures.push((task_info.id, dep_future));
+                        }
+                    }
+                    
+                    // Wait for all dependency registrations
+                    for (task_id, dep_future) in dependency_futures {
+                        if let Err(e) = dep_future.await {
+                            warn!("Failed to register dependencies for task {}: {}", task_id, e);
+                        }
+                    }
+                    
+                    // Create queued tasks
+                    let queued_tasks: Vec<QueuedTask> = task_infos.iter()
+                        .map(|task_info| QueuedTask {
+                            task_id: task_info.id,
+                            method: task_info.method.clone(),
+                            args: task_info.args.clone(),
+                            priority: task_info.priority,
+                            retry_count: 0,
+                            max_retries: 3,
+                            timeout_seconds: 3600,
+                            metadata: Default::default(),
+                            dependencies: task_info.dependencies.clone(),
+                        })
+                        .collect();
+                    
+                    // Queue all tasks in batch
+                    if let Err(e) = self.queue.queue_tasks_batch(queued_tasks).await {
+                        warn!("Failed to queue tasks in batch: {}", e);
+                    } else {
+                        self.metrics.queue_depth
+                            .with_label_values(&["default"])
+                            .add(task_infos.len() as f64);
+                    }
+                    
+                    // Update task statuses in batch
+                    let task_ids: Vec<Uuid> = task_infos.iter().map(|t| t.id).collect();
+                    if let Err(e) = self.storage
+                        .update_tasks_status_batch(&task_ids, ModelTaskStatus::Queued)
+                        .await {
+                        warn!("Failed to update task statuses: {}", e);
+                    }
+                    
+                    // Record metrics
+                    self.metrics.tasks_submitted
+                        .with_label_values(&["batch", "true"])
+                        .inc_by(task_infos.len() as f64);
+                    
+                    self.metrics.tasks_by_status
+                        .with_label_values(&["queued"])
+                        .inc_by(task_infos.len() as f64);
+                }
+                Err(e) => {
+                    self.metrics.storage_operations
+                        .with_label_values(&["batch_create", "error"])
+                        .inc();
+                    
+                    // Mark all tasks as failed
+                    for response in &mut responses {
+                        response.status = task_response::Status::Failed as i32;
+                        response.result = format!("Failed to store tasks: {}", e);
+                    }
+                    total_failed = responses.len() as i32;
+                }
+            }
+            
+            storage_timer.observe_duration();
+        }
+        
+        timer.observe_duration();
+        
+        Ok(Response::new(BatchTaskResponse {
+            responses,
+            total_submitted: (total_tasks - total_failed as usize) as i32,
+            total_failed,
+            batch_id,
         }))
     }
 }

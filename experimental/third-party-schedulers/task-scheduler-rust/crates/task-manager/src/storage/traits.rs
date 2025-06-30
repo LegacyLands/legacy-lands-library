@@ -5,7 +5,7 @@ use task_common::{
     models::{TaskInfo, TaskResult as TaskResultData, TaskStatus},
     Uuid,
 };
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 /// Storage backend trait for task management
 #[async_trait]
@@ -13,11 +13,29 @@ pub trait StorageBackend: Send + Sync {
     /// Create a new task
     async fn create_task(&self, task: &TaskInfo) -> TaskResult<()>;
     
+    /// Create multiple tasks in a batch
+    async fn create_tasks_batch(&self, tasks: &[TaskInfo]) -> TaskResult<()> {
+        // Default implementation: fall back to individual inserts
+        for task in tasks {
+            self.create_task(task).await?;
+        }
+        Ok(())
+    }
+    
     /// Get a task by ID
     async fn get_task(&self, task_id: Uuid) -> TaskResult<Option<TaskInfo>>;
     
     /// Update task status
     async fn update_task_status(&self, task_id: Uuid, status: TaskStatus) -> TaskResult<()>;
+    
+    /// Update multiple task statuses in a batch
+    async fn update_tasks_status_batch(&self, task_ids: &[Uuid], status: TaskStatus) -> TaskResult<()> {
+        // Default implementation: fall back to individual updates
+        for task_id in task_ids {
+            self.update_task_status(*task_id, status.clone()).await?;
+        }
+        Ok(())
+    }
     
     /// Update task
     async fn update_task(&self, task: &TaskInfo) -> TaskResult<()>;
@@ -40,6 +58,9 @@ pub trait StorageBackend: Send + Sync {
     
     /// Delete task
     async fn delete_task(&self, task_id: Uuid) -> TaskResult<()>;
+    
+    /// Clean up old task results
+    async fn cleanup_old_results(&self, retention_seconds: u64) -> TaskResult<usize>;
     
     /// Get storage statistics
     async fn get_stats(&self) -> StorageStats;
@@ -65,10 +86,46 @@ pub async fn create_storage_backend(config: &crate::config::Config) -> TaskResul
             Arc::new(storage)
         }
         ConfigBackend::PostgreSQL => {
-            // TODO: Implement real PostgreSQL storage for TaskInfo
-            warn!("PostgreSQL backend not yet implemented, falling back to memory storage");
-            let storage = super::memory::MemoryStorage::new(config.storage.cache_size);
-            Arc::new(storage)
+            if let Some(postgres_url) = &config.storage.postgres_url {
+                let max_connections = config.storage.max_connections.unwrap_or(100);
+                let min_connections = config.storage.min_connections.unwrap_or(10);
+                
+                info!("PostgreSQL storage configuration: enable_binary_storage = {}", config.storage.enable_binary_storage);
+                
+                if config.storage.enable_binary_storage {
+                    info!("Using PostgreSQL binary storage backend (BYTEA support)");
+                    match super::postgresql_binary::PostgresqlBinaryStorage::new(
+                        postgres_url,
+                        max_connections,
+                        min_connections,
+                    ).await {
+                        Ok(storage) => Arc::new(storage),
+                        Err(e) => {
+                            error!("Failed to create PostgreSQL binary storage: {}. Falling back to memory storage", e);
+                            let storage = super::memory::MemoryStorage::new(config.storage.cache_size);
+                            Arc::new(storage)
+                        }
+                    }
+                } else {
+                    info!("Using PostgreSQL storage backend");
+                    match super::postgresql::PostgresqlStorage::new(
+                        postgres_url,
+                        max_connections,
+                        min_connections,
+                    ).await {
+                        Ok(storage) => Arc::new(storage),
+                        Err(e) => {
+                            error!("Failed to create PostgreSQL storage: {}. Falling back to memory storage", e);
+                            let storage = super::memory::MemoryStorage::new(config.storage.cache_size);
+                            Arc::new(storage)
+                        }
+                    }
+                }
+            } else {
+                error!("PostgreSQL backend selected but postgres_url not provided. Falling back to memory storage");
+                let storage = super::memory::MemoryStorage::new(config.storage.cache_size);
+                Arc::new(storage)
+            }
         }
         ConfigBackend::MongoDB => {
             warn!("MongoDB backend has been removed, falling back to memory storage");

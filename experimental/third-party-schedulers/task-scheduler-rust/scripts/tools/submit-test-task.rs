@@ -19,7 +19,7 @@ use prost_types::Any;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Connecting to task-manager...");
     
-    let mut client = TaskSchedulerClient::connect("http://localhost:50052").await?;
+    let mut client = TaskSchedulerClient::connect("http://localhost:50051").await?;
     
     println!("Submitting echo task...");
     

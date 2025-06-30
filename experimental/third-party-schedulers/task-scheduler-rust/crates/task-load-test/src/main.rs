@@ -1,21 +1,24 @@
 use clap::Parser;
 use hdrhistogram::Histogram;
 use prometheus::{Counter, Gauge, HistogramVec, Registry};
-use prost_types::Any;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand::rngs::StdRng;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 // Generated protobuf code
 mod proto {
     tonic::include_proto!("taskscheduler");
 }
 
-use proto::{task_scheduler_client::TaskSchedulerClient, TaskRequest};
-use tokio::sync::RwLock;
+use proto::{task_scheduler_client::TaskSchedulerClient, TaskRequest, BatchTaskRequest};
+use tokio::sync::Mutex;
 use tokio::time::interval;
+use tonic::transport::Channel;
 use tonic::Request;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -37,8 +40,16 @@ struct Args {
     endpoint: String,
 
     /// Task methods to use (comma-separated)
-    #[arg(long, default_value = "test.echo,test.compute,test.sleep")]
+    #[arg(long, default_value = "echo,add,multiply,concat")]
     methods: String,
+    
+    /// Include sleep tasks (adds realistic workload)
+    #[arg(long)]
+    include_sleep: bool,
+    
+    /// Sleep duration range in ms (min-max)
+    #[arg(long, default_value = "10-100")]
+    sleep_range: String,
 
     /// Payload size in bytes
     #[arg(long, default_value = "1024")]
@@ -51,6 +62,15 @@ struct Args {
     /// Metrics server address
     #[arg(long, default_value = "0.0.0.0:9090")]
     metrics_addr: String,
+    
+    /// Enable batch submission mode for extreme performance
+    #[arg(long)]
+    batch_mode: bool,
+    
+    /// Batch size (number of tasks per batch)
+    #[arg(long, default_value = "100")]
+    batch_size: usize,
+    
 }
 
 struct LoadTestMetrics {
@@ -79,7 +99,7 @@ impl LoadTestMetrics {
                 "load_test_response_time_seconds",
                 "Response time distribution",
             )
-            .buckets(vec![0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]),
+            .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]),
             &["method"],
         )
         .unwrap();
@@ -103,12 +123,21 @@ impl LoadTestMetrics {
     }
 }
 
-struct LoadTestStats {
-    latencies: Histogram<u64>,
-    start_time: Instant,
-    total_sent: u64,
-    total_completed: u64,
-    total_failed: u64,
+// Atomic counters for lock-free statistics
+struct AtomicStats {
+    total_sent: AtomicU64,
+    total_completed: AtomicU64,
+    total_failed: AtomicU64,
+}
+
+impl AtomicStats {
+    fn new() -> Self {
+        Self {
+            total_sent: AtomicU64::new(0),
+            total_completed: AtomicU64::new(0),
+            total_failed: AtomicU64::new(0),
+        }
+    }
 }
 
 #[tokio::main]
@@ -126,13 +155,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     info!("Target endpoint: {}", args.endpoint);
     info!("Concurrent connections: {}", args.connections);
+    
+    if args.batch_mode {
+        info!("Batch mode enabled with batch size: {}", args.batch_size);
+    }
 
     // Parse methods
-    let methods: Vec<String> = args
+    let mut methods: Vec<String> = args
         .methods
         .split(',')
         .map(|s| s.trim().to_string())
         .collect();
+    
+    // Add sleep tasks if requested
+    if args.include_sleep {
+        methods.push("sleep".to_string());
+    }
+    
+    // Parse sleep range
+    let sleep_range: (u64, u64) = if args.include_sleep {
+        let parts: Vec<&str> = args.sleep_range.split('-').collect();
+        if parts.len() == 2 {
+            let min = parts[0].parse().unwrap_or(10);
+            let max = parts[1].parse().unwrap_or(100);
+            (min, max)
+        } else {
+            (10, 100)
+        }
+    } else {
+        (10, 100)
+    };
+
+    // Always use bincode serialization
+    info!("Using bincode serialization for all tasks");
 
     // Initialize metrics
     let registry = Registry::new();
@@ -150,167 +205,291 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Initialize stats
-    let stats = Arc::new(RwLock::new(LoadTestStats {
-        latencies: Histogram::<u64>::new(3).unwrap(),
-        start_time: Instant::now(),
-        total_sent: 0,
-        total_completed: 0,
-        total_failed: 0,
-    }));
+    // Initialize atomic stats
+    let stats = Arc::new(AtomicStats::new());
+    
+    // Thread-safe histogram with mutex (only for latency recording)
+    let latency_histogram = Arc::new(Mutex::new(Histogram::<u64>::new(3).unwrap()));
 
-    // Create client pool
-    let mut clients = Vec::new();
-    for _ in 0..args.connections {
-        let client: TaskSchedulerClient<tonic::transport::Channel> =
-            TaskSchedulerClient::connect(args.endpoint.clone()).await?;
-        clients.push(Arc::new(tokio::sync::Mutex::new(client)));
-    }
-
-    // Start load generation
-    let interval_ns = 1_000_000_000u64 / args.rps;
-    let mut ticker = interval(Duration::from_nanos(interval_ns));
-
+    // Create workers with dedicated clients (no shared locks)
     let test_duration = Duration::from_secs(args.duration);
     let test_start = Instant::now();
+    let workers_per_connection = 10; // Multiple workers per connection
+    let total_workers = args.connections * workers_per_connection;
+    
+    // Calculate requests per worker
+    let rps_per_worker = args.rps as f64 / total_workers as f64;
+    let interval_ns = if rps_per_worker > 0.0 {
+        (1_000_000_000.0 / rps_per_worker) as u64
+    } else {
+        0 // 0 means unlimited rate
+    };
 
-    // Spawn workers
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    let rx = Arc::new(tokio::sync::Mutex::new(rx));
+    let mut handles = Vec::new();
 
-    for (_i, client) in clients.into_iter().enumerate() {
-        let _tx = tx.clone();
-        let rx = rx.clone();
-        let methods = methods.clone();
-        let metrics = metrics.clone();
-        let stats = stats.clone();
-        let payload_size = args.payload_size;
-
-        tokio::spawn(async move {
-            loop {
-                let msg = {
-                    let mut rx_guard = rx.lock().await;
-                    rx_guard.recv().await
+    for _conn_idx in 0..args.connections {
+        // Create a dedicated client for this group of workers with optimized settings
+        let channel = Channel::from_shared(args.endpoint.clone())?
+            .connect_timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(60))
+            .rate_limit(5000, Duration::from_secs(1)) // 5000 requests per second per connection
+            .concurrency_limit(1000)
+            .connect()
+            .await?;
+        let client = TaskSchedulerClient::new(channel);
+        
+        for _worker_idx in 0..workers_per_connection {
+            let client = client.clone(); // Clone is cheap for gRPC clients
+            let methods = methods.clone();
+            let metrics = metrics.clone();
+            let stats = stats.clone();
+            let latency_histogram = latency_histogram.clone();
+            let payload_size = args.payload_size;
+            let batch_mode = args.batch_mode;
+            let batch_size = args.batch_size;
+            let worker_rps = rps_per_worker;
+            let interval_nanos = interval_ns;
+            
+            let handle = tokio::spawn(async move {
+                let mut ticker = if worker_rps > 0.0 {
+                    Some(interval(Duration::from_nanos(interval_nanos)))
+                } else {
+                    None
                 };
-
-                if msg.is_none() {
-                    break;
-                }
-                let method = methods[rand::thread_rng().gen_range(0..methods.len())].clone();
-                let payload = generate_payload(payload_size);
-                let task_id = uuid::Uuid::new_v4().to_string();
-
-                let start = Instant::now();
-                metrics.active_requests.inc();
-
-                let mut client = client.lock().await;
-                let request = Request::new(TaskRequest {
-                    task_id: task_id.clone(),
-                    method: method.clone(),
-                    args: vec![Any {
-                        type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-                        value: payload.into_bytes(),
-                    }],
-                    deps: vec![],
-                    is_async: true,
-                });
-
-                match client.submit_task(request).await {
-                    Ok(_response) => {
-                        let duration = start.elapsed();
-                        metrics.requests_completed.inc();
-                        metrics
-                            .response_time
-                            .with_label_values(&[&method])
-                            .observe(duration.as_secs_f64());
-
-                        let mut stats = stats.write().await;
-                        stats.total_completed += 1;
-                        stats.latencies.record(duration.as_micros() as u64).unwrap();
+                let mut rng = StdRng::from_entropy();
+                let mut local_client = client;
+                let sleep_range = sleep_range;
+                
+                loop {
+                    if test_start.elapsed() >= test_duration {
+                        break;
                     }
-                    Err(e) => {
-                        error!("Request failed: {}", e);
-                        metrics.requests_failed.inc();
-
-                        let mut stats = stats.write().await;
-                        stats.total_failed += 1;
+                    
+                    // Only use ticker if RPS is limited
+                    if let Some(ref mut t) = ticker {
+                        t.tick().await;
+                    } else {
+                        // In unlimited mode, yield occasionally to prevent starving other tasks
+                        tokio::task::yield_now().await;
+                    }
+                    
+                    if batch_mode {
+                        // Batch mode: collect multiple tasks and submit together
+                        let mut batch_tasks = Vec::with_capacity(batch_size);
+                        
+                        for _ in 0..batch_size {
+                            let task = generate_task_request(&mut rng, &methods, payload_size, sleep_range);
+                            batch_tasks.push(task);
+                        }
+                        
+                        let batch_count = batch_tasks.len();
+                        stats.total_sent.fetch_add(batch_count as u64, Ordering::Relaxed);
+                        metrics.requests_sent.inc_by(batch_count as f64);
+                        metrics.active_requests.add(batch_count as f64);
+                        
+                        let start = Instant::now();
+                        
+                        let request = Request::new(BatchTaskRequest {
+                            tasks: batch_tasks,
+                            is_async: true,
+                        });
+                        
+                        trace!("Submitting batch of {} tasks", batch_count);
+                        match local_client.batch_submit_tasks(request).await {
+                            Ok(response) => {
+                                let duration = start.elapsed();
+                                let resp = response.into_inner();
+                                let completed = resp.total_submitted as u64;
+                                let failed = resp.total_failed as u64;
+                                
+                                stats.total_completed.fetch_add(completed, Ordering::Relaxed);
+                                stats.total_failed.fetch_add(failed, Ordering::Relaxed);
+                                metrics.requests_completed.inc_by(completed as f64);
+                                metrics.requests_failed.inc_by(failed as f64);
+                                
+                                metrics
+                                    .response_time
+                                    .with_label_values(&["batch"])
+                                    .observe(duration.as_secs_f64());
+                                
+                                // Record latency (this is the only place we need a lock)
+                                if let Ok(mut hist) = latency_histogram.try_lock() {
+                                    let _ = hist.record(duration.as_micros() as u64);
+                                }
+                            }
+                            Err(e) => {
+                                error!("Batch request failed: {}", e);
+                                stats.total_failed.fetch_add(batch_count as u64, Ordering::Relaxed);
+                                metrics.requests_failed.inc_by(batch_count as f64);
+                            }
+                        }
+                        
+                        metrics.active_requests.sub(batch_count as f64);
+                    } else {
+                        // Single task mode
+                        let task = generate_task_request(&mut rng, &methods, payload_size, sleep_range);
+                        let method = task.method.clone();
+                        
+                        stats.total_sent.fetch_add(1, Ordering::Relaxed);
+                        metrics.requests_sent.inc();
+                        metrics.active_requests.inc();
+                        
+                        let start = Instant::now();
+                        
+                        let request = Request::new(task);
+                        
+                        match local_client.submit_task(request).await {
+                            Ok(_response) => {
+                                let duration = start.elapsed();
+                                stats.total_completed.fetch_add(1, Ordering::Relaxed);
+                                metrics.requests_completed.inc();
+                                metrics
+                                    .response_time
+                                    .with_label_values(&[&method])
+                                    .observe(duration.as_secs_f64());
+                                
+                                // Record latency (this is the only place we need a lock)
+                                if let Ok(mut hist) = latency_histogram.try_lock() {
+                                    let _ = hist.record(duration.as_micros() as u64);
+                                }
+                            }
+                            Err(e) => {
+                                error!("Request failed: {}", e);
+                                stats.total_failed.fetch_add(1, Ordering::Relaxed);
+                                metrics.requests_failed.inc();
+                            }
+                        }
+                        
+                        metrics.active_requests.dec();
                     }
                 }
-
-                metrics.active_requests.dec();
-            }
-        });
+            });
+            
+            handles.push(handle);
+        }
     }
 
-    // Generate load
-    info!("Starting load generation...");
+    info!("Started {} workers, generating load...", total_workers);
 
-    loop {
-        if test_start.elapsed() >= test_duration {
-            break;
-        }
-
-        ticker.tick().await;
-
-        // Send work to a random worker
-        if tx.send(()).is_ok() {
-            metrics.requests_sent.inc();
-            let mut stats = stats.write().await;
-            stats.total_sent += 1;
-        }
+    // Wait for all workers to complete
+    for handle in handles {
+        let _ = handle.await;
     }
 
-    drop(tx);
-    info!("Load generation complete, waiting for in-flight requests...");
-
-    // Wait for in-flight requests
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    info!("Load generation complete");
 
     // Print results
-    print_results(&stats).await;
+    print_results(&stats, &latency_histogram, test_start).await;
 
     Ok(())
 }
 
-async fn print_results(stats: &Arc<RwLock<LoadTestStats>>) {
-    let stats = stats.read().await;
-    let duration = stats.start_time.elapsed();
+async fn print_results(
+    stats: &Arc<AtomicStats>,
+    latency_histogram: &Arc<Mutex<Histogram<u64>>>,
+    start_time: Instant,
+) {
+    let duration = start_time.elapsed();
+    let total_sent = stats.total_sent.load(Ordering::Relaxed);
+    let total_completed = stats.total_completed.load(Ordering::Relaxed);
+    let total_failed = stats.total_failed.load(Ordering::Relaxed);
 
     println!("\n=== LOAD TEST RESULTS ===");
     println!("Duration: {:.2}s", duration.as_secs_f64());
-    println!("Total sent: {}", stats.total_sent);
-    println!("Total completed: {}", stats.total_completed);
-    println!("Total failed: {}", stats.total_failed);
+    println!("Total sent: {}", total_sent);
+    println!("Total completed: {}", total_completed);
+    println!("Total failed: {}", total_failed);
     println!(
         "Success rate: {:.2}%",
-        (stats.total_completed as f64 / stats.total_sent as f64) * 100.0
+        (total_completed as f64 / total_sent as f64) * 100.0
     );
     println!(
         "Actual RPS: {:.2}",
-        stats.total_sent as f64 / duration.as_secs_f64()
+        total_sent as f64 / duration.as_secs_f64()
     );
 
-    if !stats.latencies.is_empty() {
-        println!("\nLatency (microseconds):");
-        println!("  Min: {}", stats.latencies.min());
-        println!("  P50: {}", stats.latencies.value_at_quantile(0.50));
-        println!("  P90: {}", stats.latencies.value_at_quantile(0.90));
-        println!("  P95: {}", stats.latencies.value_at_quantile(0.95));
-        println!("  P99: {}", stats.latencies.value_at_quantile(0.99));
-        println!("  P99.9: {}", stats.latencies.value_at_quantile(0.999));
-        println!("  Max: {}", stats.latencies.max());
-        println!("  Mean: {:.2}", stats.latencies.mean());
-        println!("  StdDev: {:.2}", stats.latencies.stdev());
+    let hist = latency_histogram.lock().await;
+    if !hist.is_empty() {
+            println!("\nLatency (microseconds):");
+            println!("  Min: {}", hist.min());
+            println!("  P50: {}", hist.value_at_quantile(0.50));
+            println!("  P90: {}", hist.value_at_quantile(0.90));
+            println!("  P95: {}", hist.value_at_quantile(0.95));
+            println!("  P99: {}", hist.value_at_quantile(0.99));
+            println!("  P99.9: {}", hist.value_at_quantile(0.999));
+            println!("  Max: {}", hist.max());
+            println!("  Mean: {:.2}", hist.mean());
+            println!("  StdDev: {:.2}", hist.stdev());
+    }
+}
+
+fn generate_task_request(
+    rng: &mut StdRng,
+    methods: &[String],
+    payload_size: usize,
+    sleep_range: (u64, u64),
+) -> TaskRequest {
+    let method = &methods[rng.gen_range(0..methods.len())];
+    let task_id = Uuid::new_v4().to_string();
+    
+    // Helper function to serialize value as JSON string
+    let serialize_value = |value: &serde_json::Value| -> String {
+        serde_json::to_string(value).unwrap()
+    };
+    
+    // Generate appropriate arguments based on method
+    let args = match method.as_str() {
+        "echo" => {
+            // Echo expects a string argument
+            let payload = generate_payload(payload_size);
+            vec![serialize_value(&serde_json::Value::String(payload))]
+        }
+        "add" | "multiply" => {
+            // Math operations expect numeric arguments
+            let num1 = rng.gen_range(1..100) as f64;
+            let num2 = rng.gen_range(1..100) as f64;
+            vec![
+                serialize_value(&serde_json::Value::Number(
+                    serde_json::Number::from_f64(num1).unwrap()
+                )),
+                serialize_value(&serde_json::Value::Number(
+                    serde_json::Number::from_f64(num2).unwrap()
+                )),
+            ]
+        }
+        "concat" => {
+            // Concat expects string arguments
+            vec![
+                serialize_value(&serde_json::Value::String("Hello".to_string())),
+                serialize_value(&serde_json::Value::String(" World".to_string())),
+            ]
+        }
+        "sleep" => {
+            // Sleep task expects duration in milliseconds
+            let duration = rng.gen_range(sleep_range.0..=sleep_range.1);
+            vec![serialize_value(&serde_json::Value::Number(
+                serde_json::Number::from(duration)
+            ))]
+        }
+        _ => {
+            // Default: send a simple string payload
+            let payload = generate_payload(payload_size);
+            vec![serialize_value(&serde_json::Value::String(payload))]
+        }
+    };
+    
+    TaskRequest {
+        task_id,
+        method: method.clone(),
+        args,
+        deps: vec![],
+        is_async: true,
     }
 }
 
 fn generate_payload(size: usize) -> String {
-    serde_json::json!({
-        "data": "x".repeat(size),
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-        "load_test": true,
-    })
-    .to_string()
+    // Simple payload without JSON serialization overhead
+    format!("{{\"data\":\"{}\"}}", "x".repeat(size))
 }
 
 async fn start_metrics_server(

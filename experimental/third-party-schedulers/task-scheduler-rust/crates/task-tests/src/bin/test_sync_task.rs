@@ -1,12 +1,13 @@
 use task_common::proto::{TaskRequest, taskscheduler::task_scheduler_client::TaskSchedulerClient};
-use prost_types::Any;
+use base64::Engine;
+use bincode;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Testing Synchronous Task Submission ===");
-    println!("Connecting to task-manager at localhost:50052...");
+    println!("Connecting to task-manager at localhost:50051...");
     
-    let mut client = TaskSchedulerClient::connect("http://localhost:50052").await?;
+    let mut client = TaskSchedulerClient::connect("http://localhost:50051").await?;
     println!("✓ Connected successfully!");
     
     // Test 1: Async task (should work)
@@ -14,10 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let async_request = TaskRequest {
         task_id: uuid::Uuid::new_v4().to_string(),
         method: "echo".to_string(),
-        args: vec![Any {
-            type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-            value: serde_json::to_vec(&"Async Hello").unwrap(),
-        }],
+        args: {
+            let value = bincode::serialize(&"Async Hello").unwrap();
+            vec![base64::engine::general_purpose::STANDARD.encode(&value)]
+        },
         deps: vec![],
         is_async: true,
     };
@@ -33,10 +34,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sync_request = TaskRequest {
         task_id: uuid::Uuid::new_v4().to_string(),
         method: "echo".to_string(),
-        args: vec![Any {
-            type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-            value: serde_json::to_vec(&"Sync Hello").unwrap(),
-        }],
+        args: {
+            let value = bincode::serialize(&"Sync Hello").unwrap();
+            vec![base64::engine::general_purpose::STANDARD.encode(&value)]
+        },
         deps: vec![],
         is_async: false,  // This is the key difference
     };

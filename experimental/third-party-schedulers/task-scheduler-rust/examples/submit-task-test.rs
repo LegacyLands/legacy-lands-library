@@ -9,7 +9,7 @@ use prost_types::Any;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// gRPC server address
-    #[arg(short, long, default_value = "http://127.0.0.1:50052")]
+    #[arg(short, long, default_value = "http://127.0.0.1:50051")]
     server: String,
     
     /// Task method

@@ -1,5 +1,6 @@
 use task_common::proto::{TaskRequest, taskscheduler::task_scheduler_client::TaskSchedulerClient};
-use prost_types::Any;
+use base64::Engine;
+use bincode;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,10 +37,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             args: if reason.is_empty() {
                 vec![]
             } else {
-                vec![Any {
-                    type_url: "type.googleapis.com/google.protobuf.StringValue".to_string(),
-                    value: serde_json::to_vec(&reason).unwrap(),
-                }]
+                let value = bincode::serialize(&reason).unwrap();
+                vec![base64::engine::general_purpose::STANDARD.encode(&value)]
             },
             deps: vec![],
             is_async: true,

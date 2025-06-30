@@ -49,7 +49,7 @@ taskManager:
 taskWorker:
   enabled: true
   service:
-    grpcPort: 50052
+    grpcPort: 50051
     metricsPort: 9001
   resources:
     requests:

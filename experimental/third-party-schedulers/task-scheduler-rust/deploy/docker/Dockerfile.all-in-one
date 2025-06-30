@@ -1,0 +1,126 @@
+# 🚀 All-in-One Task Scheduler Container
+# Contains Kind + Helm + complete deployment for out-of-the-box experience
+#
+# Usage:
+#   docker build -f deploy/docker/Dockerfile.all-in-one -t task-scheduler-aio .
+#   docker run -it --privileged -p 3000:3000 -p 9090:9090 -p 50051:50051 task-scheduler-aio
+
+FROM ubuntu:22.04
+
+# Prevent interactive installation
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm-256color
+
+# Install basic tools
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg2 \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    lsb-release \
+    systemd \
+    systemd-sysv \
+    dbus \
+    sudo \
+    vim \
+    git \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Docker
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+    | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install kubectl
+RUN curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg \
+    && echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' \
+    | tee /etc/apt/sources.list.d/kubernetes.list \
+    && apt-get update \
+    && apt-get install -y kubectl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Kind
+RUN curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 \
+    && chmod +x ./kind \
+    && mv ./kind /usr/local/bin/kind
+
+# Install Helm
+RUN curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | tee /usr/share/keyrings/helm.gpg > /dev/null \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" \
+    | tee /etc/apt/sources.list.d/helm-stable-debian.list \
+    && apt-get update \
+    && apt-get install -y helm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create working directory
+WORKDIR /opt/task-scheduler
+
+# Copy project files
+COPY . .
+
+# Create startup script
+RUN cat > /usr/local/bin/start-task-scheduler.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🚀 启动 Task Scheduler All-in-One 容器"
+echo "======================================"
+
+# 启动 Docker daemon
+echo "启动 Docker 服务..."
+service docker start
+sleep 5
+
+# 确保 Docker 正在运行
+while ! docker info >/dev/null 2>&1; do
+    echo "等待 Docker 启动..."
+    sleep 2
+done
+
+echo "Docker 已启动！"
+
+# 进入项目目录
+cd /opt/task-scheduler
+
+# 运行一键部署脚本
+echo "运行一键部署..."
+./scripts/deploy/deploy-one-click.sh kind
+
+# 设置端口转发（后台运行）
+echo "设置端口转发..."
+kubectl port-forward svc/grafana 3000:3000 -n monitoring --address 0.0.0.0 &
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n monitoring --address 0.0.0.0 &
+kubectl port-forward svc/task-manager 50051:50051 -n task-scheduler --address 0.0.0.0 &
+
+echo ""
+echo "🎉 Task Scheduler 已成功启动！"
+echo ""
+echo "🔗 访问地址："
+echo "  • Grafana: http://localhost:3000"
+echo "  • Prometheus: http://localhost:9090"  
+echo "  • gRPC API: localhost:50051"
+echo ""
+echo "📋 有用的命令："
+echo "  • kubectl get pods -A                    # 查看所有 Pod"
+echo "  • kubectl logs -f deploy/task-manager    # 查看 Manager 日志"
+echo "  • ./scripts/test/benchmark.sh           # 运行性能测试"
+echo ""
+
+# 保持容器运行
+echo "容器正在运行... 按 Ctrl+C 退出"
+tail -f /dev/null
+EOF
+
+RUN chmod +x /usr/local/bin/start-task-scheduler.sh
+
+# Expose ports
+EXPOSE 3000 9090 50051 8080
+
+# Startup script
+CMD ["/usr/local/bin/start-task-scheduler.sh"]

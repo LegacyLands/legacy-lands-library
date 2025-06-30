@@ -19,6 +19,7 @@ use task_manager::{
     storage,
 };
 use tonic::transport::Server;
+use tower::ServiceBuilder;
 use tracing::{debug, error, info, warn};
 
 #[derive(Parser, Debug)]
@@ -91,6 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting Task Manager v{}", env!("CARGO_PKG_VERSION"));
     info!("Configuration loaded: {:?}", config);
+    info!("Binary storage enabled: {}", config.storage.enable_binary_storage);
 
     // Initialize metrics
     let registry = Registry::new();
@@ -484,6 +486,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // Start periodic cleanup task for old task results
+    let cleanup_storage = storage.clone();
+    let cleanup_config = config.storage.clone();
+    let _cleanup_metrics = metrics.clone();
+    let cleanup_handle = tokio::spawn(async move {
+        info!("Starting periodic task result cleanup");
+        let mut interval = tokio::time::interval(Duration::from_secs(cleanup_config.cleanup_interval_seconds));
+        
+        loop {
+            interval.tick().await;
+            
+            info!("Running task result cleanup (retention: {} seconds)", cleanup_config.result_retention_seconds);
+            match cleanup_storage.cleanup_old_results(cleanup_config.result_retention_seconds).await {
+                Ok(deleted_count) => {
+                    if deleted_count > 0 {
+                        info!("Cleaned up {} old task results", deleted_count);
+                        
+                        // Update cleanup counter metric (we might need to add this metric)
+                        // cleanup_metrics.results_cleaned.inc_by(deleted_count as f64);
+                    }
+                    
+                    // Get storage stats and log memory usage
+                    let stats = cleanup_storage.get_stats().await;
+                    info!(
+                        "Storage stats after cleanup: {} tasks, {} results, {} cache entries",
+                        stats.total_tasks, stats.total_results, stats.cache_size
+                    );
+                }
+                Err(e) => {
+                    error!("Failed to cleanup old task results: {}", e);
+                }
+            }
+        }
+    });
+
     // Start metrics server
     let metrics_handle = tokio::spawn(async move {
         if let Err(e) = start_metrics_server(metrics_addr, registry).await {
@@ -491,8 +528,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Configure gRPC server
-    let mut server_builder = Server::builder();
+    // Configure gRPC server with optimized settings for high throughput
+    let mut server_builder = Server::builder()
+        // HTTP/2 settings for better performance
+        .http2_keepalive_interval(Some(Duration::from_secs(10)))
+        .http2_keepalive_timeout(Some(Duration::from_secs(20)))
+        .http2_adaptive_window(Some(true))
+        .initial_stream_window_size(Some(1024 * 1024)) // 1MB
+        .initial_connection_window_size(Some(2 * 1024 * 1024)) // 2MB
+        .max_concurrent_streams(Some(10000)) // Support high concurrency
+        // TCP settings
+        .tcp_keepalive(Some(Duration::from_secs(60)))
+        .tcp_nodelay(true)
+        // Disable HTTP/1 for pure gRPC
+        .accept_http1(false);
 
     // Configure TLS if enabled
     if config.server.tls_enabled {
@@ -504,9 +553,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start gRPC server
     info!("Starting gRPC server on {}", grpc_addr);
 
+    // Apply concurrency limiting middleware
+    let service_with_limits = ServiceBuilder::new()
+        // Note: We can add more middleware here if needed
+        // .layer(tower::limit::ConcurrencyLimitLayer::new(config.server.max_concurrent_requests))
+        // .layer(tower_http::timeout::TimeoutLayer::new(Duration::from_secs(300)))
+        .service(TaskSchedulerServer::new(service));
+
     let server_handle = tokio::spawn(async move {
         if let Err(e) = server_builder
-            .add_service(TaskSchedulerServer::new(service))
+            .add_service(service_with_limits)
             .serve(grpc_addr)
             .await
         {
@@ -527,6 +583,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     completion_listener_handle.abort();
     result_listener_handle.abort();
     system_monitor_handle.abort();
+    cleanup_handle.abort();
 
     // Shutdown tracing
     if config.observability.tracing_enabled {

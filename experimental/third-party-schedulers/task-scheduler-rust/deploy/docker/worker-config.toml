@@ -1,0 +1,32 @@
+# High-Performance Task Worker Configuration
+
+[worker]
+max_concurrent_tasks = 10000
+metrics_address = "0.0.0.0:9001"
+mode = "worker"
+worker_threads = 16
+
+[queue]
+nats_url = "nats://task-scheduler-nats:4222"
+batch_size = 500
+fetch_timeout_seconds = 5
+prefetch_count = 5000
+
+[kubernetes]
+enabled = false
+namespace = "task-scheduler"
+
+[plugins]
+plugin_dirs = [
+    "/usr/local/lib/task-scheduler/plugins",
+    "./plugins"
+]
+auto_load = true
+plugin_patterns = ["*.so", "*.dll", "*.dylib"]
+
+[observability]
+tracing_enabled = false
+otlp_endpoint = "http://task-scheduler-jaeger:4317"
+service_name = "task-worker"
+log_level = "warn"
+sampling_ratio = 0.01

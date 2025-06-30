@@ -6,28 +6,87 @@ scrape_configs:
   # Task Manager metrics
   - job_name: 'task-manager'
     static_configs:
-      - targets: ['task-manager:9000']
+      - targets: ['task-scheduler-manager:9000']
         labels:
           service: 'task-manager'
           
-  # Task Worker metrics
+  # Task Worker metrics (all 50 workers)
   - job_name: 'task-worker'
     static_configs:
-      - targets: ['task-worker-1:9000', 'task-worker-2:9000', 'task-worker-3:9000']
+      - targets:
+          - 'docker-task-worker-1:9001'
+          - 'docker-task-worker-2:9001'
+          - 'docker-task-worker-3:9001'
+          - 'docker-task-worker-4:9001'
+          - 'docker-task-worker-5:9001'
+          - 'docker-task-worker-6:9001'
+          - 'docker-task-worker-7:9001'
+          - 'docker-task-worker-8:9001'
+          - 'docker-task-worker-9:9001'
+          - 'docker-task-worker-10:9001'
+          - 'docker-task-worker-11:9001'
+          - 'docker-task-worker-12:9001'
+          - 'docker-task-worker-13:9001'
+          - 'docker-task-worker-14:9001'
+          - 'docker-task-worker-15:9001'
+          - 'docker-task-worker-16:9001'
+          - 'docker-task-worker-17:9001'
+          - 'docker-task-worker-18:9001'
+          - 'docker-task-worker-19:9001'
+          - 'docker-task-worker-20:9001'
+          - 'docker-task-worker-21:9001'
+          - 'docker-task-worker-22:9001'
+          - 'docker-task-worker-23:9001'
+          - 'docker-task-worker-24:9001'
+          - 'docker-task-worker-25:9001'
+          - 'docker-task-worker-26:9001'
+          - 'docker-task-worker-27:9001'
+          - 'docker-task-worker-28:9001'
+          - 'docker-task-worker-29:9001'
+          - 'docker-task-worker-30:9001'
+          - 'docker-task-worker-31:9001'
+          - 'docker-task-worker-32:9001'
+          - 'docker-task-worker-33:9001'
+          - 'docker-task-worker-34:9001'
+          - 'docker-task-worker-35:9001'
+          - 'docker-task-worker-36:9001'
+          - 'docker-task-worker-37:9001'
+          - 'docker-task-worker-38:9001'
+          - 'docker-task-worker-39:9001'
+          - 'docker-task-worker-40:9001'
+          - 'docker-task-worker-41:9001'
+          - 'docker-task-worker-42:9001'
+          - 'docker-task-worker-43:9001'
+          - 'docker-task-worker-44:9001'
+          - 'docker-task-worker-45:9001'
+          - 'docker-task-worker-46:9001'
+          - 'docker-task-worker-47:9001'
+          - 'docker-task-worker-48:9001'
+          - 'docker-task-worker-49:9001'
+          - 'docker-task-worker-50:9001'
         labels:
           service: 'task-worker'
-          
-  # Task Operator metrics
-  - job_name: 'task-operator'
-    static_configs:
-      - targets: ['task-operator:9000']
-        labels:
-          service: 'task-operator'
           
   # NATS metrics
   - job_name: 'nats'
     static_configs:
-      - targets: ['nats:8222']
+      - targets: ['task-scheduler-nats:8222']
         labels:
           service: 'nats'
+    metrics_path: '/varz'
+    
+  # Redis metrics (if enabled)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['task-scheduler-redis:6379']
+        labels:
+          service: 'redis'
+    metrics_path: '/metrics'
+    
+  # PostgreSQL metrics (if exporter enabled)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['task-scheduler-postgres:5432']
+        labels:
+          service: 'postgres'
     metrics_path: '/metrics'

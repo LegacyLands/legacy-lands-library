@@ -96,14 +96,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "\n(sum(increase(task_manager_tasks_status_total{status=\"succeeded\"}[24h])) / \n(sum(increase(task_manager_tasks_status_total{status=\"succeeded\"}[24h])) + \nsum(increase(task_manager_tasks_status_total{status=\"failed\"}[24h])) + 0.01)) * 100\n",
+          "expr": "sum(task_manager_task_execution_duration_seconds_count{status=\"succeeded\"}) / sum(task_manager_task_execution_duration_seconds_count) * 100",
           "format": "time_series",
           "instant": false,
           "legendFormat": "Success Rate",
           "refId": "A"
         }
       ],
-      "title": "24h Success Rate",
+      "title": "Success Rate (1h)",
       "type": "stat"
     },
     {
@@ -159,14 +159,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(task_manager_tasks_submitted_total[24h]))",
+          "expr": "sum(increase(task_manager_tasks_submitted_total[1h]))",
           "format": "time_series",
           "instant": false,
           "legendFormat": "Total Tasks",
           "refId": "A"
         }
       ],
-      "title": "Total Tasks (24h)",
+      "title": "Total Tasks (1h)",
       "type": "stat"
     },
     {
@@ -303,7 +303,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "\n100 - (sum(increase(task_manager_task_execution_duration_seconds_bucket{le=\"+Inf\"}[24h])) - \nsum(increase(task_manager_task_execution_duration_seconds_bucket{le=\"5\"}[24h]))) / \nclamp_min(sum(increase(task_manager_task_execution_duration_seconds_count[24h])), 1) * 100\n",
+          "expr": "\n100 - (sum(increase(task_manager_task_execution_duration_seconds_bucket{le=\"+Inf\"}[1h])) - \nsum(increase(task_manager_task_execution_duration_seconds_bucket{le=\"5\"}[1h]))) / \nclamp_min(sum(increase(task_manager_task_execution_duration_seconds_count[1h])), 1) or 0) * 100\n",
           "format": "time_series",
           "instant": false,
           "legendFormat": "SLA Compliance",
@@ -376,7 +376,7 @@
               }
             ]
           },
-          "unit": "reqps"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -534,7 +534,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(task_manager_tasks_status_total{status=\"succeeded\"}[5m]))",
+          "expr": "rate(task_manager_task_execution_duration_seconds_count{status=\"succeeded\"}[5m])",
           "format": "time_series",
           "instant": false,
           "legendFormat": "Succeeded",
@@ -545,7 +545,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(task_manager_tasks_status_total{status=\"failed\"}[5m]))",
+          "expr": "rate(task_manager_task_execution_duration_seconds_count{status=\"failed\"}[5m])",
           "format": "time_series",
           "instant": false,
           "legendFormat": "Failed",
@@ -630,7 +630,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(task_manager_tasks_submitted_total[24h])) by (method)",
+          "expr": "sum(increase(task_manager_tasks_submitted_total[1h])) by (method)",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{method}}",
@@ -704,7 +704,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(task_manager_tasks_errors_by_category_total[24h])) by (error_category)",
+          "expr": "sum(increase(task_manager_task_execution_duration_seconds_count{status="failed"}[1h])) by (error_category)",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{error_category}}",
@@ -838,7 +838,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.5, sum(rate(task_manager_task_execution_duration_seconds_bucket[24h])) by (method, le))",
+          "expr": "histogram_quantile(0.5, sum(rate(task_manager_task_execution_duration_seconds_bucket[1h])) by (method, le))",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -849,7 +849,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(task_manager_task_execution_duration_seconds_bucket[24h])) by (method, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(task_manager_task_execution_duration_seconds_bucket[1h])) by (method, le))",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -860,7 +860,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(task_manager_task_execution_duration_seconds_bucket[24h])) by (method, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(task_manager_task_execution_duration_seconds_bucket[1h])) by (method, le))",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -871,7 +871,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(increase(task_manager_tasks_submitted_total[24h])) by (method)",
+          "expr": "sum(increase(task_manager_tasks_submitted_total[1h])) by (method)",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -935,7 +935,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-6h",
     "to": "now"
   },
   "timezone": "",

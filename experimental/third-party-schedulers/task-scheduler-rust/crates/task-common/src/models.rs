@@ -12,8 +12,8 @@ pub struct TaskInfo {
     /// Task method name
     pub method: String,
 
-    /// Task arguments (JSON serialized)
-    pub args: Vec<serde_json::Value>,
+    /// Task arguments (base64-encoded bincode)
+    pub args: Vec<String>,
 
     /// Task dependencies
     pub dependencies: Vec<Uuid>,
@@ -110,8 +110,8 @@ pub struct TaskResult {
     /// Execution status
     pub status: TaskStatus,
 
-    /// Result data (if succeeded)
-    pub result: Option<serde_json::Value>,
+    /// Result data (if succeeded, base64-encoded bincode)
+    pub result: Option<String>,
 
     /// Error message (if failed)
     pub error: Option<String>,

@@ -44,6 +44,9 @@ pub enum TaskError {
 
     #[error("Method not found: {0}")]
     MethodNotFound(String),
+
+    #[error("Storage error: {0}")]
+    Storage(String),
 }
 
 /// Result type for task operations

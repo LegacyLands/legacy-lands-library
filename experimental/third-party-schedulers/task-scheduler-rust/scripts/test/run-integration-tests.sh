@@ -32,7 +32,7 @@ echo -e "${YELLOW}Building project...${NC}"
 cargo build --bin task-manager --bin task-worker
 
 # Set environment variables
-export GRPC_ADDRESS="http://localhost:50052"
+export GRPC_ADDRESS="http://localhost:50051"
 export NATS_URL="nats://localhost:4222"
 export TEST_POSTGRES_URL="postgres://postgres:password@localhost:5432/task_scheduler_test"
 

@@ -177,6 +177,36 @@ impl QueueManager {
         debug!("Queued task {}", task_data.task_id);
         Ok(())
     }
+    
+    /// Queue multiple tasks for processing in batch
+    pub async fn queue_tasks_batch(&self, tasks: Vec<QueuedTask>) -> TaskResult<()> {
+        // Create futures for all publish operations
+        let mut publish_futures = Vec::with_capacity(tasks.len());
+        
+        for task_data in tasks {
+            let payload = serde_json::to_vec(&task_data)
+                .map_err(|e| TaskError::SerializationError(e.to_string()))?;
+            
+            let task_id = task_data.task_id;
+            let publish_future = self.jetstream
+                .publish(subjects::TASK_QUEUE, payload.into())
+                .await
+                .map_err(|e| TaskError::QueueError(format!("Failed to queue task {}: {}", task_id, e)))?;
+                
+            publish_futures.push((task_id, publish_future));
+        }
+        
+        // Wait for all confirmations in parallel
+        for (task_id, publish_future) in publish_futures {
+            publish_future
+                .await
+                .map_err(|e| TaskError::QueueError(format!("Failed to confirm task {} queue: {}", task_id, e)))?;
+            
+            debug!("Queued task {}", task_id);
+        }
+        
+        Ok(())
+    }
 
     /// Create a task queue consumer
     pub async fn create_task_consumer(
@@ -249,7 +279,8 @@ impl QueueManager {
 pub struct QueuedTask {
     pub task_id: Uuid,
     pub method: String,
-    pub args: Vec<serde_json::Value>,
+    /// Arguments as base64-encoded bincode data
+    pub args: Vec<String>,
     pub priority: i32,
     pub retry_count: u32,
     pub max_retries: u32,
@@ -264,7 +295,7 @@ pub struct QueuedTask {
 pub struct TaskResultMessage {
     pub task_id: Uuid,
     pub success: bool,
-    pub result: Option<serde_json::Value>,
+    pub result: Option<String>,
     pub error: Option<String>,
     pub execution_time_ms: u64,
     pub worker_id: String,

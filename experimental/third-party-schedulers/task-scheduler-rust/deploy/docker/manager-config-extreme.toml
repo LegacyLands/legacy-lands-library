@@ -9,16 +9,19 @@ worker_threads = 16
 backend = "postgresql"
 postgres_url = "postgres://task_scheduler:task_scheduler_pass@task-scheduler-postgres:5432/task_scheduler"
 redis_url = "redis://task-scheduler-redis:6379"
-cache_size = 50000
-max_connections = 200
-min_connections = 50
+cache_size = 10000
+max_connections = 100
+min_connections = 10
+result_retention_seconds = 3600
+cleanup_interval_seconds = 300
+enable_binary_storage = true
 
 [queue]
 nats_url = "nats://task-scheduler-nats:4222"
 jetstream_enabled = true
 queue_prefix = "tasks"
-batch_size = 500
-prefetch_count = 5000
+batch_size = 2000
+prefetch_count = 20000
 
 [kubernetes]
 namespace = "task-scheduler"
@@ -28,7 +31,7 @@ enabled = false
 tracing_enabled = false
 otlp_endpoint = "http://task-scheduler-jaeger:4317"
 service_name = "task-manager"
-log_level = "warn"
+log_level = "info"
 sampling_ratio = 0.01
 
 [security]

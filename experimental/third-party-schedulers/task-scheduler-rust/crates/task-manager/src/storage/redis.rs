@@ -132,7 +132,7 @@ impl StorageBackend for CachedStorageBackend {
         let key = self.task_key(task.id);
         let mut conn = self.redis.clone();
         
-        let serialized = serde_json::to_string(task)
+        let serialized = bincode::serialize(task)
             .map_err(|e| TaskError::InternalError(format!("Failed to serialize task: {}", e)))?;
         
         conn.set_ex::<_, _, ()>(&key, serialized, self.config.task_ttl)
@@ -145,6 +145,35 @@ impl StorageBackend for CachedStorageBackend {
         Ok(())
     }
     
+    async fn create_tasks_batch(&self, tasks: &[TaskInfo]) -> TaskResult<()> {
+        debug!("Creating {} tasks through cache in batch", tasks.len());
+        
+        // First, create in the backend
+        self.backend.create_tasks_batch(tasks).await?;
+        
+        // Then cache all tasks using Redis pipeline
+        let mut conn = self.redis.clone();
+        let mut pipe = redis::pipe();
+        
+        for task in tasks {
+            let key = self.task_key(task.id);
+            let serialized = bincode::serialize(task)
+                .map_err(|e| TaskError::InternalError(format!("Failed to serialize task: {}", e)))?;
+            
+            pipe.set_ex(&key, serialized, self.config.task_ttl);
+        }
+        
+        // Execute pipeline
+        pipe.query_async::<()>(&mut conn)
+            .await
+            .map_err(|e| TaskError::InternalError(format!("Failed to batch cache tasks: {}", e)))?;
+        
+        // Invalidate task lists once
+        self.invalidate_task_lists().await?;
+        
+        Ok(())
+    }
+    
     async fn get_task(&self, task_id: Uuid) -> TaskResult<Option<TaskInfo>> {
         debug!("Getting task {} from cache", task_id);
         
@@ -152,7 +181,7 @@ impl StorageBackend for CachedStorageBackend {
         let mut conn = self.redis.clone();
         
         // Try to get from cache first
-        let cached: Option<String> = conn
+        let cached: Option<Vec<u8>> = conn
             .get(&key)
             .await
             .map_err(|e| TaskError::InternalError(format!("Failed to get from cache: {}", e)))?;
@@ -160,7 +189,7 @@ impl StorageBackend for CachedStorageBackend {
         if let Some(cached_data) = cached {
             // Cache hit
             debug!("Cache hit for task {}", task_id);
-            let task = serde_json::from_str(&cached_data)
+            let task = bincode::deserialize(&cached_data)
                 .map_err(|e| TaskError::InternalError(format!("Failed to deserialize task: {}", e)))?;
             return Ok(Some(task));
         }
@@ -171,7 +200,7 @@ impl StorageBackend for CachedStorageBackend {
         
         // Cache the result if found
         if let Some(ref task_info) = task {
-            let serialized = serde_json::to_string(task_info)
+            let serialized = bincode::serialize(task_info)
                 .map_err(|e| TaskError::InternalError(format!("Failed to serialize task: {}", e)))?;
             
             conn.set_ex::<_, _, ()>(&key, serialized, self.config.task_ttl)
@@ -194,6 +223,32 @@ impl StorageBackend for CachedStorageBackend {
         Ok(())
     }
     
+    async fn update_tasks_status_batch(&self, task_ids: &[Uuid], status: TaskStatus) -> TaskResult<()> {
+        debug!("Batch updating {} task statuses through cache", task_ids.len());
+        
+        // Update in backend
+        self.backend.update_tasks_status_batch(task_ids, status).await?;
+        
+        // Invalidate cache for all tasks using pipeline
+        if !task_ids.is_empty() {
+            let mut pipe = redis::pipe();
+            for task_id in task_ids {
+                let key = self.task_key(*task_id);
+                pipe.del(&key);
+            }
+            
+            let mut conn = self.redis.clone();
+            let _: () = pipe.query_async(&mut conn)
+                .await
+                .map_err(|e| TaskError::InternalError(format!("Failed to invalidate cache batch: {}", e)))?;
+        }
+        
+        // Invalidate task lists since statuses changed
+        self.invalidate_task_lists().await?;
+        
+        Ok(())
+    }
+    
     async fn update_task(&self, task: &TaskInfo) -> TaskResult<()> {
         debug!("Updating task {} through cache", task.id);
         
@@ -204,7 +259,7 @@ impl StorageBackend for CachedStorageBackend {
         let key = self.task_key(task.id);
         let mut conn = self.redis.clone();
         
-        let serialized = serde_json::to_string(task)
+        let serialized = bincode::serialize(task)
             .map_err(|e| TaskError::InternalError(format!("Failed to serialize task: {}", e)))?;
         
         conn.set_ex::<_, _, ()>(&key, serialized, self.config.task_ttl)
@@ -227,7 +282,7 @@ impl StorageBackend for CachedStorageBackend {
         let key = self.result_key(result.task_id);
         let mut conn = self.redis.clone();
         
-        let serialized = serde_json::to_string(result)
+        let serialized = bincode::serialize(result)
             .map_err(|e| TaskError::InternalError(format!("Failed to serialize result: {}", e)))?;
         
         conn.set_ex::<_, _, ()>(&key, serialized, self.config.result_ttl)
@@ -244,7 +299,7 @@ impl StorageBackend for CachedStorageBackend {
         let mut conn = self.redis.clone();
         
         // Try to get from cache first
-        let cached: Option<String> = conn
+        let cached: Option<Vec<u8>> = conn
             .get(&key)
             .await
             .map_err(|e| TaskError::InternalError(format!("Failed to get from cache: {}", e)))?;
@@ -252,7 +307,7 @@ impl StorageBackend for CachedStorageBackend {
         if let Some(cached_data) = cached {
             // Cache hit
             debug!("Cache hit for task result {}", task_id);
-            let result = serde_json::from_str(&cached_data)
+            let result = bincode::deserialize(&cached_data)
                 .map_err(|e| TaskError::InternalError(format!("Failed to deserialize result: {}", e)))?;
             return Ok(Some(result));
         }
@@ -263,7 +318,7 @@ impl StorageBackend for CachedStorageBackend {
         
         // Cache the result if found
         if let Some(ref result_data) = result {
-            let serialized = serde_json::to_string(result_data)
+            let serialized = bincode::serialize(result_data)
                 .map_err(|e| TaskError::InternalError(format!("Failed to serialize result: {}", e)))?;
             
             conn.set_ex::<_, _, ()>(&key, serialized, self.config.result_ttl)
@@ -284,7 +339,7 @@ impl StorageBackend for CachedStorageBackend {
         let mut conn = self.redis.clone();
         
         // Try to get from cache
-        let cached: Option<String> = conn
+        let cached: Option<Vec<u8>> = conn
             .get(&key)
             .await
             .map_err(|e| TaskError::InternalError(format!("Failed to get from cache: {}", e)))?;
@@ -292,7 +347,7 @@ impl StorageBackend for CachedStorageBackend {
         if let Some(cached_data) = cached {
             // Cache hit
             debug!("Cache hit for task list");
-            let tasks: Vec<TaskInfo> = serde_json::from_str(&cached_data)
+            let tasks: Vec<TaskInfo> = bincode::deserialize(&cached_data)
                 .map_err(|e| TaskError::InternalError(format!("Failed to deserialize task list: {}", e)))?;
             
             // Apply limit
@@ -304,7 +359,7 @@ impl StorageBackend for CachedStorageBackend {
         let tasks = self.backend.list_tasks(status_filter, limit).await?;
         
         // Cache the result with a shorter TTL (5 minutes)
-        let serialized = serde_json::to_string(&tasks)
+        let serialized = bincode::serialize(&tasks)
             .map_err(|e| TaskError::InternalError(format!("Failed to serialize task list: {}", e)))?;
         
         conn.set_ex::<_, _, ()>(&key, serialized, 300)
@@ -339,5 +394,18 @@ impl StorageBackend for CachedStorageBackend {
     async fn get_stats(&self) -> StorageStats {
         // Get stats from backend, cache stats are not included
         self.backend.get_stats().await
+    }
+    
+    async fn cleanup_old_results(&self, retention_seconds: u64) -> TaskResult<usize> {
+        debug!("Cleaning up old results through cache backend");
+        
+        // Cleanup in the underlying backend
+        let deleted_count = self.backend.cleanup_old_results(retention_seconds).await?;
+        
+        // Note: Redis TTL will automatically clean up cached results,
+        // so we don't need to manually clean the cache
+        
+        info!("Cleaned up {} old results from backend storage", deleted_count);
+        Ok(deleted_count)
     }
 }

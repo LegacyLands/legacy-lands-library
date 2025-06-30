@@ -3,6 +3,7 @@ use dashmap::DashMap;
 use lru::LruCache;
 use parking_lot::Mutex;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use task_common::{
     error::{TaskError, TaskResult},
     models::{TaskInfo, TaskResult as TaskResultData, TaskStatus},
@@ -19,6 +20,9 @@ pub struct MemoryStorage {
 
     /// In-memory storage for task results
     results: Arc<DashMap<Uuid, TaskResultData>>,
+    
+    /// Timestamps for task results (for cleanup)
+    result_timestamps: Arc<DashMap<Uuid, u64>>,
 
     /// LRU cache for frequently accessed tasks
     cache: Arc<Mutex<LruCache<Uuid, TaskInfo>>>,
@@ -30,8 +34,17 @@ impl MemoryStorage {
         Self {
             tasks: Arc::new(DashMap::new()),
             results: Arc::new(DashMap::new()),
+            result_timestamps: Arc::new(DashMap::new()),
             cache: Arc::new(Mutex::new(LruCache::new(cache_size.try_into().unwrap()))),
         }
+    }
+    
+    /// Get current timestamp in seconds
+    fn current_timestamp() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
     }
 }
 
@@ -111,6 +124,7 @@ impl StorageBackend for MemoryStorage {
         debug!("Storing result for task: {}", result.task_id);
 
         self.results.insert(result.task_id, result.clone());
+        self.result_timestamps.insert(result.task_id, Self::current_timestamp());
 
         info!("Result stored for task {}", result.task_id);
         Ok(())
@@ -156,10 +170,37 @@ impl StorageBackend for MemoryStorage {
     async fn delete_task(&self, task_id: Uuid) -> TaskResult<()> {
         self.tasks.remove(&task_id);
         self.results.remove(&task_id);
+        self.result_timestamps.remove(&task_id);
         self.cache.lock().pop(&task_id);
 
         info!("Task {} deleted", task_id);
         Ok(())
+    }
+
+    async fn cleanup_old_results(&self, retention_seconds: u64) -> TaskResult<usize> {
+        let current_time = Self::current_timestamp();
+        let cutoff_time = current_time.saturating_sub(retention_seconds);
+        
+        let mut deleted_count = 0;
+        let mut to_delete = Vec::new();
+        
+        // Find results older than retention period
+        for entry in self.result_timestamps.iter() {
+            let (task_id, timestamp) = entry.pair();
+            if *timestamp < cutoff_time {
+                to_delete.push(*task_id);
+            }
+        }
+        
+        // Delete old results
+        for task_id in to_delete {
+            self.results.remove(&task_id);
+            self.result_timestamps.remove(&task_id);
+            deleted_count += 1;
+        }
+        
+        info!("Cleaned up {} old task results", deleted_count);
+        Ok(deleted_count)
     }
 
     async fn get_stats(&self) -> StorageStats {

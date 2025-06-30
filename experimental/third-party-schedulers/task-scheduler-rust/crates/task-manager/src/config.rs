@@ -68,6 +68,24 @@ pub struct StorageConfig {
 
     /// Redis connection string (if using Redis for caching)
     pub redis_url: Option<String>,
+    
+    /// Maximum database connections
+    pub max_connections: Option<u32>,
+    
+    /// Minimum database connections
+    pub min_connections: Option<u32>,
+    
+    /// Task result retention period in seconds
+    #[serde(default = "default_result_retention_seconds")]
+    pub result_retention_seconds: u64,
+    
+    /// Result cleanup interval in seconds
+    #[serde(default = "default_cleanup_interval_seconds")]
+    pub cleanup_interval_seconds: u64,
+    
+    /// Enable binary storage for PostgreSQL (uses BYTEA instead of JSONB)
+    #[serde(default = "default_binary_storage")]
+    pub enable_binary_storage: bool,
 }
 
 /// Storage backend type
@@ -185,7 +203,7 @@ fn default_max_concurrent_requests() -> usize {
 }
 
 fn default_storage_backend() -> StorageBackend {
-    StorageBackend::Memory
+    StorageBackend::PostgreSQL
 }
 
 fn default_cache_size() -> usize {
@@ -252,6 +270,18 @@ fn default_session_timeout() -> u64 {
     3600 // 1 hour
 }
 
+fn default_result_retention_seconds() -> u64 {
+    3600 // 1 hour
+}
+
+fn default_cleanup_interval_seconds() -> u64 {
+    300 // 5 minutes
+}
+
+fn default_binary_storage() -> bool {
+    false
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -269,6 +299,11 @@ impl Default for Config {
                 cache_size: default_cache_size(),
                 postgres_url: None,
                 redis_url: None,
+                max_connections: None,
+                min_connections: None,
+                result_retention_seconds: default_result_retention_seconds(),
+                cleanup_interval_seconds: default_cleanup_interval_seconds(),
+                enable_binary_storage: default_binary_storage(),
             },
             queue: QueueConfig {
                 nats_url: default_nats_url(),
@@ -329,6 +364,18 @@ impl Config {
 
         if let Ok(endpoint) = std::env::var("OTLP_ENDPOINT") {
             config.observability.otlp_endpoint = endpoint;
+        }
+
+        if let Ok(retention) = std::env::var("RESULT_RETENTION_SECONDS") {
+            if let Ok(seconds) = retention.parse::<u64>() {
+                config.storage.result_retention_seconds = seconds;
+            }
+        }
+
+        if let Ok(interval) = std::env::var("CLEANUP_INTERVAL_SECONDS") {
+            if let Ok(seconds) = interval.parse::<u64>() {
+                config.storage.cleanup_interval_seconds = seconds;
+            }
         }
 
         config

@@ -23,7 +23,7 @@ impl TestEnvironment {
             "http://task-manager:50051".to_string()
         } else {
             std::env::var("GRPC_ADDRESS")
-                .unwrap_or_else(|_| "http://localhost:50052".to_string())
+                .unwrap_or_else(|_| "http://localhost:50051".to_string())
         };
         
         let nats_url = if is_ci {

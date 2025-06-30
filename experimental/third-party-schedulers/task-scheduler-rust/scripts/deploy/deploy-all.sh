@@ -1,5 +1,11 @@
 #!/bin/bash
 # Deploy all components of the task scheduler
+# 
+# Required components:
+# - NATS with JetStream (message queue)
+# - PostgreSQL (persistent storage)
+# - Redis (caching layer)
+# - Task Manager and Workers
 
 set -e
 
@@ -33,25 +39,28 @@ kubectl apply -f "$PROJECT_ROOT/deploy/k8s/nats/"
 echo "Waiting for NATS to be ready..."
 kubectl wait --for=condition=ready pod -l app=nats -n $NAMESPACE --timeout=120s
 
-# Deploy PostgreSQL (optional)
-echo -e "\n5️⃣ Deploy PostgreSQL storage? (y/n)"
-read -r response
-if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    kubectl apply -f "$PROJECT_ROOT/deploy/k8s/storage/postgres.yaml"
-    echo "Waiting for PostgreSQL to be ready..."
-    kubectl wait --for=condition=ready pod -l app=postgres -n $NAMESPACE --timeout=120s || true
-fi
+# Deploy PostgreSQL (required)
+echo -e "\n5️⃣ Deploying PostgreSQL storage..."
+kubectl apply -f "$PROJECT_ROOT/deploy/k8s/storage/postgres.yaml"
+echo "Waiting for PostgreSQL to be ready..."
+kubectl wait --for=condition=ready pod -l app=postgres -n $NAMESPACE --timeout=120s
+
+# Deploy Redis (required)
+echo -e "\n6️⃣ Deploying Redis cache..."
+kubectl apply -f "$PROJECT_ROOT/deploy/k8s/infrastructure/redis.yaml"
+echo "Waiting for Redis to be ready..."
+kubectl wait --for=condition=ready pod -l app=redis -n $NAMESPACE --timeout=120s
 
 # Deploy services
-echo -e "\n6️⃣ Deploying services..."
+echo -e "\n7️⃣ Deploying services..."
 kubectl apply -f "$PROJECT_ROOT/deploy/k8s/services/"
 
 # Wait for deployments
-echo -e "\n7️⃣ Waiting for deployments to be ready..."
+echo -e "\n8️⃣ Waiting for deployments to be ready..."
 kubectl wait --for=condition=available deployment --all -n $NAMESPACE --timeout=300s
 
 # Show status
-echo -e "\n8️⃣ Deployment Status:"
+echo -e "\n9️⃣ Deployment Status:"
 kubectl get all -n $NAMESPACE
 
 echo -e "\n✅ Deployment complete!"

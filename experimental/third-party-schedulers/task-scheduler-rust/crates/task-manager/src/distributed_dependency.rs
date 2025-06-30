@@ -251,12 +251,17 @@ impl DistributedDependencyManager {
         let task_info = TaskInfo {
             id: dependent_task,
             method: "dependency_registration".to_string(),
-            args: vec![serde_json::json!({
-                "dependent_task": dependent_task,
-                "dependency": dependency,
-                "requesting_node": self.node_id,
-                "node_id": node_id,
-            })],
+            args: vec![{
+                let data = serde_json::json!({
+                    "dependent_task": dependent_task,
+                    "dependency": dependency,
+                    "requesting_node": self.node_id,
+                    "node_id": node_id,
+                });
+                let bytes = bincode::serialize(&data)
+                    .map_err(|e| TaskError::SerializationError(e.to_string()))?;
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes)
+            }],
             dependencies: vec![],
             priority: 0,
             metadata: Default::default(),
