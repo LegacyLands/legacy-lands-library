@@ -19,6 +19,7 @@ import org.redisson.api.options.KeysScanOptions;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 /**
  * Task responsible for persisting player data from the L2 cache (Redis) to the database.
@@ -97,19 +98,23 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
      * @return {@inheritDoc}
      */
     @Override
-    public CompletableFuture<?> start() {
-        return submitWithVirtualThreadAsync(() -> {
-            try {
-                // Sync L1 cache to L2 cache first
-                L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();
+    public CompletableFuture<Void> start() {
+        CompletableFuture<?> task = L1ToL2PlayerDataSyncTask.of(legacyPlayerDataService).start();
 
-                // Perform persistence operation
-                persistPlayerData();
-
-            } catch (Exception exception) {
-                Log.error("Error during player data persistence", exception);
+        task.whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                Log.error("L1ToL2PlayerDataSyncTask failed to sync L1 cache to L2 cache: %s", throwable.getMessage());
             }
         });
+
+        return task.thenCompose(ignored -> submitWithVirtualThreadAsync(() -> {
+            try {
+                persistPlayerData();
+            } catch (Exception exception) {
+                Log.error("PlayerDataPersistenceTask failed to persist player data. error: %s", exception.getMessage());
+                throw new CompletionException("Failed to persist player data", exception);
+            }
+        }));
     }
 
     /**
@@ -187,7 +192,7 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
             );
 
             if (playerDataString.isEmpty()) {
-                Log.error("The key value is not expected to be null, this should not happen!! key: %s", key);
+                Log.error("The Player data key value is not expected to be null, this should not happen!! key: %s", key);
                 continue;
             }
 

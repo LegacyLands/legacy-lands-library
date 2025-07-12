@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -319,8 +320,21 @@ public class LegacyPlayerDataService {
      * @throws InterruptedException if the shutdown process is interrupted
      */
     public void shutdown() throws InterruptedException {
+        // Create a latch to track completion of persistence task
+        CountDownLatch completionLatch = new CountDownLatch(1);
+
         // Wait for the player data persistence task to finish
-        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start().wait();
+        PlayerDataPersistenceTask task = PlayerDataPersistenceTask.of(
+                LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this
+        );
+
+        // Start the task
+        task.start().whenComplete((ignored, throwable) -> completionLatch.countDown());
+
+        // Wait for the task to complete with a timeout
+        if (!completionLatch.await(2, TimeUnit.MINUTES)) {
+            Log.warn("Timed out waiting for player persistence task to complete!!");
+        }
 
         // Remove this LegacyPlayerDataService from the cache
         LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().remove(name);

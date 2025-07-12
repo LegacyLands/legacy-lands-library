@@ -54,7 +54,8 @@ The Player module employs a three-tier caching architecture to optimize performa
 
 ### Hardware Configuration
 
-Note: These are test results based on a single machine in a home environment. Performance will be significantly improved in production environments with enterprise-grade hardware configurations and multi-cluster deployments.
+Note: These are test results based on a single machine in a home environment. Performance will be significantly improved
+in production environments with enterprise-grade hardware configurations and multi-cluster deployments.
 
 ```
 Processor: AMD Ryzen 9 7940H w/Radeon 780M Graphics (16 cores, average running frequency: 3.79GHz)
@@ -66,13 +67,17 @@ Java: OpenJDK 21.0.6 LTS (Amazon Corretto)
 
 ### Player Data Service Performance
 
-This QPS data is an **extremely conservative estimate** based on complete test cycles. The testing included non-core business operations, and these overheads diluted the actual business processing performance.
+This QPS data is an **extremely conservative estimate** based on complete test cycles. The testing included non-core
+business operations, and these overheads diluted the actual business processing performance.
 
 **Why actual QPS will be higher:**
 
-The test environment intentionally included performance limiting factors that don't exist in production environments: forced 2-second wait times, complete distributed synchronization processes, strict lock contention scenarios, etc.
-In actual deployment, L1 cache's nanosecond-level access speed can easily achieve 10,000+ QPS, while L2 cache's optimized access patterns can achieve 3,000 - 8,000 QPS.
-More importantly, this framework adopts a three-tier cache architecture, where most data access will hit L1 memory cache, achieving performance close to theoretical limits.
+The test environment intentionally included performance limiting factors that don't exist in production environments:
+forced 2-second wait times, complete distributed synchronization processes, strict lock contention scenarios, etc.
+In actual deployment, L1 cache's nanosecond-level access speed can easily achieve 10,000+ QPS, while L2 cache's
+optimized access patterns can achieve 3,000 - 8,000 QPS.
+More importantly, this framework adopts a three-tier cache architecture, where most data access will hit L1 memory
+cache, achieving performance close to theoretical limits.
 
 **1. Player Data Batch Save Benchmark:**
 
@@ -127,15 +132,22 @@ Duration Improvement: 2.3x
 
 ### Best Practices
 
-**Core Principle**: Most of the time we operate **only on memory**. Unless there are strong consistency requirements, it is not recommended to **manually save directly** to different levels of cache or database after changing data, which will greatly reduce performance.
+**Core Principle**: Most of the time we operate **only on memory**. Unless there are strong consistency requirements, it
+is not recommended to **manually save directly** to different levels of cache or database after changing data, which
+will greatly reduce performance.
 
 **Recommended Performance Optimization Strategies:**
-1. **Unified Batch Saving**: Use `saveLegacyPlayersData(List)` and `saveEntities(List)` instead of calling individual save in loops
-2. **Prepare-Aggregate-Execute Pattern**: Multi-threaded data preparation → Collect all data → Single batch save
-3. **Avoid Distributed Lock Contention**: Reduce concurrent save operations from N times to 1 time, achieving 2.4x performance improvement
-4. **Memory-First Strategy**: Pure memory operations for hot data, asynchronous batch persistence, achieving nanosecond-level response times
 
-Based on actual test data, batch saving strategy can improve QPS from 1,600 to 3,846 compared to individual saving, reducing 58.4% of lock contention performance loss.
+1. **Unified Batch Saving**: Use `saveLegacyPlayersData(List)` and `saveEntities(List)` instead of calling individual
+   save in loops
+2. **Prepare-Aggregate-Execute Pattern**: Multi-threaded data preparation → Collect all data → Single batch save
+3. **Avoid Distributed Lock Contention**: Reduce concurrent save operations from N times to 1 time, achieving 2.4x
+   performance improvement
+4. **Memory-First Strategy**: Pure memory operations for hot data, asynchronous batch persistence, achieving
+   nanosecond-level response times
+
+Based on actual test data, batch saving strategy can improve QPS from 1,600 to 3,846 compared to individual saving,
+reducing 58.4% of lock contention performance loss.
 
 ### Basic Service Configuration
 

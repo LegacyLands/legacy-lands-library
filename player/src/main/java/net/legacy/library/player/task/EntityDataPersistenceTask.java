@@ -19,7 +19,7 @@ import org.redisson.api.options.KeysScanOptions;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletionException;
 
 /**
  * Task for persisting entity data from L2 cache (Redis) to the database.
@@ -36,10 +36,9 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class EntityDataPersistenceTask implements TaskInterface<CompletableFuture<?>> {
     private final LockSettings lockSettings;
-    private final LegacyEntityDataService service;
+    private final LegacyEntityDataService legacyEntityDataService;
     private final int limit;
     private final Duration ttl;
-    private CompletionCallback completionCallback;
 
     /**
      * Factory method to create a new {@link EntityDataPersistenceTask}.
@@ -90,17 +89,6 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
     }
 
     /**
-     * Sets a callback to be invoked when the task completes.
-     *
-     * @param callback the callback to invoke
-     * @return this task instance for method chaining
-     */
-    public EntityDataPersistenceTask setCompletionCallback(CompletionCallback callback) {
-        this.completionCallback = callback;
-        return this;
-    }
-
-    /**
      * Executes the persistence task, transferring entity data from L2 cache to the database.
      *
      * <p>Synchronizes L1 cache to L2 cache, then persists all entity data from L2 cache to the database.
@@ -108,38 +96,35 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
      * @return {@inheritDoc}
      */
     @Override
-    public CompletableFuture<?> start() {
-        return submitWithVirtualThreadAsync(() -> {
-            boolean success = false;
-            try {
-                // Sync L1 cache to L2 cache first
-                L1ToL2EntityDataSyncTask.of(service).start();
+    public CompletableFuture<Void> start() {
+        CompletableFuture<?> task = L1ToL2EntityDataSyncTask.of(legacyEntityDataService).start();
 
-                // Perform the persistence process
-                persistEntities();
-
-                success = true;
-            } catch (Exception exception) {
-                Log.error("Error during entity persistence", exception);
-            } finally {
-                // Notify completion if a callback is registered
-                if (completionCallback != null) {
-                    completionCallback.accept(success);
-                }
+        task.whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                Log.error("L1ToL2EntityDataSyncTask failed to sync L1 cache to L2 cache: %s", throwable.getMessage());
             }
         });
+
+        return task.thenCompose(ignored -> submitWithVirtualThreadAsync(() -> {
+            try {
+                persistEntities();
+            } catch (Exception exception) {
+                Log.error("EntityDataPersistenceTask failed to persist player data. error: %s", exception.getMessage());
+                throw new CompletionException("Failed to persist player data", exception);
+            }
+        }));
     }
 
     /**
      * Persists entity data from L2 cache to the database.
      */
     private void persistEntities() {
-        RedisCacheServiceInterface l2Cache = service.getL2Cache();
+        RedisCacheServiceInterface l2Cache = legacyEntityDataService.getL2Cache();
         RedissonClient redissonClient = l2Cache.getResource();
-        Datastore datastore = service.getMongoDBConnectionConfig().getDatastore();
+        Datastore datastore = legacyEntityDataService.getMongoDBConnectionConfig().getDatastore();
 
         // Get Redis persistence lock
-        String lockKey = EntityRKeyUtil.getEntityLockKey(service, "persistence-lock");
+        String lockKey = EntityRKeyUtil.getEntityLockKey(legacyEntityDataService, "persistence-lock");
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
@@ -175,7 +160,7 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
                                           Datastore datastore) {
         RKeys keys = redissonClient.getKeys();
         KeysScanOptions keysScanOptions = KeysScanOptions.defaults()
-                .pattern(EntityRKeyUtil.getEntityKeyPattern(service))
+                .pattern(EntityRKeyUtil.getEntityKeyPattern(legacyEntityDataService))
                 .limit(limit);
 
         for (String key : keys.getKeys(keysScanOptions)) {
@@ -191,7 +176,7 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
             );
 
             if (entityDataString.isEmpty()) {
-                Log.error("The key value is not expected to be null, this should not happen!! key: %s", key);
+                Log.error("The Entity data key value is not expected to be null, this should not happen!! key: %s", key);
                 continue;
             }
 
@@ -205,17 +190,5 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
                 TTLUtil.setTTLIfMissing(redissonClient, key, LegacyEntityDataService.DEFAULT_TTL_DURATION.getSeconds());
             }
         }
-    }
-
-    /**
-     * Callback interface for notifying task completion.
-     */
-    public interface CompletionCallback extends Consumer<Boolean> {
-        /**
-         * Called when the task completes.
-         *
-         * @param success true if the task completed successfully, false otherwise
-         */
-        void accept(Boolean success);
     }
 } 

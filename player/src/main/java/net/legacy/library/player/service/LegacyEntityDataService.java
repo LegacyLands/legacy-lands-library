@@ -49,7 +49,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -982,31 +981,18 @@ public class LegacyEntityDataService {
     public void shutdown() throws InterruptedException {
         // Create a latch to track completion of persistence task
         CountDownLatch completionLatch = new CountDownLatch(1);
-        AtomicInteger successCount = new AtomicInteger(0);
-        int entityCount = getL1Cache().getResource().asMap().size();
 
         // Create a single task to persist all entities in L1 cache
         EntityDataPersistenceTask task = EntityDataPersistenceTask.of(
-                LockSettings.of(500, 500, TimeUnit.MILLISECONDS),
-                this
+                LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this
         );
 
-        // Add completion callback
-        task.setCompletionCallback(success -> {
-            if (success) {
-                // If successful, consider all entities persisted
-                successCount.set(entityCount);
-            }
-            completionLatch.countDown();
-        });
-
         // Start the task
-        task.start();
+        task.start().whenComplete((ignored, throwable) -> completionLatch.countDown());
 
         // Wait for the task to complete with a timeout
-        if (!completionLatch.await(5, TimeUnit.SECONDS)) {
-            Log.warn("Timed out waiting for entity persistence task to complete. Only %s out of %s entities were likely persisted.",
-                    successCount.get(), entityCount);
+        if (!completionLatch.await(2, TimeUnit.MINUTES)) {
+            Log.warn("Timed out waiting for entity persistence task to complete!!");
         }
 
         // Remove this service from the registry

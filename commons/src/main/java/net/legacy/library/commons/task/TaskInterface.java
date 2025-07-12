@@ -60,6 +60,59 @@ public interface TaskInterface<R> {
     }
 
     /**
+     * Returns a TaskInterface instance that uses the provided {@link MCScheduler}.
+     *
+     * @param mcScheduler the {@link MCScheduler} to be used by the returned TaskInterface
+     * @return a TaskInterface instance with the custom {@link MCScheduler}
+     */
+    static TaskInterface<Object> customInstance(MCScheduler mcScheduler) {
+        return new TaskInterface<>() {
+            @Override
+            public MCScheduler getMCScheduler() {
+                return mcScheduler;
+            }
+        };
+    }
+
+    /**
+     * Returns a TaskInterface instance that uses the provided {@link ExecutorService} for virtual threads.
+     *
+     * @param virtualThreadPerTaskExecutor the {@link ExecutorService} to be used for virtual threads
+     *                                     by the returned TaskInterface
+     * @return a TaskInterface instance with the custom {@code ExecutorService}
+     */
+    static TaskInterface<Object> customInstance(ExecutorService virtualThreadPerTaskExecutor) {
+        return new TaskInterface<>() {
+            @Override
+            public ExecutorService getVirtualThreadPerTaskExecutor() {
+                return virtualThreadPerTaskExecutor;
+            }
+        };
+    }
+
+    /**
+     * Returns a TaskInterface instance that uses the provided {@link MCScheduler} and {@link ExecutorService} for virtual threads.
+     *
+     * @param mcScheduler                  the {@link MCScheduler} to be used by the returned TaskInterface
+     * @param virtualThreadPerTaskExecutor the {@link ExecutorService} to be used for virtual threads
+     *                                     by the returned TaskInterface
+     * @return a TaskInterface instance with the custom {@link MCScheduler} and {@link ExecutorService}
+     */
+    static TaskInterface<Object> customInstance(MCScheduler mcScheduler, ExecutorService virtualThreadPerTaskExecutor) {
+        return new TaskInterface<>() {
+            @Override
+            public MCScheduler getMCScheduler() {
+                return mcScheduler;
+            }
+
+            @Override
+            public ExecutorService getVirtualThreadPerTaskExecutor() {
+                return virtualThreadPerTaskExecutor;
+            }
+        };
+    }
+
+    /**
      * Starts the task. Implementations should define the logic of the task within this method.
      *
      * <p>By default, overriding this method will schedule the task asynchronously, depending on the
