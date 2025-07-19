@@ -95,6 +95,17 @@ dependencies {
 
 ![promptx-logo.png](./promptx-logo.png)
 
+## 贡献
+
+我们热烈欢迎更多开发者加入我们的开源项目，贡献自己的力量。无论是分享想法、创建 Issue，还是提交 Pull Request，每一份贡献都是有意义的！
+
+我们对使用 AI 非常宽容。您可以使用任何 AI 来编写和贡献代码，只要它能正常工作并满足 [CLAUDE.md](CLAUDE.md) 中的要求即可。
+
+## 未来计划
+
+我们将这个库作为维持整个服务器运行（LegacyLands Minecraft 服务器）的主要依赖，并正在积极引入 Scala 3。未来将进行小部分的非破坏性迁移到
+Scala 3，利用其优越的类型系统、并发模型和函数式编程能力来获得更好的性能和可维护性。
+
 ## Star 历史
 
 [![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)

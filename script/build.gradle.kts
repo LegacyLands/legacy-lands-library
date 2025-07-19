@@ -31,17 +31,12 @@ dependencies {
     // https://mvnrepository.com/artifact/org.openjdk.nashorn/nashorn-core
     implementation("org.openjdk.nashorn:nashorn-core:15.6")
 
-    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8
-    implementation("com.eclipsesource.j2v8:j2v8:6.2.1")
-
-    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8_linux_x86_64
-    implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.8.0")
-
-    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8_win32_x86_64
-    implementation("com.eclipsesource.j2v8:j2v8_win32_x86_64:4.6.0")
-
-    // https://mvnrepository.com/artifact/com.eclipsesource.j2v8/j2v8_macosx_x86_64
-    implementation("com.eclipsesource.j2v8:j2v8_macosx_x86_64:4.6.0")
+    // https://mvnrepository.com/artifact/com.caoccao.javet/javet
+    implementation("com.caoccao.javet:javet:4.1.5")
+    implementation("com.caoccao.javet:javet-v8-linux-x86_64:4.1.5")
+    implementation("com.caoccao.javet:javet-v8-windows-x86_64:4.1.5")
+    implementation("com.caoccao.javet:javet-v8-macos-x86_64:4.1.5")
+    implementation("com.caoccao.javet:javet-v8-macos-arm64:4.1.5")
 
     // https://mvnrepository.com/artifact/org.mozilla/rhino
     implementation("org.mozilla:rhino:1.8.0")

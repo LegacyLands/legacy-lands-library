@@ -12,15 +12,19 @@
 
 ## Overview
 
-A Modular Plugin Toolkit built on [Fairy Framework](https://github.com/FairyProject/fairy), featuring modular design and leveraging modern Java 21 features.
-It provides essential tools and utilities for modern Minecraft plugin development with cross-platform support for Spigot, Paper, and Folia.
+A Modular Plugin Toolkit built on [Fairy Framework](https://github.com/FairyProject/fairy), featuring modular design and
+leveraging modern Java 21 features.
+It provides essential tools and utilities for modern Minecraft plugin development with cross-platform support for
+Spigot, Paper, and Folia.
 
 ## Core Modules
 
-- [**foundation**](foundation/README.md) - Core foundation module providing essential testing infrastructure, utilities, and base abstractions for all library modules.
+- [**foundation**](foundation/README.md) - Core foundation module providing essential testing infrastructure, utilities,
+  and base abstractions for all library modules.
 - [**annotation**](annotation/README.md) - Powerful annotation processing framework with flexible scanning options and
   lifecycle management.
-- [**aop**](aop/README.md) - Enterprise-grade Aspect-Oriented Programming framework with ClassLoader isolation, providing performance monitoring, thread safety, logging, and exception handling aspects.
+- [**aop**](aop/README.md) - Enterprise-grade Aspect-Oriented Programming framework with ClassLoader isolation,
+  providing performance monitoring, thread safety, logging, and exception handling aspects.
 - [**commons**](commons/README.md) - Essential utilities including VarHandle injection, task scheduling, virtual thread
   scheduling, JSON operations, and random object generation.
 - [**configuration**](configuration/README.md) - Flexible configuration framework built on SimplixStorage with
@@ -28,14 +32,17 @@ It provides essential tools and utilities for modern Minecraft plugin developmen
 - [**mongodb**](mongodb/README.md) - Streamlined MongoDB integration with Morphia for efficient data persistence.
 - [**cache**](cache/README.md) - Multi-tier caching system integrating Caffeine and Redis, providing comprehensive lock
   management and a generic framework for thread-safe resource access.
-- [**player**](player/README.md) - Enterprise-grade distributed data management framework building high-performance entity-relationship data layers. Capable of **seamlessly handling thousands of inter-entity** relationship networks and state synchronization.
+- [**player**](player/README.md) - Enterprise-grade distributed data management framework building high-performance
+  entity-relationship data layers. Capable of **seamlessly handling thousands of inter-entity** relationship networks
+  and state synchronization.
 - [**script**](script/README.md) - Powerful, flexible, extensible, and high-performance script execution engine wrapper
   that supports `Rhino`, `Nashorn` and `V8` `JavaScript` engines.
 
 - [**experimental**](experimental/README.md) - Some experimental modules that can significantly improve performance, but
   may be too complex to use or temporarily unstable.
     - [**third-party-schedulers**](experimental/third-party-schedulers/README.md) - Achieves distributed task processing
-      via gRPC external task schedulers (currently implemented in Rust), enabling large plugin decoupling and performance improvements (for backends
+      via gRPC external task schedulers (currently implemented in Rust), enabling large plugin decoupling and
+      performance improvements (for backends
       that cannot directly access the Bukkit API). Ideal for machine learning, anti-cheat large data computation,
       mathematics, and similar
       applications.
@@ -101,15 +108,25 @@ is a Folia fork with many useful optimizations, configurable vanilla features, a
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
-[PromptX](https://github.com/Deepractice/PromptX) is an AI application-native professional capability enhancement system developed by [Deepractice](https://github.com/Deepractice), playing a key role in this project.
+[PromptX](https://github.com/Deepractice/PromptX) is an AI application-native professional capability enhancement system
+developed by [Deepractice](https://github.com/Deepractice), playing a key role in this project.
 
 ![promptx-logo.png](./promptx-logo.png)
 
 ## Contributing
 
-We warmly welcome more developers to join our open source project and contribute their strength. Whether it's sharing ideas, creating Issues, or submitting Pull Requests, every contribution is significant!
+We warmly welcome more developers to join our open source project and contribute their strength. Whether it's sharing
+ideas, creating Issues, or submitting Pull Requests, every contribution is significant!
 
-We are very liberal with our use of AI. You can use any AI you want to write and contribute code, as long as it all works and meets the requirements in [CLAUDE.md](CLAUDE.md) (this is a Chinese document).
+We are very liberal with our use of AI. You can use any AI you want to write and contribute code, as long as it all
+works and meets the requirements in [CLAUDE.md](CLAUDE.md) (this is a Chinese document).
+
+## Future plans
+
+We are treating this library as a major dependency for keeping our entire server running (LegacyLands Minecraft server),
+and we are actively introducing Scala 3 into it. There will be small portions of non-breaking migration to Scala 3 in
+the future, leveraging its superior type system, concurrency model, and functional programming capabilities for better
+performance and maintainability.
 
 ## Star History
 

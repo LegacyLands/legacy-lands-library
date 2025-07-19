@@ -45,15 +45,44 @@ protobuf {
             }
         }
     }
-    // Set the proto files location to the shared directory
-    sourceSets {
-        main {
-            proto {
-                // Use proto files from the shared directory
-                srcDir("${rootProject.projectDir}/experimental/third-party-schedulers/proto")
-            }
+}
+
+// Configure source sets for Scala/Java joint compilation with protobuf
+sourceSets {
+    main {
+        proto {
+            // Use proto files from the shared directory
+            srcDir("${rootProject.projectDir}/experimental/third-party-schedulers/proto")
+        }
+        scala {
+            setSrcDirs(listOf("src/main/java", "src/main/scala"))
+        }
+        java {
+            setSrcDirs(emptyList<String>())
+            // Add generated protobuf sources
+            srcDir("build/generated/sources/proto/main/java")
+            srcDir("build/generated/sources/proto/main/grpc")
         }
     }
+}
+
+// Ensure generateProto runs before compilation
+tasks.named<JavaCompile>("compileJava") {
+    enabled = false
+}
+
+tasks.named<ScalaCompile>("compileScala") {
+    dependsOn(tasks.generateProto)
+    // Add generated sources to classpath
+    classpath = sourceSets.main.get().compileClasspath + files(
+        "build/generated/sources/proto/main/java",
+        "build/generated/sources/proto/main/grpc"
+    )
+}
+
+// Disable delombok for this module as it conflicts with protobuf
+tasks.matching { it.name == "delombok" }.configureEach {
+    enabled = false
 }
 
 // Dependencies

@@ -736,7 +736,7 @@ public class ValidationUtil {
      *
      * @param index the index
      * @param size  the size
-     * @throws IndexOutOfBoundsException if index < 0 or index >= size
+     * @throws IndexOutOfBoundsException if index &lt; 0 or index &gt;= size
      * @see Objects#checkIndex(int, int)
      */
     public static void checkElementIndex(int index, int size) {
@@ -752,7 +752,7 @@ public class ValidationUtil {
      * @param index   the index
      * @param size    the size
      * @param message exception message
-     * @throws IndexOutOfBoundsException if index < 0 or index >= size
+     * @throws IndexOutOfBoundsException if index &lt; 0 or index &gt;= size
      */
     public static void checkElementIndex(int index, int size, String message) {
         if (!isIndexValid(index, size)) {
@@ -768,14 +768,13 @@ public class ValidationUtil {
      * @param size              the size
      * @param exceptionSupplier exception supplier
      * @param <X>               exception type
-     * @throws X if index < 0 or index >= size
+     * @throws X if index &lt; 0 or index &gt;= size
      */
     public static <X extends Throwable> void checkElementIndex(int index, int size, Supplier<? extends X> exceptionSupplier) throws X {
         if (!isIndexValid(index, size)) {
             throw exceptionSupplier.get();
         }
     }
-
 
     /**
      * Checks if the index is a valid position in an array/list/string.
@@ -784,7 +783,7 @@ public class ValidationUtil {
      *
      * @param index the index
      * @param size  the size
-     * @throws IndexOutOfBoundsException if index < 0 or index > size
+     * @throws IndexOutOfBoundsException if index &lt; 0 or index &gt; size
      * @see Objects#checkFromIndexSize(int, int, int) (similar concept, but this checks a single position)
      */
     public static void checkPositionIndex(int index, int size) {
@@ -800,7 +799,7 @@ public class ValidationUtil {
      * @param index   the index
      * @param size    the size
      * @param message exception message
-     * @throws IndexOutOfBoundsException if index < 0 or index > size
+     * @throws IndexOutOfBoundsException if index &lt; 0 or index &gt; size
      */
     public static void checkPositionIndex(int index, int size, String message) {
         if (index < 0 || index > size) {
@@ -816,14 +815,13 @@ public class ValidationUtil {
      * @param size              the size
      * @param exceptionSupplier exception supplier
      * @param <X>               exception type
-     * @throws X if index < 0 or index > size
+     * @throws X if index &lt; 0 or index &gt; size
      */
     public static <X extends Throwable> void checkPositionIndex(int index, int size, Supplier<? extends X> exceptionSupplier) throws X {
         if (index < 0 || index > size) {
             throw exceptionSupplier.get();
         }
     }
-
 
     /**
      * Ensures that the condition is true, throws {@link IllegalArgumentException} otherwise.

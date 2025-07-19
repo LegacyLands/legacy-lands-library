@@ -8,19 +8,19 @@ package net.legacy.library.script.exception;
  */
 public class ScriptException extends Exception {
     /**
-     * {@inheritDoc}
+     * Constructs a new script exception with the specified detail message.
      *
-     * @param message {@inheritDoc}
+     * @param message the detail message
      */
     public ScriptException(String message) {
         super(message);
     }
 
     /**
-     * {@inheritDoc}
+     * Constructs a new script exception with the specified detail message and cause.
      *
-     * @param message {@inheritDoc}
-     * @param cause   {@inheritDoc}
+     * @param message the detail message
+     * @param cause   the cause of this exception
      */
     public ScriptException(String message, Throwable cause) {
         super(message, cause);

@@ -25,7 +25,7 @@ public class ScriptLauncher extends Plugin {
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the script engine framework during plugin startup.
      */
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = false
 
     @Override
     public void onPluginEnable() {

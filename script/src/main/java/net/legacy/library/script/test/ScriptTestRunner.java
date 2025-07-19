@@ -130,7 +130,7 @@ public class ScriptTestRunner extends AbstractModuleTestRunner {
                 }
             }
         } catch (Exception exception) {
-            TestLogger.logFailure(MODULE_NAME, "Failed to execute test class %s: %s", 
+            TestLogger.logFailure(MODULE_NAME, "Failed to execute test class %s: %s",
                     testClass.getSimpleName(), exception.getMessage());
         }
     }
@@ -156,7 +156,7 @@ public class ScriptTestRunner extends AbstractModuleTestRunner {
             }
 
         } catch (Exception exception) {
-            TestLogger.logValidation(MODULE_NAME, methodName, false, 
+            TestLogger.logValidation(MODULE_NAME, methodName, false,
                     "Test failed with exception: %s", exception.getMessage());
             context.incrementProcessed();
             context.incrementFailure();
