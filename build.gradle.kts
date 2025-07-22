@@ -198,10 +198,6 @@ subprojects {
         // Ensure compilation is done before javadoc
         dependsOn(tasks.named("compileScala"))
 
-        // Set source to include Java files from Scala source directories
-        source = fileTree("src/main/java") + fileTree("src/main/scala")
-        include("**/*.java")
-
         // Use classpath from compileScala to resolve Lombok-generated classes
         classpath = sourceSets.main.get().compileClasspath + files(sourceSets.main.get().output)
 
