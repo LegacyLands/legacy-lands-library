@@ -84,6 +84,8 @@ public class PlayerLauncher extends Plugin {
      * Safely shutdown all LegacyPlayerDataService instances.
      */
     private void shutdownPlayerDataServices() {
+        long start = System.currentTimeMillis();
+
         CacheServiceInterface<Cache<String, LegacyPlayerDataService>, LegacyPlayerDataService> services =
                 LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES;
         ConcurrentMap<String, LegacyPlayerDataService> serviceMap = services.getResource().asMap();
@@ -98,12 +100,16 @@ public class PlayerLauncher extends Plugin {
                 Log.error("Unexpected error shutting down LegacyPlayerDataService: %s", service.getName(), exception);
             }
         });
+
+        Log.info("All player data services have been shut down. Total time: %s ms", System.currentTimeMillis() - start);
     }
 
     /**
      * Safely shutdown all LegacyEntityDataService instances.
      */
     private void shutdownEntityDataServices() {
+        long start = System.currentTimeMillis();
+        
         CacheServiceInterface<Cache<String, LegacyEntityDataService>, LegacyEntityDataService> services =
                 LegacyEntityDataService.LEGACY_ENTITY_DATA_SERVICES;
         ConcurrentMap<String, LegacyEntityDataService> serviceMap = services.getResource().asMap();
@@ -118,5 +124,7 @@ public class PlayerLauncher extends Plugin {
                 Log.error("Unexpected error shutting down LegacyEntityDataService: %s", service.getName(), exception);
             }
         });
+
+        Log.info("All entity data services have been shut down. Total time: %s ms", System.currentTimeMillis() - start);
     }
 }

@@ -310,12 +310,10 @@ public class LegacyEntityDataService {
      * @return the entity data retrieved from the database, or {@code null} if not found
      */
     public LegacyEntityData getFromDatabase(UUID uuid) {
-        String uuidString = uuid.toString();
-
         @Cleanup
         MorphiaCursor<LegacyEntityData> queryResult = mongoDBConnectionConfig.getDatastore()
                 .find(LegacyEntityData.class)
-                .filter(Filters.eq("_id", uuidString))
+                .filter(Filters.eq("_id", uuid))
                 .iterator();
 
         return queryResult.hasNext() ? queryResult.tryNext() : null;

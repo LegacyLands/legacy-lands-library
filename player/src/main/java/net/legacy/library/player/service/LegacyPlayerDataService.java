@@ -273,13 +273,15 @@ public class LegacyPlayerDataService {
      * @return the {@link LegacyPlayerData} retrieved from the database, or a new instance if not found
      */
     public LegacyPlayerData getFromDatabase(UUID uuid) {
-        String uuidString = uuid.toString();
-
         // Retrieve data from database
         @Cleanup
         MorphiaCursor<LegacyPlayerData> queryResult = mongoDBConnectionConfig.getDatastore()
                 .find(LegacyPlayerData.class)
-                .filter(Filters.eq("_id", uuidString))
+                // BRUH, I FUCKING FORGOT _ID IS UUID
+                // NOT FUCKING STRING, THAT SO FUCKING DUMB
+                // I SPENT MORE THAN 50MIN DEBUGGING THIS SHIT
+                // FUCKFUCKFUCKFUCKFUCKFUCKFUCKFUCKFUCKFUCK :(((((((((((
+                .filter(Filters.eq("_id", uuid))
                 .iterator();
 
         return queryResult.hasNext() ? queryResult.tryNext() : LegacyPlayerData.of(uuid);

@@ -33,6 +33,7 @@ public class PlayerListener implements Listener {
         UUID uniqueId = event.getPlayer().getUniqueId();
 
         // L1 L2 sync
-        LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().forEach((name, service) -> L1ToL2PlayerDataSyncTask.of(uniqueId, service).start());
+        LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().forEach((name, service) -> 
+                L1ToL2PlayerDataSyncTask.of(uniqueId, service).start());
     }
 }
