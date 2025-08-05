@@ -1,0 +1,10 @@
+---
+exclude_paths:
+  - "experimental"
+  - "annotation/src/main/java/net/legacy/library/annotation/test"
+  - "aop/src/main/java/net/legacy/library/aop/test"
+  - "cache/src/main/java/net/legacy/library/cache/test"
+  - "commons/src/main/java/net/legacy/library/commons/test"
+  - "configuration/src/main/java/net/legacy/library/configuration/test"
+  - "player/src/main/java/net/legacy/library/player/test"
+  - "script/src/main/java/net/legacy/library/script/test"
