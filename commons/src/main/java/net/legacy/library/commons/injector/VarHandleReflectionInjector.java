@@ -4,10 +4,11 @@ import io.fairyproject.container.InjectableComponent;
 import net.legacy.library.commons.factory.InjectorFactory;
 import net.legacy.library.commons.injector.annotation.VarHandleAutoInjection;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 /**
  * Injector class for injecting {@link VarHandle} instances into static fields annotated with {@link VarHandleAutoInjection}.
@@ -33,8 +34,8 @@ import java.lang.reflect.Method;
  * thread's context {@link ClassLoader}. The method should be accessible and match the required signature for retrieving
  * the {@link VarHandle}.
  *
- * <p>Due to the use of reflection, the fields will be made accessible even if they are private, ensuring that injection
- * can occur regardless of visibility modifiers.
+ * <p>This implementation uses {@link MethodHandles.Lookup} and {@link VarHandle} for secure field access without
+ * requiring the deprecated {@code setAccessible(true)} approach, providing better security compliance.
  *
  * <p>This class implements the {@link StaticInjectorInterface} interface, which defines the contract for injecting
  * dependencies (in this case, {@link VarHandle} instances) into static fields of a class.
@@ -52,16 +53,15 @@ public class VarHandleReflectionInjector implements StaticInjectorInterface {
      * {@link VarHandleAutoInjection}. This method uses reflection to find the appropriate {@link VarHandle}
      * for each annotated field and assigns it to the field.
      *
-     * <p>The method performs the injection by either using the default method of
-     * {@link MethodHandles#privateLookupIn(Class, MethodHandles.Lookup)} to
-     * locate the {@link VarHandle} for the specified static field or by using a static method if defined in the
-     * annotation {@link VarHandleAutoInjection}.
+     * <p>The method performs the injection by using {@link MethodHandles#privateLookupIn(Class, MethodHandles.Lookup)}
+     * to securely access fields without requiring {@code setAccessible(true)}. For static method injection, 
+     * {@link MethodHandles.Lookup#findStatic(Class, String, MethodType)} is used to obtain method handles safely.
      *
      * <p>The specified static method must contain two parameters: {@link String} and {@link Class}
      *
-     * <p>If a static method is specified in the annotation, it will be called to retrieve the {@link VarHandle}
-     * for the field. The class containing the static method must be loadable by the current thread's context
-     * {@link ClassLoader}.
+     * <p>If a static method is specified in the annotation, a {@link MethodHandle} will be
+     * obtained to invoke the method securely. The class containing the static method must be loadable by the 
+     * current thread's context {@link ClassLoader}.
      *
      * @param clazz the class into which {@link VarHandle} instances will be injected into its static fields
      * @throws IllegalStateException if the injection fails due to reflection issues or invalid annotations
@@ -84,21 +84,27 @@ public class VarHandleReflectionInjector implements StaticInjectorInterface {
 
             try {
                 VarHandle varHandle;
+                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(clazz, MethodHandles.lookup());
 
                 if (useStaticMethod) {
                     Class<?> staticClass = Class.forName(staticMethodPackage);
-                    Method method = staticClass.getDeclaredMethod(staticMethodName, String.class, Class.class);
-                    method.setAccessible(true);
-                    varHandle = (VarHandle) method.invoke(null, targetFieldName, field.getType());
+                    MethodHandles.Lookup staticLookup = MethodHandles.privateLookupIn(staticClass, MethodHandles.lookup());
+
+                    // Use MethodHandle instead of reflection to avoid setAccessible()
+                    MethodHandle methodHandle = staticLookup.findStatic(
+                            staticClass,
+                            staticMethodName,
+                            MethodType.methodType(VarHandle.class, String.class, Class.class)
+                    );
+                    varHandle = (VarHandle) methodHandle.invoke(targetFieldName, field.getType());
                 } else {
-                    varHandle = MethodHandles.privateLookupIn(clazz, MethodHandles.lookup())
-                            .unreflectVarHandle(clazz.getDeclaredField(targetFieldName));
+                    varHandle = lookup.unreflectVarHandle(clazz.getDeclaredField(targetFieldName));
                 }
 
-                field.setAccessible(true);
-                field.set(null, varHandle);
-            } catch (Exception exception) {
-                throw new IllegalStateException("Failed to inject VarHandle for field: " + field.getName(), exception);
+                // Use VarHandle to set the field value instead of reflection
+                lookup.unreflectVarHandle(field).set(varHandle);
+            } catch (Throwable throwable) {
+                throw new IllegalStateException("Failed to inject VarHandle for field: " + field.getName(), throwable);
             }
         }
     }
