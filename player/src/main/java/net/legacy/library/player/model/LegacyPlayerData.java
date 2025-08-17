@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -45,6 +46,7 @@ public class LegacyPlayerData {
      * This constructor should only be used by the ORM framework.
      */
     protected LegacyPlayerData() {
+        // noinspection DataFlowIssue
         this.uuid = null; // Will be overwritten during deserialization
     }
 
@@ -134,5 +136,50 @@ public class LegacyPlayerData {
     public <R> R getData(String key, Function<String, R> function) {
         String value = data.get(key);
         return value != null ? function.apply(value) : null;
+    }
+
+    /**
+     * Retrieves the value associated with the specified key, applies a transformation function to it,
+     * or calls a {@link Callable} to provide a default value if the key is not present.
+     *
+     * @param key      the key whose associated value is to be transformed or retrieved
+     * @param function the function to apply to the value if the key is present
+     * @param callable a {@link Callable} to compute a default value if the key is not present
+     * @param <R>      the type of the result produced by the function or callable
+     * @return the transformed value, or the result of the callable if the key is not present
+     * @throws Exception if the callable throws an exception during computation
+     */
+    public <R> R getData(String key, Function<String, R> function, Callable<R> callable) throws Exception {
+        String value = data.get(key);
+        return value != null ? function.apply(value) : callable.call();
+    }
+
+    /**
+     * Retrieves the value associated with the specified key, or returns a default value if the key is not present.
+     *
+     * @param key          the key whose associated value is to be returned
+     * @param defaultValue the default value to return if the key is not found in the map
+     * @return the value associated with the key, or {@code defaultValue} if the key is not present
+     */
+    public String getOrDefault(String key, String defaultValue) {
+        return data.getOrDefault(key, defaultValue);
+    }
+
+    /**
+     * Retrieves the value associated with the specified key and attempts to cast it to the given type,
+     * or returns a default value if the key is not present or the cast is not possible.
+     *
+     * <p>Note: This method performs an unchecked cast and should be used with caution,
+     * ensuring that the stored value type matches the expected default value type.
+     *
+     * @param key          the key whose associated value is to be returned
+     * @param defaultValue the default value to return if the key is not found in the map or casting fails
+     * @param <R>          the type of the result
+     * @return the value associated with the key cast to type {@code R}, or {@code defaultValue} if the key is not present or the cast is not possible
+     */
+    public <R> R getOrDefault(String key, R defaultValue) {
+        String value = data.get(key);
+        // noinspection unchecked
+        return value == null ? defaultValue : (R) value;
     }
 }
