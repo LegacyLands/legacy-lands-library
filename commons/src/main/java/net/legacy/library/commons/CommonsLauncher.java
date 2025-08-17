@@ -3,6 +3,7 @@ package net.legacy.library.commons;
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.plugin.Plugin;
+import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.commons.test.CommonsTestRunner;
 import net.legacy.library.foundation.test.TestExecutionUtil;
 
@@ -31,6 +32,11 @@ public class CommonsLauncher extends Plugin {
         if (DEBUG) {
             runDebugTests();
         }
+    }
+
+    @Override
+    public void onPluginDisable() {
+        TaskInterface.VIRTUAL_SCHEDULER.close();
     }
 
     /**
