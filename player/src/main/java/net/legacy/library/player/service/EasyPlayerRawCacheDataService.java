@@ -30,6 +30,7 @@ import java.util.UUID;
  */
 @Getter
 public class EasyPlayerRawCacheDataService {
+
     /**
      * Cache service for managing {@link EasyPlayerRawCacheDataService} instances.
      * Keyed by service name.
@@ -107,4 +108,5 @@ public class EasyPlayerRawCacheDataService {
         // noinspection OptionalGetWithoutIsPresent
         return get(uuid, true).get(); // 100% not empty
     }
+
 }

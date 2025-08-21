@@ -31,6 +31,7 @@ import org.redisson.api.options.KeysScanOptions;
 import org.redisson.config.Config;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -57,6 +58,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public class LegacyPlayerDataService {
+
     /**
      * Cache service for managing {@link LegacyPlayerDataService} instances.
      * Keyed by service name.
@@ -313,6 +315,46 @@ public class LegacyPlayerDataService {
     }
 
     /**
+     * Retrieves all {@link LegacyPlayerData} objects from the database and populates the L1 cache.
+     *
+     * <p>Unlike the {@code getLegacyPlayerData(UUID uuid)} method, this method avoids
+     * the typical lazy-loading pattern by eagerly fetching all player data from the database.
+     * This makes it suitable for "pre-warming" the L1 cache, ensuring that frequently
+     * accessed data is readily available for subsequent lookups.
+     *
+     * <p><b>Performance Warning:</b> This operation can be resource-intensive, especially
+     * with a large number of player data entries, as it involves loading all data into memory.
+     * Therefore, it is generally NOT recommended for use in synchronous, performance-critical
+     * environments or on the main thread, as it can lead to significant delays and
+     * potential bottlenecks. Consider using this method sparingly and in asynchronous
+     * contexts where startup latency is acceptable for the benefit of later read performance.
+     *
+     * @return a {@link List} containing all {@link LegacyPlayerData} objects found in the database.
+     *         Returns an empty list if no player data is found.
+     */
+    public List<LegacyPlayerData> getAllLegacyPlayerData() {
+        // Get all LegacyPlayerData objects
+        @Cleanup
+        MorphiaCursor<LegacyPlayerData> queryResult = mongoDBConnectionConfig.getDatastore()
+                .find(LegacyPlayerData.class)
+                .iterator();
+
+        if (!queryResult.hasNext()) {
+            return Collections.emptyList();
+        }
+
+        List<LegacyPlayerData> resultList = queryResult.toList();
+
+        // L1
+        Cache<UUID, LegacyPlayerData> l1Cache = getL1Cache().getResource();
+        for (LegacyPlayerData legacyPlayerData : resultList) {
+            l1Cache.put(legacyPlayerData.getUuid(), legacyPlayerData);
+        }
+
+        return resultList;
+    }
+
+    /**
      * Shuts down the {@link LegacyPlayerDataService}, ensuring that all
      * background tasks are properly terminated and caches are cleared.
      *
@@ -481,4 +523,5 @@ public class LegacyPlayerDataService {
         }
         return count;
     }
+
 }

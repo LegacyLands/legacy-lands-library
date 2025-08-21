@@ -71,6 +71,7 @@ import java.util.stream.Collectors;
  */
 @Getter
 public class LegacyEntityDataService {
+
     /**
      * Cache service for managing {@link LegacyEntityDataService} instances.
      * Keyed by service name.
@@ -972,6 +973,46 @@ public class LegacyEntityDataService {
     }
 
     /**
+     * Retrieves all {@link LegacyEntityData} objects from the database and populates the L1 cache.
+     *
+     * <p>Unlike the {@code getEntityData(UUID uuid)} method, this method avoids
+     * the typical lazy-loading pattern by eagerly fetching all entity data from the database.
+     * This makes it suitable for "pre-warming" the L1 cache, ensuring that frequently
+     * accessed data is readily available for subsequent lookups.
+     *
+     * <p><b>Performance Warning:</b> This operation can be resource-intensive, especially
+     * with a large number of entity data entries, as it involves loading all data into memory.
+     * Therefore, it is generally NOT recommended for use in synchronous, performance-critical
+     * environments or on the main thread, as it can lead to significant delays and
+     * potential bottlenecks. Consider using this method sparingly and in asynchronous
+     * contexts where startup latency is acceptable for the benefit of later read performance.
+     *
+     * @return a {@link List} containing all {@link LegacyEntityData} objects found in the database.
+     *         Returns an empty list if no entity data is found.
+     */
+    public List<LegacyEntityData> getAllLegacyEntityData() {
+        // Get all LegacyEntityData objects
+        @Cleanup
+        MorphiaCursor<LegacyEntityData> queryResult = mongoDBConnectionConfig.getDatastore()
+                .find(LegacyEntityData.class)
+                .iterator();
+
+        if (!queryResult.hasNext()) {
+            return Collections.emptyList();
+        }
+
+        List<LegacyEntityData> resultList = queryResult.toList();
+
+        // L1
+        Cache<UUID, LegacyEntityData> l1Cache = getL1Cache().getResource();
+        for (LegacyEntityData entityData : resultList) {
+            l1Cache.put(entityData.getUuid(), entityData);
+        }
+
+        return resultList;
+    }
+
+    /**
      * Shuts down the service, ensuring all data is properly persisted.
      *
      * @throws InterruptedException if the shutdown process is interrupted
@@ -1065,4 +1106,5 @@ public class LegacyEntityDataService {
         }
         return count;
     }
+
 }

@@ -13,6 +13,7 @@ import java.util.UUID;
  */
 @FunctionalInterface
 public interface RelationshipTransactionCallback {
+
     /**
      * Executes relationship operations using the provided transaction context.
      *
@@ -60,5 +61,7 @@ public interface RelationshipTransactionCallback {
          * @return the transaction context for method chaining
          */
         RelationshipTransaction createBidirectionalRelationship(UUID entity1Id, String relationshipType1, UUID entity2Id, String relationshipType2);
+
     }
+
 } 
