@@ -24,6 +24,7 @@ import java.util.Arrays;
 @InjectableComponent
 @AOPInterceptor(global = true, order = 300)
 public class LoggingAspect implements MethodInterceptor {
+
     /**
      * {@inheritDoc}
      *
@@ -147,4 +148,5 @@ public class LoggingAspect implements MethodInterceptor {
             case ERROR -> Log.error(format, args);
         }
     }
+
 }

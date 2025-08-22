@@ -25,6 +25,7 @@ import java.util.function.Supplier;
  * @since 2024-12-21 18:54
  */
 public interface CacheServiceInterface<C, V> extends LockableInterface<C> {
+
     /**
      * Retrieves a value from the cache or computes it if not found.
      *
@@ -61,4 +62,5 @@ public interface CacheServiceInterface<C, V> extends LockableInterface<C> {
     V get(Function<C, Lock> getLockFunction, Function<C, V> getCacheFunction,
           Supplier<V> query, BiConsumer<C, V> cacheBiConsumer,
           boolean cacheAfterQuery, LockSettings lockSettings);
+
 }

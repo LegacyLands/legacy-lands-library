@@ -13,6 +13,7 @@ import java.lang.reflect.Method;
  * @since 2025-06-20 19:05
  */
 public interface Pointcut {
+
     /**
      * Tests whether this pointcut matches the given method on the target class.
      *
@@ -25,7 +26,7 @@ public interface Pointcut {
      * @return {@code true} if the pointcut matches, {@code false} otherwise
      */
     boolean matches(Method method, Class<?> targetClass);
-    
+
     /**
      * Tests whether this pointcut matches any method in the given class.
      *
@@ -36,4 +37,5 @@ public interface Pointcut {
      * @return {@code true} if the pointcut might match methods in this class, {@code false} if it definitely won't
      */
     boolean matchesClass(Class<?> targetClass);
+
 }

@@ -36,6 +36,7 @@ import java.util.function.Supplier;
         expectedResult = "SUCCESS"
 )
 public class AbstractCacheServiceTest {
+
     /**
      * Tests basic cache hit scenario without locking.
      */
@@ -336,6 +337,7 @@ public class AbstractCacheServiceTest {
      * Test cache implementation using ConcurrentHashMap.
      */
     private static class TestCache extends ConcurrentHashMap<String, String> {
+
         private final ReentrantLock lock = new ReentrantLock();
         private final AtomicInteger accessCount = new AtomicInteger(0);
         private final AtomicInteger storeCount = new AtomicInteger(0);
@@ -368,12 +370,14 @@ public class AbstractCacheServiceTest {
             accessCount.set(0);
             storeCount.set(0);
         }
+
     }
 
     /**
      * Concrete implementation of AbstractCacheService for testing.
      */
     private static class TestCacheService extends AbstractCacheService<TestCache, String> {
+
         public TestCacheService(TestCache cache) {
             super(cache);
         }
@@ -382,5 +386,7 @@ public class AbstractCacheServiceTest {
         public TestCache getTestCache() {
             return getResource();
         }
+
     }
+
 }

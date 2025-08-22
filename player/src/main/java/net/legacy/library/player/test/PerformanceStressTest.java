@@ -633,6 +633,7 @@ public class PerformanceStressTest {
      * Helper class to hold mixed workload data (players and entities).
      */
     private static class MixedWorkloadData {
+
         final List<LegacyPlayerData> players;
         final List<LegacyEntityData> entities;
 
@@ -640,5 +641,7 @@ public class PerformanceStressTest {
             this.players = players;
             this.entities = entities;
         }
+
     }
+
 }

@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
  */
 @UtilityClass
 public class ValidationUtil {
+
     /**
      * Checks if the object is null.
      *
@@ -909,4 +910,5 @@ public class ValidationUtil {
             throw exceptionSupplier.get();
         }
     }
+
 }

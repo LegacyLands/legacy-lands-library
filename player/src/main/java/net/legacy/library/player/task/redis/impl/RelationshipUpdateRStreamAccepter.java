@@ -26,6 +26,7 @@ import java.util.UUID;
  */
 @EntityRStreamAccepterRegister
 public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterInterface {
+
     /**
      * Creates a new {@link EntityRStreamTask} for updating entity relationships.
      *
@@ -112,4 +113,5 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
             Log.error(exception);
         }
     }
+
 }

@@ -15,6 +15,7 @@ import java.util.List;
  * @since 2024-12-19 17:00
  */
 public interface AnnotationProcessingServiceInterface {
+
     /**
      * Processes annotations within the specified base package using the default annotation processors.
      *
@@ -70,4 +71,5 @@ public interface AnnotationProcessingServiceInterface {
      *                              but it still supports setter injection with Fairy {@link io.fairyproject.container.Autowired} annotation
      */
     void processAnnotations(Collection<URL> urls, Class<? extends CustomAnnotationProcessor> handlerClass, boolean fromFairyIoCSingleton);
+
 }

@@ -33,6 +33,7 @@ import java.util.Set;
  */
 @InjectableComponent
 public class AnnotationProcessingService implements AnnotationProcessingServiceInterface {
+
     /**
      * {@inheritDoc}
      *
@@ -137,4 +138,5 @@ public class AnnotationProcessingService implements AnnotationProcessingServiceI
             }
         }
     }
+
 }

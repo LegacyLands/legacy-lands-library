@@ -19,6 +19,7 @@ import net.legacy.library.cache.service.CacheServiceInterface;
  * @since 2024-12-21 20:03
  */
 public class CaffeineAsyncCacheService<K, V> extends AbstractCacheService<AsyncCache<K, V>, V> implements CacheServiceInterface<AsyncCache<K, V>, V> {
+
     /**
      * Creates a new async cache service with default Caffeine settings.
      */
@@ -34,4 +35,5 @@ public class CaffeineAsyncCacheService<K, V> extends AbstractCacheService<AsyncC
     public CaffeineAsyncCacheService(AsyncCache<K, V> cache) {
         super(cache);
     }
+
 }

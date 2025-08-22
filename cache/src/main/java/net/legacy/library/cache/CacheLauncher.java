@@ -21,6 +21,7 @@ import net.legacy.library.foundation.test.TestExecutionUtil;
 @FairyLaunch
 @InjectableComponent
 public class CacheLauncher extends Plugin {
+
     /**
      * Debug mode flag. When set to true, enables focused testing
      * of the cache module's critical logic during plugin startup.
@@ -40,4 +41,5 @@ public class CacheLauncher extends Plugin {
     private void runDebugTests() {
         TestExecutionUtil.executeModuleTestRunner("cache", CacheTestRunner.create());
     }
+
 }

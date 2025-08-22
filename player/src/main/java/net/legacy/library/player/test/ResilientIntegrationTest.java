@@ -470,14 +470,17 @@ public class ResilientIntegrationTest {
      */
     @FunctionalInterface
     private interface TestAccepterLogic {
+
         void execute(RStream<Object, Object> rStream, StreamMessageId streamMessageId,
                      LegacyEntityDataService legacyEntityDataService, String data) throws Exception;
+
     }
 
     /**
      * Helper class for creating test entity accepters with custom behavior.
      */
     private static class TestEntityAccepter implements EntityRStreamAccepterInterface {
+
         private final String actionName;
         private final TestAccepterLogic logic;
 
@@ -512,5 +515,7 @@ public class ResilientIntegrationTest {
         public boolean useVirtualThread() {
             return false;
         }
+
     }
+
 }

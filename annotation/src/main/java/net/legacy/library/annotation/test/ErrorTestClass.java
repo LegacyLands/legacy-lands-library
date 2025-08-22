@@ -28,6 +28,7 @@ import net.legacy.library.foundation.annotation.ModuleTest;
         isolated = true
 )
 public class ErrorTestClass {
+
     /**
      * A method that represents error-prone functionality.
      *
@@ -45,4 +46,5 @@ public class ErrorTestClass {
     public void simulateError() throws RuntimeException {
         throw new RuntimeException("Simulated error for testing");
     }
+
 }

@@ -18,10 +18,12 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AnnotationProcessor {
+
     /**
      * The type of annotation that the processor handles.
      *
      * @return the class of the handled annotation
      */
     Class<? extends Annotation> value();
+
 }

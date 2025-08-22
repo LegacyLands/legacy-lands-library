@@ -26,6 +26,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @Accessors(fluent = true)
 public class TestMetrics {
+
     /**
      * Test execution start timestamp.
      */
@@ -297,4 +298,5 @@ public class TestMetrics {
 
         return report.toString();
     }
+
 }

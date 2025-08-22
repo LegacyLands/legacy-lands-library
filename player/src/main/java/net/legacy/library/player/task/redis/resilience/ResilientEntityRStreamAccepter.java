@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class ResilientEntityRStreamAccepter implements EntityRStreamAccepterInterface {
+
     private final EntityRStreamAccepterInterface delegate;
     private final FailureHandler failureHandler;
     private final ScheduledExecutorService scheduler;
@@ -213,4 +214,5 @@ public class ResilientEntityRStreamAccepter implements EntityRStreamAccepterInte
     public int getTrackedMessageCount() {
         return retryAttempts.size();
     }
+
 }

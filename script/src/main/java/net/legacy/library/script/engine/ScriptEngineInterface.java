@@ -11,6 +11,7 @@ import net.legacy.library.script.scope.ScriptScope;
  * @since 2025-03-12 16:52
  */
 public interface ScriptEngineInterface {
+
     /**
      * Executes a script.
      *
@@ -212,4 +213,5 @@ public interface ScriptEngineInterface {
      * @param name The name of the global variable
      */
     void removeGlobalVariable(String name);
+
 }

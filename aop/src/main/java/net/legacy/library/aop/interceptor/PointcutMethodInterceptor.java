@@ -18,8 +18,9 @@ import java.lang.reflect.Method;
  * @since 2025-06-20 19:35
  */
 public abstract class PointcutMethodInterceptor implements MethodInterceptor {
+
     private final Pointcut pointcut;
-    
+
     /**
      * Creates a new pointcut-based interceptor with the given expression.
      *
@@ -29,7 +30,7 @@ public abstract class PointcutMethodInterceptor implements MethodInterceptor {
         PointcutExpressionParser parser = new PointcutExpressionParser();
         this.pointcut = parser.parse(pointcutExpression);
     }
-    
+
     /**
      * Creates a new pointcut-based interceptor using the @AOPPointcut annotation.
      *
@@ -40,11 +41,11 @@ public abstract class PointcutMethodInterceptor implements MethodInterceptor {
         if (pointcutAnnotation == null) {
             throw new IllegalArgumentException("Interceptor class must have @AOPPointcut annotation");
         }
-        
+
         PointcutExpressionParser parser = new PointcutExpressionParser();
         this.pointcut = parser.parse(pointcutAnnotation.value());
     }
-    
+
     /**
      * Creates a new pointcut-based interceptor with the given pointcut.
      *
@@ -53,7 +54,7 @@ public abstract class PointcutMethodInterceptor implements MethodInterceptor {
     protected PointcutMethodInterceptor(Pointcut pointcut) {
         this.pointcut = pointcut;
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -64,7 +65,7 @@ public abstract class PointcutMethodInterceptor implements MethodInterceptor {
     public boolean supports(Method method) {
         return pointcut.matches(method, method.getDeclaringClass());
     }
-    
+
     /**
      * Gets the pointcut used by this interceptor.
      *
@@ -73,4 +74,5 @@ public abstract class PointcutMethodInterceptor implements MethodInterceptor {
     protected Pointcut getPointcut() {
         return pointcut;
     }
+
 }

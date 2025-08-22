@@ -14,4 +14,5 @@ import io.fairyproject.plugin.Plugin;
 @FairyLaunch
 @InjectableComponent
 public class FoundationLauncher extends Plugin {
+
 }

@@ -35,6 +35,7 @@ import java.util.List;
         expectedResult = "SUCCESS"
 )
 public class AnnotationProcessingServiceTest {
+
     /**
      * Tests direct service instantiation and basic functionality.
      */
@@ -211,9 +212,11 @@ public class AnnotationProcessingServiceTest {
 
             // Create invalid processor class (no default constructor)
             class InvalidProcessor {
+
                 public InvalidProcessor(String requiredParam) {
                     // Constructor with required parameter
                 }
+
             }
 
             // This should handle the error gracefully
@@ -336,14 +339,19 @@ public class AnnotationProcessingServiceTest {
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
     public @interface TestProcessingAnnotation {
+
         String value() default "test";
+
     }
 
     // Test class with annotation
     @TestProcessingAnnotation("service-test")
     public static class AnnotatedTestClass {
+
         public String getValue() {
             return "test-value";
         }
+
     }
+
 }

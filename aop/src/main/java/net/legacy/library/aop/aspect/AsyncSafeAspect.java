@@ -41,7 +41,35 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 @AOPInterceptor(global = true, order = 200)
 public class AsyncSafeAspect implements MethodInterceptor {
+
     private final Map<String, ReentrantLock> methodLocks = new ConcurrentHashMap<>();
+
+    /**
+     * Registers a custom executor with the registry
+     *
+     * @param executor the custom executor to register
+     */
+    public static void registerCustomExecutor(CustomExecutor executor) {
+        CustomExecutorRegistry.getInstance().registerExecutor(executor);
+    }
+
+    /**
+     * Registers a custom lock strategy with the registry
+     *
+     * @param lockStrategy the custom lock strategy to register
+     */
+    public static void registerCustomLockStrategy(CustomLockStrategy lockStrategy) {
+        CustomExecutorRegistry.getInstance().registerLockStrategy(lockStrategy);
+    }
+
+    /**
+     * Registers a custom timeout handler with the registry
+     *
+     * @param timeoutHandler the custom timeout handler to register
+     */
+    public static void registerCustomTimeoutHandler(CustomTimeoutHandler timeoutHandler) {
+        CustomExecutorRegistry.getInstance().registerTimeoutHandler(timeoutHandler);
+    }
 
     /**
      * {@inheritDoc}
@@ -195,42 +223,15 @@ public class AsyncSafeAspect implements MethodInterceptor {
         // Clear method locks
         methodLocks.clear();
     }
-    
-    /**
-     * Registers a custom executor with the registry
-     *
-     * @param executor the custom executor to register
-     */
-    public static void registerCustomExecutor(CustomExecutor executor) {
-        CustomExecutorRegistry.getInstance().registerExecutor(executor);
-    }
-    
-    /**
-     * Registers a custom lock strategy with the registry
-     *
-     * @param lockStrategy the custom lock strategy to register
-     */
-    public static void registerCustomLockStrategy(CustomLockStrategy lockStrategy) {
-        CustomExecutorRegistry.getInstance().registerLockStrategy(lockStrategy);
-    }
-    
-    /**
-     * Registers a custom timeout handler with the registry
-     *
-     * @param timeoutHandler the custom timeout handler to register
-     */
-    public static void registerCustomTimeoutHandler(CustomTimeoutHandler timeoutHandler) {
-        CustomExecutorRegistry.getInstance().registerTimeoutHandler(timeoutHandler);
-    }
-    
+
     private Object executeCustom(AspectContext context, MethodInvocation invocation, AsyncSafe asyncSafe) throws Throwable {
         String executorName = asyncSafe.customExecutor();
         String lockStrategyName = asyncSafe.customLockStrategy();
         String timeoutHandlerName = asyncSafe.customTimeoutHandler();
         Properties properties = CustomExecutorRegistry.parseCustomProperties(asyncSafe.customProperties());
-        
+
         CustomExecutorRegistry registry = CustomExecutorRegistry.getInstance();
-        
+
         // Get custom executor
         CustomExecutor executor = null;
         if (!executorName.isEmpty()) {
@@ -239,7 +240,7 @@ public class AsyncSafeAspect implements MethodInterceptor {
                 throw new IllegalStateException("Custom executor not found: " + executorName);
             }
         }
-        
+
         // Get custom lock strategy
         CustomLockStrategy lockStrategy = null;
         if (!lockStrategyName.isEmpty()) {
@@ -250,7 +251,7 @@ public class AsyncSafeAspect implements MethodInterceptor {
         } else {
             lockStrategy = registry.getLockStrategy("default");
         }
-        
+
         // Get custom timeout handler
         CustomTimeoutHandler timeoutHandler = null;
         if (!timeoutHandlerName.isEmpty()) {
@@ -261,24 +262,24 @@ public class AsyncSafeAspect implements MethodInterceptor {
         } else {
             timeoutHandler = registry.getTimeoutHandler("default");
         }
-        
+
         // Check for re-entrant calls with custom lock strategy
         if (!asyncSafe.allowReentrant() && lockStrategy.isReentrant(context)) {
             throw new IllegalStateException(
-                "Re-entrant call detected for method: " + context.getMethod().getName()
+                    "Re-entrant call detected for method: " + context.getMethod().getName()
             );
         }
-        
+
         final CustomTimeoutHandler finalTimeoutHandler = timeoutHandler;
         final CustomLockStrategy finalLockStrategy = lockStrategy;
         final CustomExecutor finalExecutor = executor;
-        
+
         // Execute with custom components
         if (finalExecutor != null) {
             // Use custom executor
             long startTime = System.currentTimeMillis();
             finalTimeoutHandler.beforeExecution(context, asyncSafe.timeout(), properties);
-            
+
             try {
                 Object result = finalExecutor.execute(context, new MethodInvocation() {
                     @Override
@@ -286,15 +287,15 @@ public class AsyncSafeAspect implements MethodInterceptor {
                         return executeWithCustomLock(context, invocation, finalLockStrategy, properties);
                     }
                 }, properties);
-                
+
                 // Check if result is a CompletableFuture and handle timeout
                 if (result instanceof CompletableFuture) {
-                    result = waitForResultWithCustomHandler((CompletableFuture<Object>) result, asyncSafe.timeout(), 
-                                                          context, finalTimeoutHandler, properties);
+                    result = waitForResultWithCustomHandler((CompletableFuture<Object>) result, asyncSafe.timeout(),
+                            context, finalTimeoutHandler, properties);
                 }
-                
-                finalTimeoutHandler.afterExecution(context, result, 
-                                                  System.currentTimeMillis() - startTime, properties);
+
+                finalTimeoutHandler.afterExecution(context, result,
+                        System.currentTimeMillis() - startTime, properties);
                 return result;
             } catch (Throwable e) {
                 if (e instanceof TimeoutException) {
@@ -307,9 +308,9 @@ public class AsyncSafeAspect implements MethodInterceptor {
             return executeWithCustomLock(context, invocation, finalLockStrategy, properties);
         }
     }
-    
-    private Object executeWithCustomLock(AspectContext context, MethodInvocation invocation, 
-                                        CustomLockStrategy lockStrategy, Properties properties) throws Throwable {
+
+    private Object executeWithCustomLock(AspectContext context, MethodInvocation invocation,
+                                         CustomLockStrategy lockStrategy, Properties properties) throws Throwable {
         if (lockStrategy != null) {
             return lockStrategy.executeWithLock(context, new Callable<Object>() {
                 @Override
@@ -328,10 +329,10 @@ public class AsyncSafeAspect implements MethodInterceptor {
             return invocation.proceed();
         }
     }
-    
+
     private Object waitForResultWithCustomHandler(CompletableFuture<Object> future, long timeout,
-                                                 AspectContext context, CustomTimeoutHandler timeoutHandler,
-                                                 Properties properties) throws Throwable {
+                                                  AspectContext context, CustomTimeoutHandler timeoutHandler,
+                                                  Properties properties) throws Throwable {
         try {
             return future.get(timeout, TimeUnit.MILLISECONDS);
         } catch (TimeoutException timeoutException) {
@@ -341,4 +342,5 @@ public class AsyncSafeAspect implements MethodInterceptor {
             throw cause == null ? executionException : cause;
         }
     }
+
 }

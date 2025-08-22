@@ -18,6 +18,7 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 public class RelationshipCriteria {
+
     /**
      * The type of relationship to query (e.g., "parent", "child", "member", etc.)
      */
@@ -68,4 +69,5 @@ public class RelationshipCriteria {
     public static RelationshipCriteria hasNot(String relationshipType, UUID targetEntityUuid) {
         return of(relationshipType, targetEntityUuid, true);
     }
-} 
+
+}

@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @UtilityClass
 public class TestResultRegistry {
+
     private static final Map<String, ProcessedClassInfo> processedClasses = new ConcurrentHashMap<>();
     private static final Map<String, FailedClassInfo> failedClasses = new ConcurrentHashMap<>();
 
@@ -168,10 +169,12 @@ public class TestResultRegistry {
     @Getter
     @AllArgsConstructor
     public static class ProcessedClassInfo {
+
         private final Class<?> clazz;
         private final String testName;
         private final String result;
         private final long timestamp;
+
     }
 
     /**
@@ -180,9 +183,12 @@ public class TestResultRegistry {
     @Getter
     @AllArgsConstructor
     public static class FailedClassInfo {
+
         private final Class<?> clazz;
         private final String testName;
         private final String errorMessage;
         private final long timestamp;
+
     }
+
 }

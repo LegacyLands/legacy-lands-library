@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class RStreamPubTask implements TaskInterface<CompletableFuture<?>> {
+
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final RStreamTask rStreamTask;
 
@@ -76,4 +77,5 @@ public class RStreamPubTask implements TaskInterface<CompletableFuture<?>> {
             rStream.add(StreamAddArgs.entries(mapCache));
         });
     }
+
 }

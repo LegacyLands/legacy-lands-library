@@ -21,6 +21,7 @@ import java.nio.file.Path;
  */
 @UtilityClass
 public final class SimplixBuilderFactory {
+
     /**
      * Creates a {@link SimplixBuilder} instance from a file.
      *
@@ -88,4 +89,5 @@ public final class SimplixBuilderFactory {
                 .setConfigSettings(ConfigSettings.PRESERVE_COMMENTS)
                 .setReloadSettings(ReloadSettings.AUTOMATICALLY);
     }
+
 }

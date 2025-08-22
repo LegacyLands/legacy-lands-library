@@ -14,6 +14,7 @@ import org.bukkit.World;
  */
 @UtilityClass
 public class SpatialUtil {
+
     /**
      * Checks if a target location is within the cuboid (rectangular prism) defined by two diagonal corner locations.
      *
@@ -152,4 +153,5 @@ public class SpatialUtil {
 
         return false;
     }
+
 }

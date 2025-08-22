@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class DistributedRetryCounter implements RetryCounter {
+
     /**
      * Redis client for distributed operations
      */
@@ -267,4 +268,5 @@ public class DistributedRetryCounter implements RetryCounter {
             }
         });
     }
+
 }

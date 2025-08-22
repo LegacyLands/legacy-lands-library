@@ -18,6 +18,7 @@ import java.util.Map;
  */
 @UtilityClass
 public class TestExecutionUtil {
+
     /**
      * Executes module tests with standardized logging and error handling.
      *
@@ -167,4 +168,5 @@ public class TestExecutionUtil {
             TestLogger.logInfo(moduleName, "    Success Rate: %.1f%%", metrics.getSuccessRate());
         }
     }
+
 }

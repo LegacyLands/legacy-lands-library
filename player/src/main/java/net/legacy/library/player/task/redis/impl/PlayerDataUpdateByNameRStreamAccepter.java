@@ -35,6 +35,7 @@ import java.util.UUID;
  */
 @RStreamAccepterRegister
 public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInterface {
+
     /**
      * Creates a new {@link RStreamTask} for updating player data based on the player's name.
      *
@@ -98,4 +99,5 @@ public class PlayerDataUpdateByNameRStreamAccepter implements RStreamAccepterInt
         legacyPlayerDataService.getLegacyPlayerData(uuid).addData(dataMap);
         ack(rStream, streamMessageId);
     }
+
 }

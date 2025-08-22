@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @InjectableComponent
 @AOPInterceptor(global = true, order = 100)
 public class MonitoringAspect implements MethodInterceptor {
+
     private final Map<String, MethodMetrics> metricsMap = new ConcurrentHashMap<>();
 
     /**

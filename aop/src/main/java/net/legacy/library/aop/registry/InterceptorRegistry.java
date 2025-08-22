@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2025-06-19 12:00
  */
 public class InterceptorRegistry {
+
     private static final Map<Class<? extends MethodInterceptor>, MethodInterceptor> registry = new ConcurrentHashMap<>();
 
     /**
@@ -66,4 +67,5 @@ public class InterceptorRegistry {
     public static void clear() {
         registry.clear();
     }
+
 }

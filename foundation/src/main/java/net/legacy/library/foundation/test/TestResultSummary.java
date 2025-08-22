@@ -25,6 +25,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class TestResultSummary {
+
     /**
      * The name of the module that executed the tests.
      */
@@ -143,4 +144,5 @@ public class TestResultSummary {
     public <T> T getMetadata(String key, T defaultValue) {
         return (T) metadata.getOrDefault(key, defaultValue);
     }
+
 }

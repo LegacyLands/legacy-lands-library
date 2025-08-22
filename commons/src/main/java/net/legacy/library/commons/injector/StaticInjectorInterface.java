@@ -7,10 +7,12 @@ package net.legacy.library.commons.injector;
  * @since 2024-12-23 17:07
  */
 public interface StaticInjectorInterface {
+
     /**
      * Process the given class.
      *
      * @param clazz given class
      */
     void inject(Class<?> clazz);
+
 }

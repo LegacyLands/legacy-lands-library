@@ -21,6 +21,7 @@ import java.util.function.Supplier;
  */
 @UtilityClass
 public class GsonUtil {
+
     /**
      * A shared {@link GsonBuilder} instance to accumulate configurations.
      */
@@ -61,4 +62,5 @@ public class GsonUtil {
     public static Gson getGson() {
         return GSON;
     }
+
 }

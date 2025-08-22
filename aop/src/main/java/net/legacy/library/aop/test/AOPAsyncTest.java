@@ -41,11 +41,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -75,11 +75,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -112,11 +112,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -148,11 +148,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -186,11 +186,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -221,11 +221,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -272,11 +272,11 @@ public class AOPAsyncTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -318,15 +318,20 @@ public class AOPAsyncTest {
      * Test service interface for testing.
      */
     public interface TestService {
+
         String processData(String input);
+
         CompletableFuture<String> processDataAsync(String input);
+
         String processWithVirtualThread(String input);
+
     }
 
     /**
      * Test service implementation with async-safe annotations for testing.
      */
     public static class TestServiceImpl implements TestService {
+
         @AsyncSafe(target = AsyncSafe.ThreadType.SYNC)
         public String processData(String input) {
             return "Processed: " + input.toUpperCase();
@@ -341,5 +346,7 @@ public class AOPAsyncTest {
         public String processWithVirtualThread(String input) {
             return "Virtual Thread Processed: " + input + " on " + Thread.currentThread().getName();
         }
+
     }
+
 }

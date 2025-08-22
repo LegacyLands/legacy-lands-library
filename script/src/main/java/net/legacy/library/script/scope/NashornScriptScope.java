@@ -15,6 +15,7 @@ import javax.script.SimpleBindings;
 @Getter
 @Setter
 public class NashornScriptScope implements ScriptScope {
+
     private Bindings bindings;
 
     public NashornScriptScope() {
@@ -47,4 +48,5 @@ public class NashornScriptScope implements ScriptScope {
     public void removeVariable(String name) {
         bindings.remove(name);
     }
+
 }

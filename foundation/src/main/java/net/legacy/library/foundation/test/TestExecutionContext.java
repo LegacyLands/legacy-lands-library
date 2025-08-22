@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Setter
 @Accessors(chain = true)
 public class TestExecutionContext {
+
     /**
      * The module name being tested.
      */
@@ -259,4 +260,5 @@ public class TestExecutionContext {
             averageProcessingTime.set(average);
         }
     }
+
 }

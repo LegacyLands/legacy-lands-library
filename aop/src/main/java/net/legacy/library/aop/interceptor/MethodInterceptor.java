@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
  * @since 2025-06-19 17:41
  */
 public interface MethodInterceptor {
+
     /**
      * Intercepts a method invocation and applies the aspect's cross-cutting logic.
      *

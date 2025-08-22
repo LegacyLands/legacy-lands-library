@@ -24,6 +24,7 @@ import java.util.Map;
  */
 @UtilityClass
 public class ProtoConversionUtil {
+
     /**
      * Converts a general Java object into a Protobuf {@link Any} message suitable for task arguments.
      *
@@ -99,4 +100,5 @@ public class ProtoConversionUtil {
         }
         return Any.pack(mapBuilder.build());
     }
-} 
+
+}

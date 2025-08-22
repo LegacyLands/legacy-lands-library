@@ -39,11 +39,11 @@ public class AOPMonitoringTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -75,11 +75,11 @@ public class AOPMonitoringTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -113,11 +113,11 @@ public class AOPMonitoringTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -149,11 +149,11 @@ public class AOPMonitoringTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -191,15 +191,20 @@ public class AOPMonitoringTest {
      * Test service interface for testing.
      */
     public interface TestService {
+
         int calculateSum(int a, int b);
+
         String processData(String input);
+
         void riskyOperation();
+
     }
 
     /**
      * Test service implementation with monitoring annotations for testing.
      */
     public static class TestServiceImpl implements TestService {
+
         @Monitored(name = "calculation")
         public int calculateSum(int a, int b) {
             return a + b;
@@ -216,5 +221,7 @@ public class AOPMonitoringTest {
                 throw new RuntimeException("Random failure for testing");
             }
         }
+
     }
+
 }

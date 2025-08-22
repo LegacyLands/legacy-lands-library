@@ -19,6 +19,7 @@ import java.util.function.Predicate;
  */
 @UtilityClass
 public class RetryCounterFactory {
+
     /**
      * Default prefix for distributed retry counters in Redis
      */

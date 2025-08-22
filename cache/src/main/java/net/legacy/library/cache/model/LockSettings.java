@@ -15,6 +15,7 @@ import java.util.concurrent.locks.Lock;
  */
 @Data
 public class LockSettings {
+
     private final long waitTime;
     private final long leaseTime;
     private final TimeUnit timeUnit;
@@ -30,4 +31,5 @@ public class LockSettings {
     public static LockSettings of(long waitTime, long leaseTime, TimeUnit timeUnit) {
         return new LockSettings(waitTime, leaseTime, timeUnit);
     }
+
 }

@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 @FairyLaunch
 @InjectableComponent
 public class PlayerLauncher extends Plugin {
+
     /**
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the player module's core logic during plugin startup.
@@ -109,7 +110,7 @@ public class PlayerLauncher extends Plugin {
      */
     private void shutdownEntityDataServices() {
         long start = System.currentTimeMillis();
-        
+
         CacheServiceInterface<Cache<String, LegacyEntityDataService>, LegacyEntityDataService> services =
                 LegacyEntityDataService.LEGACY_ENTITY_DATA_SERVICES;
         ConcurrentMap<String, LegacyEntityDataService> serviceMap = services.getResource().asMap();
@@ -127,4 +128,5 @@ public class PlayerLauncher extends Plugin {
 
         Log.info("All entity data services have been shut down. Total time: %s ms", System.currentTimeMillis() - start);
     }
+
 }

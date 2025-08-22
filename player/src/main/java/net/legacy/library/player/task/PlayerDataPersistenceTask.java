@@ -35,6 +35,7 @@ import java.util.concurrent.CompletionException;
  */
 @RequiredArgsConstructor
 public class PlayerDataPersistenceTask implements TaskInterface<CompletableFuture<?>> {
+
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final int limit;
@@ -207,4 +208,5 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
             }
         }
     }
+
 }

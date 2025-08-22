@@ -22,18 +22,19 @@ import java.util.regex.Pattern;
  */
 @InjectableComponent
 public class PointcutExpressionParser {
+
     private static final Pattern EXECUTION_PATTERN = Pattern.compile(
-        "execution\\s*\\(\\s*(.+)\\s*\\)"
+            "execution\\s*\\(\\s*(.+)\\s*\\)"
     );
-    
+
     private static final Pattern WITHIN_PATTERN = Pattern.compile(
-        "within\\s*\\(\\s*(.+)\\s*\\)"
+            "within\\s*\\(\\s*(.+)\\s*\\)"
     );
-    
+
     private static final Pattern ANNOTATION_PATTERN = Pattern.compile(
-        "@annotation\\s*\\(\\s*(.+)\\s*\\)"
+            "@annotation\\s*\\(\\s*(.+)\\s*\\)"
     );
-    
+
     /**
      * Parses a pointcut expression string into a Pointcut object.
      *
@@ -45,33 +46,33 @@ public class PointcutExpressionParser {
         if (expression == null || expression.trim().isEmpty()) {
             throw new IllegalArgumentException("Pointcut expression cannot be null or empty");
         }
-        
+
         expression = expression.trim();
-        
+
         // Check for composite expressions (AND/OR)
         if (expression.contains(" && ") || expression.contains(" || ")) {
             return parseComposite(expression);
         }
-        
+
         // Parse single expressions
         Matcher executionMatcher = EXECUTION_PATTERN.matcher(expression);
         if (executionMatcher.matches()) {
             return new ExecutionPointcut(executionMatcher.group(1).trim());
         }
-        
+
         Matcher withinMatcher = WITHIN_PATTERN.matcher(expression);
         if (withinMatcher.matches()) {
             return new WithinPointcut(withinMatcher.group(1).trim());
         }
-        
+
         Matcher annotationMatcher = ANNOTATION_PATTERN.matcher(expression);
         if (annotationMatcher.matches()) {
             return new AnnotationPointcut(annotationMatcher.group(1).trim());
         }
-        
+
         throw new IllegalArgumentException("Invalid pointcut expression: " + expression);
     }
-    
+
     /**
      * Parses composite pointcut expressions containing AND (&&) or OR (||) operators.
      *
@@ -84,23 +85,24 @@ public class PointcutExpressionParser {
      */
     private Pointcut parseComposite(String expression) {
         CompositePointcut composite = new CompositePointcut();
-        
+
         // Simple parsing for AND/OR operations
         String[] parts;
         boolean isAnd = true;
-        
+
         if (expression.contains(" && ")) {
             parts = expression.split(" && ");
         } else {
             parts = expression.split(" \\|\\| ");
             isAnd = false;
         }
-        
+
         for (String part : parts) {
             Pointcut pointcut = parse(part.trim());
             composite.addPointcut(pointcut, isAnd);
         }
-        
+
         return composite;
     }
+
 }

@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @AnnotationProcessor(AOPInterceptor.class)
 public class AOPInterceptorProcessor implements CustomAnnotationProcessor {
+
     private static final Map<Class<?>, MethodInterceptor> NON_IOC_INTERCEPTORS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Boolean> PROCESSED_CLASSES = new ConcurrentHashMap<>();
 
@@ -120,4 +121,5 @@ public class AOPInterceptorProcessor implements CustomAnnotationProcessor {
     public void exception(Class<?> clazz, Exception exception) {
         Log.error("An exception occurred while processing AOP interceptor", exception);
     }
+
 }

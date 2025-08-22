@@ -23,6 +23,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 @InjectableComponent
 public class ClassLoaderIsolationService {
+
     private final Map<ClassLoader, AspectRegistry> registries = new ConcurrentHashMap<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 

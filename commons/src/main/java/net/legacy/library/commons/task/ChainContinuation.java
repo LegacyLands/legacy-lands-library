@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public class ChainContinuation {
+
     private final TaskChainBuilder builder;
 
     /**
@@ -61,4 +62,5 @@ public class ChainContinuation {
     public TaskChain complete() {
         return build();
     }
-} 
+
+}

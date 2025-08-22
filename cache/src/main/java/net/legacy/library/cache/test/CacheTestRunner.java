@@ -33,6 +33,7 @@ import java.util.List;
         failFast = true
 )
 public class CacheTestRunner extends AbstractModuleTestRunner {
+
     private static final String MODULE_NAME = "cache";
 
     private final TestTimer timer = new TestTimer();
@@ -266,4 +267,5 @@ public class CacheTestRunner extends AbstractModuleTestRunner {
                 .withMetadata("passedTests", passedTests)
                 .withMetadata("failedTests", failedTests);
     }
+
 }

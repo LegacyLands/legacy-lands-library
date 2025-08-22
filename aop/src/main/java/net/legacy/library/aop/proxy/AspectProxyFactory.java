@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @InjectableComponent
 @RequiredArgsConstructor
 public class AspectProxyFactory {
+
     private final ClassLoaderIsolationService isolationService;
     private final Map<Class<?>, List<MethodInterceptor>> interceptorCache = new ConcurrentHashMap<>();
 

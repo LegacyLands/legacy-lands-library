@@ -35,6 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
         expectedResult = "SUCCESS"
 )
 public class MultiLevelCacheTest {
+
     /**
      * Creates a test multi-level cache service.
      */
@@ -322,6 +323,7 @@ public class MultiLevelCacheTest {
      * Simple test cache implementation for testing.
      */
     private static class TestCache {
+
         private final Map<String, String> data = new HashMap<>();
         private final ReentrantLock lock = new ReentrantLock();
 
@@ -340,5 +342,7 @@ public class MultiLevelCacheTest {
         public int size() {
             return data.size();
         }
+
     }
+
 }

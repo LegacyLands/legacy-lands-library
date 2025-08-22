@@ -30,6 +30,7 @@ import io.fairyproject.log.Log;
  */
 @FunctionalInterface
 public interface CompensationAction {
+
     /**
      * A no-op compensation action that does nothing.
      *
@@ -99,4 +100,5 @@ public interface CompensationAction {
      * @throws Exception if the compensation action itself fails
      */
     void execute(FailureContext context) throws Exception;
+
 }

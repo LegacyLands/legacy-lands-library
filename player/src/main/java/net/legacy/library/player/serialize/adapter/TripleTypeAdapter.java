@@ -20,6 +20,7 @@ import java.lang.reflect.Type;
  */
 @TypeAdapterRegister(classType = Triple.class)
 public class TripleTypeAdapter implements JsonSerializer<Triple<?, ?, ?>>, JsonDeserializer<Triple<?, ?, ?>> {
+
     /**
      * {@inheritDoc}
      *
@@ -54,4 +55,5 @@ public class TripleTypeAdapter implements JsonSerializer<Triple<?, ?, ?>>, JsonD
         Object right = context.deserialize(jsonObject.get("right"), Object.class);
         return Triple.of(left, middle, right);
     }
+
 }

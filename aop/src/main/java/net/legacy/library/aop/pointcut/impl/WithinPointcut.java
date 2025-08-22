@@ -22,14 +22,15 @@ import java.util.regex.Pattern;
  */
 @Getter
 public class WithinPointcut implements Pointcut {
+
     private final String typePattern;
     private final Pattern compiledPattern;
-    
+
     public WithinPointcut(String typePattern) {
         this.typePattern = typePattern;
         this.compiledPattern = compilePattern(typePattern);
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -44,7 +45,7 @@ public class WithinPointcut implements Pointcut {
     public boolean matches(Method method, Class<?> targetClass) {
         return matchesClass(targetClass);
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -59,25 +60,26 @@ public class WithinPointcut implements Pointcut {
         String className = targetClass.getName();
         return compiledPattern.matcher(className).matches();
     }
-    
+
     private Pattern compilePattern(String pattern) {
         // Convert the pattern to a regex
         String regex = pattern
-            .replace("$", "\\$")           // Escape dollar signs first (for inner classes)
-            .replace(".", "\\.")           // Escape dots
-            .replace("..", "\\.[\\w\\.]*") // .. means any number of packages
-            .replace("*", "[\\w]*");       // * means any characters (but not dots)
-            
+                .replace("$", "\\$")           // Escape dollar signs first (for inner classes)
+                .replace(".", "\\.")           // Escape dots
+                .replace("..", "\\.[\\w\\.]*") // .. means any number of packages
+                .replace("*", "[\\w]*");       // * means any characters (but not dots)
+
         // If pattern doesn't start with *, anchor it to the beginning
         if (!pattern.startsWith("*")) {
             regex = "^" + regex;
         }
-        
+
         // If pattern doesn't end with *, anchor it to the end
         if (!pattern.endsWith("*") && !pattern.endsWith("..")) {
             regex = regex + "$";
         }
-        
+
         return Pattern.compile(regex);
     }
+
 }

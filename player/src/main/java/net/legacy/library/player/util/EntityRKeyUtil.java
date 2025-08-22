@@ -15,6 +15,7 @@ import java.util.UUID;
  * @since 2024-03-30 01:49
  */
 public class EntityRKeyUtil {
+
     private static final String ENTITY_KEY_PREFIX = "legacy:entity:data:";
     private static final String ENTITY_RW_LOCK_PREFIX = "legacy:entity:rw-lock:";
     private static final String ENTITY_STREAM_PREFIX = "legacy:entity:stream:";
@@ -103,4 +104,5 @@ public class EntityRKeyUtil {
     public static String getTempRMapCacheKey(LegacyEntityDataService service) {
         return ENTITY_TEMP_MAP_PREFIX + service.getName() + ":map-cache";
     }
-} 
+
+}

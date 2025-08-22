@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 @Data
 @AllArgsConstructor
 public class ExpirationSettings {
+
     private final long timeToLive;
     private final TimeUnit timeUnit;
 
@@ -40,4 +41,5 @@ public class ExpirationSettings {
     public Duration toDuration() {
         return Duration.ofMillis(timeUnit.toMillis(timeToLive));
     }
+
 }

@@ -21,6 +21,7 @@ import java.util.List;
  */
 @RequiredArgsConstructor
 public class AspectInvocationHandler implements InvocationHandler {
+
     private final Object target;
     private final List<MethodInterceptor> interceptors;
     private final ClassLoaderIsolationService isolationService;
@@ -107,4 +108,5 @@ public class AspectInvocationHandler implements InvocationHandler {
             return interceptor.intercept(context, next);
         };
     }
+
 }

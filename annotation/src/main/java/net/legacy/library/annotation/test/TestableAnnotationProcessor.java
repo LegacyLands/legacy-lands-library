@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @AnnotationProcessor(TestableAnnotation.class)
 @InjectableComponent
 public class TestableAnnotationProcessor implements CustomAnnotationProcessor {
+
     // Static counters for cross-test visibility
     private static final AtomicInteger processedCount = new AtomicInteger(0);
     private static final AtomicInteger beforeCount = new AtomicInteger(0);
@@ -174,4 +175,5 @@ public class TestableAnnotationProcessor implements CustomAnnotationProcessor {
                     " with test name: " + annotation.testName());
         }
     }
+
 }

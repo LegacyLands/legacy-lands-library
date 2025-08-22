@@ -22,10 +22,12 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TypeAdapterRegister {
+
     /**
      * Specifies the class type for which the type adapter is being registered.
      *
      * @return the class type to register the adapter for
      */
     Class<?> classType();
+
 }

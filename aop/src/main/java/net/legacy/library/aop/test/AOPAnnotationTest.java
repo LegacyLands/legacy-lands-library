@@ -40,11 +40,11 @@ public class AOPAnnotationTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -74,13 +74,13 @@ public class AOPAnnotationTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register both aspects since TestServiceImpl uses both @Monitored and @AsyncSafe
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
             aopService.registerGlobalInterceptor(asyncSafeAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -106,14 +106,18 @@ public class AOPAnnotationTest {
      * Test service interface for testing.
      */
     public interface TestService {
+
         int calculateSum(int a, int b);
+
         String processDataWithMultipleAnnotations(String input);
+
     }
 
     /**
      * Test service implementation with AOP annotations for testing.
      */
     public static class TestServiceImpl implements TestService {
+
         @Monitored(name = "calculation")
         public int calculateSum(int a, int b) {
             return a + b;
@@ -124,5 +128,7 @@ public class AOPAnnotationTest {
         public String processDataWithMultipleAnnotations(String input) {
             return "Processed: " + input.toUpperCase();
         }
+
     }
+
 }

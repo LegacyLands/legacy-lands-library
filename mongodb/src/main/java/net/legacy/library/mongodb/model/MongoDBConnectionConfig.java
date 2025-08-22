@@ -18,6 +18,7 @@ import org.bson.UuidRepresentation;
  */
 @Data
 public class MongoDBConnectionConfig {
+
     private final MongoClient mongoClient;
     private final Datastore datastore;
 
@@ -88,4 +89,5 @@ public class MongoDBConnectionConfig {
             mongoClient.close();
         }
     }
+
 }

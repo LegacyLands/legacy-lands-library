@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class EntityDataPersistenceTimerTask implements TaskInterface<VirtualThreadScheduledFuture> {
+
     private final Duration delay;
     private final Duration period;
     private final LockSettings lockSettings;
@@ -99,4 +100,5 @@ public class EntityDataPersistenceTimerTask implements TaskInterface<VirtualThre
         return scheduleAtFixedRateWithVirtualThread(() -> EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start(),
                 delay.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
     }
-} 
+
+}

@@ -46,6 +46,7 @@ import java.lang.reflect.Field;
  */
 @InjectableComponent
 public class VarHandleReflectionInjector implements StaticInjectorInterface {
+
     /**
      * {@inheritDoc}
      *
@@ -108,4 +109,5 @@ public class VarHandleReflectionInjector implements StaticInjectorInterface {
             }
         }
     }
+
 }

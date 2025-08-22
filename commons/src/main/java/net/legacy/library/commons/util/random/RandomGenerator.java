@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @NoArgsConstructor
 public class RandomGenerator<T> {
+
     /**
      * SecureRandom generator.
      */
@@ -373,4 +374,5 @@ public class RandomGenerator<T> {
 
         return Optional.empty();
     }
+
 }

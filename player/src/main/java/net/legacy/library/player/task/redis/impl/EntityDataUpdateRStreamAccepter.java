@@ -32,6 +32,7 @@ import java.util.UUID;
  */
 @EntityRStreamAccepterRegister
 public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInterface {
+
     /**
      * Creates a new {@link EntityRStreamTask} for updating entity data based on the entity's UUID.
      *
@@ -211,4 +212,5 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
             Log.error("Error processing entity data update task.", exception);
         }
     }
+
 }

@@ -19,6 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * @since 2025-06-06 16:30
  */
 public class ResilienceFactory {
+
     private static final ScheduledExecutorService DEFAULT_SCHEDULER =
             Executors.newScheduledThreadPool(2, runnable -> {
                 Thread thread = new Thread(runnable, "resilience-scheduler");

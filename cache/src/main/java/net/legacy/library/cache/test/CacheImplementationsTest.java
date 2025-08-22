@@ -40,6 +40,7 @@ import java.util.function.Supplier;
         expectedResult = "SUCCESS"
 )
 public class CacheImplementationsTest {
+
     /**
      * Tests CaffeineCacheService basic functionality.
      */
@@ -390,6 +391,7 @@ public class CacheImplementationsTest {
      * Test implementation of custom cache using ConcurrentHashMap.
      */
     private static class TestCustomCache extends ConcurrentHashMap<String, String> {
+
         @Getter
         private final ReentrantLock lock = new ReentrantLock();
         private final AtomicInteger getCount = new AtomicInteger(0);
@@ -419,5 +421,7 @@ public class CacheImplementationsTest {
             getCount.set(0);
             putCount.set(0);
         }
+
     }
+
 }

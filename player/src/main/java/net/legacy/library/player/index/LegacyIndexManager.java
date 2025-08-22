@@ -29,6 +29,7 @@ import org.apache.commons.lang3.Validate;
  * @since 2025-4-6 14:12
  */
 public class LegacyIndexManager {
+
     private static final String ENTITY_COLLECTION_NAME = "legacy-entity-data";
     private static final String PLAYER_DATA_COLLECTION_NAME = "legacy-player-data";
     private final MongoDatabase mongoDatabase;
@@ -158,4 +159,5 @@ public class LegacyIndexManager {
                     effectiveIndexName, indexKeyName, collectionName, exception.getMessage(), exception);
         }
     }
+
 }

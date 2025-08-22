@@ -14,6 +14,7 @@ import net.legacy.library.annotation.service.CustomAnnotationProcessor;
  */
 @AnnotationProcessor(SimplixSerializerSerializableAutoRegister.class)
 public class SimplixSerializerSerializableAutoRegisterProcessor implements CustomAnnotationProcessor {
+
     /**
      * {@inheritDoc}
      *
@@ -37,4 +38,5 @@ public class SimplixSerializerSerializableAutoRegisterProcessor implements Custo
     public void exception(Class<?> clazz, Exception exception) {
         Log.error("Error registering serializer", exception);
     }
+
 }

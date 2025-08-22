@@ -36,6 +36,7 @@ import java.util.List;
         failFast = true
 )
 public class PlayerTestRunner extends AbstractModuleTestRunner {
+
     private static final String MODULE_NAME = "player";
 
     private final TestTimer timer = new TestTimer();
@@ -288,4 +289,5 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
                 .withMetadata("requiresRedis", true)
                 .withMetadata("requiresMongoDB", true);
     }
+
 }

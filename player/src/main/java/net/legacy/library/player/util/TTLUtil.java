@@ -14,6 +14,7 @@ import java.util.List;
  * @since 2025-04-11 19:45
  */
 public class TTLUtil {
+
     /**
      * Lua script for atomic increment with TTL setting
      */
@@ -242,4 +243,5 @@ public class TTLUtil {
 
         return result != null && result == 1L;
     }
+
 }

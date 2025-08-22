@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture<?>> {
+
     private final Set<UUID> entityUuids;
     private final LegacyEntityDataService service;
     private final Duration ttl;
@@ -170,4 +171,5 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
             });
         });
     }
-} 
+
+}

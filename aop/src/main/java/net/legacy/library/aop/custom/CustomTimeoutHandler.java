@@ -16,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
  * @since 2025-06-20 18:43
  */
 public interface CustomTimeoutHandler {
+
     /**
      * Handles timeout scenarios for async method execution
      *
@@ -26,16 +27,16 @@ public interface CustomTimeoutHandler {
      * @return the result to return (maybe a fallback value)
      * @throws Throwable if timeout should result in an exception
      */
-    Object handleTimeout(AspectContext context, CompletableFuture<?> future, 
-                        long timeout, Properties properties) throws Throwable;
-    
+    Object handleTimeout(AspectContext context, CompletableFuture<?> future,
+                         long timeout, Properties properties) throws Throwable;
+
     /**
      * Gets the name of this timeout handler
      *
      * @return the handler name
      */
     String getName();
-    
+
     /**
      * Initializes the timeout handler with configuration properties
      *
@@ -44,7 +45,7 @@ public interface CustomTimeoutHandler {
     default void initialize(Properties properties) {
         // Default implementation does nothing
     }
-    
+
     /**
      * Called before a method execution to prepare for potential timeout
      *
@@ -55,7 +56,7 @@ public interface CustomTimeoutHandler {
     default void beforeExecution(AspectContext context, long timeout, Properties properties) {
         // Default implementation does nothing
     }
-    
+
     /**
      * Called after successful method execution
      *
@@ -64,15 +65,16 @@ public interface CustomTimeoutHandler {
      * @param executionTime the actual execution time
      * @param properties configuration properties
      */
-    default void afterExecution(AspectContext context, Object result, 
-                               long executionTime, Properties properties) {
+    default void afterExecution(AspectContext context, Object result,
+                                long executionTime, Properties properties) {
         // Default implementation does nothing
     }
-    
+
     /**
      * Releases any resources associated with this timeout handler
      */
     default void shutdown() {
         // Default implementation does nothing
     }
+
 }

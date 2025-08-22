@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.LongAdder;
  */
 @ToString
 public class MethodMetrics {
+
     private final LongAdder invocationCount = new LongAdder();
     private final LongAdder totalDuration = new LongAdder();
     private final LongAdder failureCount = new LongAdder();
@@ -93,4 +94,5 @@ public class MethodMetrics {
     public long getFailureCount() {
         return failureCount.sum();
     }
+
 }

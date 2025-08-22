@@ -9,6 +9,7 @@ package net.legacy.library.aop.interceptor;
  */
 @FunctionalInterface
 public interface MethodInvocation {
+
     /**
      * Continues the execution of the interceptor chain or invokes the target method.
      *
@@ -16,4 +17,5 @@ public interface MethodInvocation {
      * @throws Throwable if the invocation fails at any point in the chain
      */
     Object proceed() throws Throwable;
+
 }

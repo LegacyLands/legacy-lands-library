@@ -16,6 +16,7 @@ import java.util.concurrent.Callable;
  * @since 2025-06-20 18:43
  */
 public interface CustomLockStrategy {
+
     /**
      * Executes the given operation with appropriate locking mechanism
      *
@@ -27,14 +28,14 @@ public interface CustomLockStrategy {
      * @throws Exception if execution fails
      */
     <T> T executeWithLock(AspectContext context, Callable<T> operation, Properties properties) throws Exception;
-    
+
     /**
      * Gets the name of this lock strategy
      *
      * @return the strategy name
      */
     String getName();
-    
+
     /**
      * Initializes the lock strategy with configuration properties
      *
@@ -43,7 +44,7 @@ public interface CustomLockStrategy {
     default void initialize(Properties properties) {
         // Default implementation does nothing
     }
-    
+
     /**
      * Checks if re-entrant access is currently held for the given context
      *
@@ -53,11 +54,12 @@ public interface CustomLockStrategy {
     default boolean isReentrant(AspectContext context) {
         return false;
     }
-    
+
     /**
      * Releases any resources associated with this lock strategy
      */
     default void shutdown() {
         // Default implementation does nothing
     }
+
 }

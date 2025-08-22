@@ -22,6 +22,7 @@ import java.util.function.Predicate;
 @Getter
 @Builder
 public class RetryPolicy {
+
     /**
      * Maximum number of retry attempts (excluding the initial attempt)
      */
@@ -235,4 +236,5 @@ public class RetryPolicy {
         return retryCounterType == RetryCounterType.DISTRIBUTED ||
                 retryCounterType == RetryCounterType.HYBRID;
     }
+
 }

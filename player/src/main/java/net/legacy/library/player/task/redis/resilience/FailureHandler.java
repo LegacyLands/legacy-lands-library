@@ -16,6 +16,7 @@ package net.legacy.library.player.task.redis.resilience;
  */
 @FunctionalInterface
 public interface FailureHandler {
+
     /**
      * A failure handler that always retries according to the default retry policy.
      *
@@ -120,4 +121,5 @@ public interface FailureHandler {
     default RetryPolicy getRetryPolicy() {
         return null;
     }
+
 }

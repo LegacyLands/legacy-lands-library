@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 @RequiredArgsConstructor
 public class EasyPlayerRawCacheData {
+
     /**
      * The unique identifier for the player.
      */
@@ -113,4 +114,5 @@ public class EasyPlayerRawCacheData {
     public <T extends Cache<?, ?>, V> CacheServiceInterface<T, V> removeCustomRawCache(String key) {
         return (CacheServiceInterface<T, V>) customRawCache.remove(key);
     }
+
 }

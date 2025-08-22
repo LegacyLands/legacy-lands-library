@@ -32,6 +32,7 @@ import java.util.List;
 @FairyLaunch
 @InjectableComponent
 public class AOPLauncher extends Plugin {
+
     /**
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the annotation processing framework during plugin startup.
@@ -79,4 +80,5 @@ public class AOPLauncher extends Plugin {
     private void runDebugTests() {
         TestExecutionUtil.executeModuleTestRunner("aop", AOPTestRunner.create());
     }
+
 }

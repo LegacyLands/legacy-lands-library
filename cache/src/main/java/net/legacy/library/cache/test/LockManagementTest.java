@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
         expectedResult = "SUCCESS"
 )
 public class LockManagementTest {
+
     /**
      * Tests successful lock acquisition and execution.
      */
@@ -323,7 +324,10 @@ public class LockManagementTest {
     @Setter
     @Getter
     private static class TestResource {
+
         private final ReentrantLock lock = new ReentrantLock();
         private String data = "initial";
+
     }
+
 }

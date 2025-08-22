@@ -26,6 +26,7 @@ import net.legacy.library.script.factory.ScriptEngineFactory;
         expectedResult = "SUCCESS"
 )
 public class RhinoScriptEngineTest {
+
     /**
      * Tests basic script execution.
      */
@@ -232,4 +233,5 @@ public class RhinoScriptEngineTest {
             return false;
         }
     }
+
 }

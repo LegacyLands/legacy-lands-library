@@ -21,6 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface TestConfiguration {
+
     /**
      * Whether to enable parallel execution of tests.
      *
@@ -153,4 +154,5 @@ public @interface TestConfiguration {
      * @return true to enable result caching
      */
     boolean enableCaching() default false;
+
 }

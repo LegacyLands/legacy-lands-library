@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public class EntityRStreamAccepterInvokeTask implements TaskInterface<VirtualThreadScheduledFuture> {
+
     private final LegacyEntityDataService service;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -232,4 +233,5 @@ public class EntityRStreamAccepterInvokeTask implements TaskInterface<VirtualThr
 
         return scheduleAtFixedRateWithVirtualThread(runnable, period.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
     }
+
 }

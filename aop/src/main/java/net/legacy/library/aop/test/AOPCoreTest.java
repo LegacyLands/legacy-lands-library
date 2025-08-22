@@ -42,11 +42,11 @@ public class AOPCoreTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             // Create AOP-enhanced service
@@ -120,11 +120,11 @@ public class AOPCoreTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             // Create service with multiple aspects (monitoring + logging)
@@ -160,11 +160,11 @@ public class AOPCoreTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             // Test service availability - services should be created successfully
@@ -194,11 +194,11 @@ public class AOPCoreTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             // Test null input handling
@@ -238,11 +238,11 @@ public class AOPCoreTest {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
             AOPService aopService = new AOPService(proxyFactory, isolationService);
-            
+
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
             aopService.registerGlobalInterceptor(monitoringAspect);
-            
+
             AOPFactory aopFactory = new AOPFactory(aopService);
 
             TestService service = aopFactory.create(TestServiceImpl.class);
@@ -272,28 +272,36 @@ public class AOPCoreTest {
     }
 
     /**
-     * Simple test object without AOP annotations for fallback testing.
-     */
-    public static class SimpleTestObject {
-        public String simpleMethod() {
-            return "simple";
-        }
-    }
-
-    /**
      * Interface for test service to enable proxy creation.
      */
     public interface TestService {
+
         int calculateSum(int a, int b);
+
         String processData(String input);
+
         CompletableFuture<String> processDataAsync(String input);
+
         void riskyOperation();
+
+    }
+
+    /**
+     * Simple test object without AOP annotations for fallback testing.
+     */
+    public static class SimpleTestObject {
+
+        public String simpleMethod() {
+            return "simple";
+        }
+
     }
 
     /**
      * Test service implementation with AOP annotations for testing.
      */
     public static class TestServiceImpl implements TestService {
+
         @Monitored(name = "calculation")
         public int calculateSum(int a, int b) {
             return a + b;
@@ -316,5 +324,7 @@ public class AOPCoreTest {
                 throw new RuntimeException("Random failure for testing");
             }
         }
+
     }
+
 }

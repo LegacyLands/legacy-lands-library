@@ -16,6 +16,7 @@ import org.mozilla.javascript.ScriptableObject;
 @Getter
 @Setter
 public class RhinoScriptScope implements ScriptScope {
+
     private Scriptable scriptable;
     private ScriptableObject scriptEngineRootScope;
 
@@ -44,4 +45,5 @@ public class RhinoScriptScope implements ScriptScope {
     public void removeVariable(String name) {
         scriptEngineRootScope.delete(name);
     }
+
 }

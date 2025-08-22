@@ -10,6 +10,7 @@ package net.legacy.library.player.task.redis.resilience;
  * @since 2025-06-07 16:00
  */
 public class RetryCounterException extends RuntimeException {
+
     /**
      * Constructs a new retry counter exception with the specified detail message.
      *
@@ -29,4 +30,5 @@ public class RetryCounterException extends RuntimeException {
     public RetryCounterException(String message, Throwable cause) {
         super(message, cause);
     }
+
 }

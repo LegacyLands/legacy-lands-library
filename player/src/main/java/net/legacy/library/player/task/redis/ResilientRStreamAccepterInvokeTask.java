@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public class ResilientRStreamAccepterInvokeTask implements TaskInterface<VirtualThreadScheduledFuture> {
+
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -342,4 +343,5 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
 
         return scheduleAtFixedRateWithVirtualThread(runnable, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
     }
+
 }

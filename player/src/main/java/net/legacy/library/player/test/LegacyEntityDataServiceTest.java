@@ -37,6 +37,7 @@ import java.util.UUID;
         validateLifecycle = true
 )
 public class LegacyEntityDataServiceTest {
+
     /**
      * Test basic service creation and initialization with required configurations.
      */
@@ -372,4 +373,5 @@ public class LegacyEntityDataServiceTest {
             return false;
         }
     }
+
 }

@@ -22,6 +22,7 @@ import java.util.concurrent.Executors;
  * @since 2024-03-30 01:49
  */
 public interface EntityRStreamAccepterInterface {
+
     /**
      * Gets the action name associated with this task.
      *
@@ -144,4 +145,5 @@ public interface EntityRStreamAccepterInterface {
     default ExecutorService getVirtualThreadPerTaskExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
+
 }

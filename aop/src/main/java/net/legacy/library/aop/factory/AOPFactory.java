@@ -22,6 +22,7 @@ import java.util.List;
 @InjectableComponent
 @RequiredArgsConstructor
 public class AOPFactory {
+
     private final AOPService aopService;
 
     /**
@@ -111,4 +112,5 @@ public class AOPFactory {
         T instance = Containers.get(clazz);
         return instance == null ? create(clazz) : instance;
     }
+
 }

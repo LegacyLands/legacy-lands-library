@@ -21,6 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ModuleTest {
+
     /**
      * The unique name identifier for this test.
      *
@@ -126,4 +127,5 @@ public @interface ModuleTest {
      * @return the custom configuration properties
      */
     String[] properties() default {};
+
 }

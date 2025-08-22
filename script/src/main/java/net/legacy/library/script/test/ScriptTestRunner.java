@@ -31,6 +31,7 @@ import net.legacy.library.script.factory.ScriptEngineFactory;
         failFast = true
 )
 public class ScriptTestRunner extends AbstractModuleTestRunner {
+
     private static final String MODULE_NAME = "script";
 
     @Getter
@@ -210,4 +211,5 @@ public class ScriptTestRunner extends AbstractModuleTestRunner {
                 .withMetadata("exception", exception.getClass().getSimpleName())
                 .withMetadata("exceptionMessage", exception.getMessage());
     }
+
 }

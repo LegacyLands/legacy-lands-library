@@ -28,8 +28,9 @@ import java.util.List;
  * @since 2025-06-20 19:30
  */
 public class CompositePointcut implements Pointcut {
+
     private final List<PointcutEntry> pointcuts = new ArrayList<>();
-    
+
     /**
      * Adds a pointcut to the composite with the specified operation.
      *
@@ -39,7 +40,7 @@ public class CompositePointcut implements Pointcut {
     public void addPointcut(Pointcut pointcut, boolean isAnd) {
         pointcuts.add(new PointcutEntry(pointcut, isAnd));
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -55,25 +56,25 @@ public class CompositePointcut implements Pointcut {
         if (pointcuts.isEmpty()) {
             return false;
         }
-        
+
         // Start with the first pointcut
         boolean result = pointcuts.getFirst().pointcut.matches(method, targetClass);
-        
+
         // Apply subsequent pointcuts with their operations
         for (int i = 1; i < pointcuts.size(); i++) {
             PointcutEntry entry = pointcuts.get(i);
             boolean matches = entry.pointcut.matches(method, targetClass);
-            
+
             if (entry.isAnd) {
                 result = result && matches;
             } else {
                 result = result || matches;
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -88,14 +89,14 @@ public class CompositePointcut implements Pointcut {
         if (pointcuts.isEmpty()) {
             return false;
         }
-        
+
         // For class matching, we need to be more conservative
         // If any OR pointcut might match, return true
         // If all AND pointcuts might match, return true
-        
+
         boolean hasAnd = false;
         boolean hasOr = false;
-        
+
         for (PointcutEntry entry : pointcuts) {
             if (entry.isAnd) {
                 hasAnd = true;
@@ -109,18 +110,21 @@ public class CompositePointcut implements Pointcut {
                 }
             }
         }
-        
+
         // If we only had AND conditions and all passed, return true
         // If we only had OR conditions and none passed, return false
         return hasAnd && !hasOr;
     }
-    
+
     /**
      * Internal class to hold a pointcut and its operation type.
      */
     @RequiredArgsConstructor
     private static class PointcutEntry {
+
         final Pointcut pointcut;
         final boolean isAnd;
+
     }
+
 }

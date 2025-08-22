@@ -25,9 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @AnnotationProcessor(AOPPointcut.class)
 public class AOPPointcutProcessor implements CustomAnnotationProcessor {
+
     private static final Map<Class<?>, MethodInterceptor> POINTCUT_INTERCEPTORS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Boolean> PROCESSED_CLASSES = new ConcurrentHashMap<>();
-    
+
     /**
      * {@inheritDoc}
      *
@@ -42,40 +43,40 @@ public class AOPPointcutProcessor implements CustomAnnotationProcessor {
             Log.debug("[AOPPointcutProcessor] Class %s already processed, skipping", clazz.getName());
             return;
         }
-        
+
         AOPPointcut pointcutAnnotation = clazz.getAnnotation(AOPPointcut.class);
         if (pointcutAnnotation == null) {
             return;
         }
-        
+
         // Check if the class extends PointcutMethodInterceptor
         if (!PointcutMethodInterceptor.class.isAssignableFrom(clazz)) {
-            Log.warn("[AOPPointcutProcessor] Class %s has @AOPPointcut but doesn't extend PointcutMethodInterceptor", 
+            Log.warn("[AOPPointcutProcessor] Class %s has @AOPPointcut but doesn't extend PointcutMethodInterceptor",
                     clazz.getName());
             return;
         }
-        
+
         // Check if it also has @AOPInterceptor
         AOPInterceptor interceptorAnnotation = clazz.getAnnotation(AOPInterceptor.class);
         if (interceptorAnnotation == null) {
-            Log.warn("[AOPPointcutProcessor] Class %s has @AOPPointcut but missing @AOPInterceptor annotation", 
+            Log.warn("[AOPPointcutProcessor] Class %s has @AOPPointcut but missing @AOPInterceptor annotation",
                     clazz.getName());
             return;
         }
-        
+
         // Create or retrieve the interceptor instance
         MethodInterceptor interceptor = createOrRetrieveInterceptor(clazz, interceptorAnnotation);
-        
+
         if (interceptor == null) {
             Log.warn("[AOPPointcutProcessor] Failed to create interceptor instance for %s", clazz.getName());
             return;
         }
-        
+
         // Register in the InterceptorRegistry
         if (InterceptorRegistry.get(interceptor.getClass()) == null) {
             InterceptorRegistry.register(interceptor);
         }
-        
+
         // Register with AOP service if it's a global interceptor
         if (interceptorAnnotation.global()) {
             AOPService aopService = Containers.get(AOPService.class);
@@ -89,7 +90,7 @@ public class AOPPointcutProcessor implements CustomAnnotationProcessor {
                     clazz.getName(), pointcutAnnotation.value());
         }
     }
-    
+
     private MethodInterceptor createOrRetrieveInterceptor(Class<?> clazz, AOPInterceptor interceptorAnnotation) {
         if (interceptorAnnotation.isFromFairyIoC()) {
             return (MethodInterceptor) Containers.get(clazz);
@@ -114,7 +115,7 @@ public class AOPPointcutProcessor implements CustomAnnotationProcessor {
             });
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -122,4 +123,5 @@ public class AOPPointcutProcessor implements CustomAnnotationProcessor {
     public void exception(Class<?> clazz, Exception exception) {
         Log.error("An exception occurred while processing pointcut interceptor", exception);
     }
+
 }

@@ -21,6 +21,7 @@ import net.legacy.library.script.test.ScriptTestRunner;
 @FairyLaunch
 @InjectableComponent
 public class ScriptLauncher extends Plugin {
+
     /**
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the script engine framework during plugin startup.
@@ -40,4 +41,5 @@ public class ScriptLauncher extends Plugin {
     private void runDebugTests() {
         TestExecutionUtil.executeModuleTestRunner("script", ScriptTestRunner.create());
     }
+
 }

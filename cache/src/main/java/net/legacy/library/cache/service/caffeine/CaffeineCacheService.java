@@ -19,6 +19,7 @@ import net.legacy.library.cache.service.CacheServiceInterface;
  * @since 2024-12-21 20:03
  */
 public class CaffeineCacheService<K, V> extends AbstractCacheService<Cache<K, V>, V> implements CacheServiceInterface<Cache<K, V>, V> {
+
     /**
      * Creates a new cache service with default Caffeine settings.
      */
@@ -34,4 +35,5 @@ public class CaffeineCacheService<K, V> extends AbstractCacheService<Cache<K, V>
     public CaffeineCacheService(Cache<K, V> cache) {
         super(cache);
     }
+
 }

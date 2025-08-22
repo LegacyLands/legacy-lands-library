@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @since 2025-06-10 02:30
  */
 public class TestConnectionResource {
+
     private static final String TEST_DATABASE_NAME = "legacy_lands_test_player";
     private static final String REDIS_URL = "redis://localhost:6379";
     private static final String MONGODB_URL = "mongodb://localhost:27017";
@@ -222,4 +223,5 @@ public class TestConnectionResource {
                 redisStreamAcceptInterval
         );
     }
+
 }

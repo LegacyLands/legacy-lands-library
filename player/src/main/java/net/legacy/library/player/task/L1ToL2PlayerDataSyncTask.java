@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture<?>> {
+
     private final UUID uuid;
     private final LegacyPlayerDataService legacyPlayerDataService;
 
@@ -99,4 +100,5 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture
             });
         });
     }
+
 }

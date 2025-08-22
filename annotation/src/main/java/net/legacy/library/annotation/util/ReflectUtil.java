@@ -16,6 +16,7 @@ import java.util.List;
  */
 @UtilityClass
 public class ReflectUtil {
+
     /**
      * Resolves URLs for the given base packages and class loaders.
      * This effectively gets all URLs on the classpath that are within the specified packages.
@@ -43,4 +44,5 @@ public class ReflectUtil {
     public static Collection<URL> resolveUrlsForPackages(List<String> basePackages, ClassLoader... classLoader) {
         return resolveUrlsForPackages(basePackages, List.of(classLoader));
     }
+
 }

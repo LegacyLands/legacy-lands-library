@@ -12,6 +12,7 @@ import lombok.Data;
  */
 @Data
 public class TieredCacheLevel<L, C> {
+
     private final L level;
     private final C cache;
 
@@ -60,4 +61,5 @@ public class TieredCacheLevel<L, C> {
     public <R> R getCacheWithType() {
         return (R) cache;
     }
+
 }

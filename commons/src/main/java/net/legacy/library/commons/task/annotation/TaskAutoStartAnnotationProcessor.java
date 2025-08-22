@@ -23,6 +23,7 @@ import net.legacy.library.commons.task.TaskInterface;
  */
 @AnnotationProcessor(TaskAutoStartAnnotation.class)
 public class TaskAutoStartAnnotationProcessor implements CustomAnnotationProcessor {
+
     /**
      * Processes a class annotated with {@link TaskAutoStartAnnotation}.
      *
@@ -62,4 +63,5 @@ public class TaskAutoStartAnnotationProcessor implements CustomAnnotationProcess
     public void exception(Class<?> clazz, Exception exception) {
         Log.error("An exception occurred while processing the task", exception);
     }
+
 }

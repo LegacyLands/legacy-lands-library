@@ -14,6 +14,7 @@ import net.legacy.library.player.model.LegacyPlayerData;
  */
 @SimplixSerializerSerializableAutoRegister
 public class LegacyPlayerSerializable implements SimplixSerializable<LegacyPlayerData> {
+
     /**
      * {@inheritDoc}
      *
@@ -47,4 +48,5 @@ public class LegacyPlayerSerializable implements SimplixSerializable<LegacyPlaye
     public Class<LegacyPlayerData> getClazz() {
         return LegacyPlayerData.class;
     }
+
 }

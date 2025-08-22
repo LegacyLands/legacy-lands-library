@@ -363,6 +363,7 @@ public class LockContentionQPSTest {
      * Helper class to hold QPS measurement results.
      */
     private static class QpsResult {
+
         final double qps;
         final long durationMs;
         final double lockContentionRate;
@@ -374,5 +375,7 @@ public class LockContentionQPSTest {
             this.lockContentionRate = lockContentionRate;
             this.entitiesSaved = entitiesSaved;
         }
+
     }
+
 }

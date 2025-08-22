@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2025-06-07 22:30
  */
 public class TestTimer {
+
     /**
      * Map of active timers by name.
      */
@@ -271,10 +272,12 @@ public class TestTimer {
     @Value
     @ToString
     public static class TimerResult {
+
         String name;
         long startTime;
         long endTime;
         long duration;
+
     }
 
     /**
@@ -282,7 +285,10 @@ public class TestTimer {
      */
     @Value
     public static class TimedResult<T> {
+
         T result;
         long duration;
+
     }
+
 }

@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
 public class TaskSchedulerExample {
+
     public void runDemonstrationLogic(GRPCTaskSchedulerClient scheduler) {
         Log.info("--- Running Task Scheduler Demonstration Logic ---");
 
@@ -151,4 +152,5 @@ public class TaskSchedulerExample {
             Log.error("An error occurred during task scheduler demonstration logic", exception);
         }
     }
-} 
+
+}

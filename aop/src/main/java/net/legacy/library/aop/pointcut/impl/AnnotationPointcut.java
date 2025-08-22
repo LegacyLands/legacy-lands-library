@@ -21,13 +21,14 @@ import java.lang.reflect.Method;
  * @since 2025-06-20 19:25
  */
 public class AnnotationPointcut implements Pointcut {
+
     private final String annotationClassName;
     private Class<? extends Annotation> annotationClass;
-    
+
     @SuppressWarnings("unchecked")
     public AnnotationPointcut(String annotationClassName) {
         this.annotationClassName = annotationClassName;
-        
+
         try {
             // Try to load the annotation class
             Class<?> clazz = Class.forName(annotationClassName);
@@ -41,7 +42,7 @@ public class AnnotationPointcut implements Pointcut {
             // Will try to load it later when needed
         }
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -62,10 +63,10 @@ public class AnnotationPointcut implements Pointcut {
                 return false;
             }
         }
-        
+
         return method.isAnnotationPresent(annotationClass);
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -79,7 +80,7 @@ public class AnnotationPointcut implements Pointcut {
     public boolean matchesClass(Class<?> targetClass) {
         return true;
     }
-    
+
     @SuppressWarnings("unchecked")
     private void tryLoadAnnotationClass(ClassLoader classLoader) {
         try {
@@ -91,4 +92,5 @@ public class AnnotationPointcut implements Pointcut {
             // Still not found
         }
     }
+
 }

@@ -13,6 +13,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class RandomObject<T> {
+
     /**
      * The random object.
      */
@@ -22,4 +23,5 @@ public class RandomObject<T> {
      * The probability weight of the random object.
      */
     private final int probability;
+
 }

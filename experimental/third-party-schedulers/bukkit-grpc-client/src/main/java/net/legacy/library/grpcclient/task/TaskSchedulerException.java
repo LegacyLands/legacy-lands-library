@@ -7,6 +7,7 @@ package net.legacy.library.grpcclient.task;
  * @since 2025-4-4 16:20
  */
 public class TaskSchedulerException extends Exception {
+
     /**
      * Constructs a new TaskSchedulerException with the specified detail message.
      *
@@ -25,4 +26,5 @@ public class TaskSchedulerException extends Exception {
     public TaskSchedulerException(String message, Throwable cause) {
         super(message, cause);
     }
-} 
+
+}

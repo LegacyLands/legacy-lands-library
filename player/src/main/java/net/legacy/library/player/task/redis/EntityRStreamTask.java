@@ -20,6 +20,7 @@ import java.time.Duration;
 @Getter
 @RequiredArgsConstructor
 public class EntityRStreamTask {
+
     /**
      * The name of the task, used for identifying the type of operation.
      */
@@ -68,4 +69,5 @@ public class EntityRStreamTask {
     public long getExpirationTimeMillis() {
         return expirationTime != null ? expirationTime.toMillis() : 0;
     }
-} 
+
+}

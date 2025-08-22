@@ -23,6 +23,7 @@ import java.util.function.Function;
  */
 @Data
 public abstract class AbstractLockable<R> implements LockableInterface<R> {
+
     private final R resource;
 
     /**
@@ -86,4 +87,5 @@ public abstract class AbstractLockable<R> implements LockableInterface<R> {
             throw new RuntimeException("Thread interrupted while trying to acquire lock: " + simpleName, exception);
         }
     }
+
 }

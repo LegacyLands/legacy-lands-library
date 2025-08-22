@@ -32,6 +32,7 @@ import net.legacy.library.foundation.util.TestTimer;
         failFast = true
 )
 public class AnnotationTestRunner extends AbstractModuleTestRunner {
+
     private static final String TEST_PACKAGE = "net.legacy.library.annotation.test";
     private static final String MODULE_NAME = "annotation";
 
@@ -281,4 +282,5 @@ public class AnnotationTestRunner extends AbstractModuleTestRunner {
                 .withMetadata("processedClasses", TestResultRegistry.getProcessedCount())
                 .withMetadata("failedClasses", TestResultRegistry.getFailedCount());
     }
+
 }

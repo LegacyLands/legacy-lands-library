@@ -35,6 +35,7 @@ import java.util.concurrent.CompletionException;
  */
 @RequiredArgsConstructor
 public class EntityDataPersistenceTask implements TaskInterface<CompletableFuture<?>> {
+
     private final LockSettings lockSettings;
     private final LegacyEntityDataService legacyEntityDataService;
     private final int limit;
@@ -191,4 +192,5 @@ public class EntityDataPersistenceTask implements TaskInterface<CompletableFutur
             }
         }
     }
-} 
+
+}

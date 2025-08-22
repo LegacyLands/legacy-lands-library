@@ -26,22 +26,23 @@ import java.util.regex.Pattern;
  * @since 2025-06-20 19:15
  */
 public class ExecutionPointcut implements Pointcut {
+
     private final Pattern modifierPattern;
     private final Pattern returnTypePattern;
     private final Pattern classPattern;
     private final Pattern methodPattern;
     private final Pattern parameterPattern;
-    
+
     // Parsed components
     private String modifierPart;
     private String returnTypePart;
     private String classPart;
     private String methodPart;
     private String parameterPart;
-    
+
     public ExecutionPointcut(String expression) {
         parseExpression(expression);
-        
+
         // Initialize patterns based on parsed expression
         this.modifierPattern = createModifierPattern();
         this.returnTypePattern = createReturnTypePattern();
@@ -49,7 +50,7 @@ public class ExecutionPointcut implements Pointcut {
         this.methodPattern = createMethodPattern();
         this.parameterPattern = createParameterPattern();
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -66,26 +67,26 @@ public class ExecutionPointcut implements Pointcut {
         if (!matchesModifiers(method)) {
             return false;
         }
-        
+
         // Check return type
         if (!matchesReturnType(method)) {
             return false;
         }
-        
+
         // Check class name
         if (!matchesClassName(targetClass)) {
             return false;
         }
-        
+
         // Check method name
         if (!matchesMethodName(method)) {
             return false;
         }
-        
+
         // Check parameters
         return matchesParameters(method);
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -99,7 +100,7 @@ public class ExecutionPointcut implements Pointcut {
     public boolean matchesClass(Class<?> targetClass) {
         return classPattern == null || matchesClassName(targetClass);
     }
-    
+
     /**
      * Parses the execution expression to extract pattern components.
      *
@@ -113,33 +114,33 @@ public class ExecutionPointcut implements Pointcut {
     private void parseExpression(String expression) {
         // Remove leading/trailing whitespace
         String trimmed = expression.trim();
-        
+
         // Find parameter section first (everything in parentheses)
         int openParen = trimmed.indexOf('(');
         int closeParen = trimmed.lastIndexOf(')');
-        
+
         if (openParen == -1 || closeParen == -1 || closeParen < openParen) {
             throw new IllegalArgumentException(
-                String.format("Invalid execution expression '%s': missing or malformed parentheses. " +
-                    "Expected format: [modifiers] return-type [declaring-type].method-name(parameters)",
-                    expression));
+                    String.format("Invalid execution expression '%s': missing or malformed parentheses. " +
+                                    "Expected format: [modifiers] return-type [declaring-type].method-name(parameters)",
+                            expression));
         }
-        
+
         // Extract parameter part
         this.parameterPart = trimmed.substring(openParen + 1, closeParen).trim();
-        
+
         // Get the part before parameters
         String beforeParams = trimmed.substring(0, openParen).trim();
-        
+
         if (beforeParams.isEmpty()) {
             throw new IllegalArgumentException(
-                String.format("Invalid execution expression '%s': missing method signature before parameters",
-                    expression));
+                    String.format("Invalid execution expression '%s': missing method signature before parameters",
+                            expression));
         }
-        
+
         // Find the last dot to separate method name from class/type
         int lastDot = beforeParams.lastIndexOf('.');
-        
+
         if (lastDot == -1) {
             // No class specified, only method pattern
             parseModifierAndReturnType(beforeParams);
@@ -147,21 +148,21 @@ public class ExecutionPointcut implements Pointcut {
             int lastSpace = beforeParams.lastIndexOf(' ');
             if (lastSpace == -1) {
                 throw new IllegalArgumentException(
-                    String.format("Invalid execution expression '%s': missing return type. " +
-                        "Expected format: [modifiers] return-type method-name(parameters)",
-                        expression));
+                        String.format("Invalid execution expression '%s': missing return type. " +
+                                        "Expected format: [modifiers] return-type method-name(parameters)",
+                                expression));
             }
             this.methodPart = beforeParams.substring(lastSpace + 1);
         } else {
             // Extract method name
             this.methodPart = beforeParams.substring(lastDot + 1).trim();
-            
+
             // Get the part before method name
             String beforeMethod = beforeParams.substring(0, lastDot).trim();
-            
+
             // Parse modifiers and return type
             parseModifierAndReturnType(beforeMethod);
-            
+
             // Extract class pattern (everything after return type)
             int lastSpace = beforeMethod.lastIndexOf(' ');
             if (lastSpace != -1 && hasReturnType(beforeMethod)) {
@@ -171,7 +172,7 @@ public class ExecutionPointcut implements Pointcut {
             }
         }
     }
-    
+
     /**
      * Parses modifiers and return type from the expression prefix.
      *
@@ -179,13 +180,13 @@ public class ExecutionPointcut implements Pointcut {
      */
     private void parseModifierAndReturnType(String prefix) {
         String[] parts = prefix.split("\\s+");
-        
+
         if (parts.length == 0) {
             this.modifierPart = null;
             this.returnTypePart = "*";
             return;
         }
-        
+
         // Check for modifiers
         String firstPart = parts[0];
         if (isModifier(firstPart)) {
@@ -200,7 +201,7 @@ public class ExecutionPointcut implements Pointcut {
             this.returnTypePart = firstPart;
         }
     }
-    
+
     /**
      * Checks if a string represents a method modifier.
      *
@@ -208,12 +209,12 @@ public class ExecutionPointcut implements Pointcut {
      * @return true if it's a modifier
      */
     private boolean isModifier(String str) {
-        return "public".equals(str) || "protected".equals(str) || 
-               "private".equals(str) || "static".equals(str) ||
-               "final".equals(str) || "abstract".equals(str) ||
-               "synchronized".equals(str) || "native".equals(str);
+        return "public".equals(str) || "protected".equals(str) ||
+                "private".equals(str) || "static".equals(str) ||
+                "final".equals(str) || "abstract".equals(str) ||
+                "synchronized".equals(str) || "native".equals(str);
     }
-    
+
     /**
      * Checks if the expression contains a return type.
      *
@@ -225,7 +226,7 @@ public class ExecutionPointcut implements Pointcut {
         String[] parts = expression.split("\\s+");
         return parts.length > 1 || !isModifier(parts[0]);
     }
-    
+
     /**
      * Creates a pattern to match method modifiers based on the parsed expression.
      *
@@ -235,12 +236,12 @@ public class ExecutionPointcut implements Pointcut {
         if (modifierPart == null || modifierPart.isEmpty() || "*".equals(modifierPart)) {
             return null; // Matches any modifier
         }
-        
+
         // Support multiple modifiers like "public static"
         // Just store the modifiers, actual matching is done in matchesModifiers
         return Pattern.compile(modifierPart);
     }
-    
+
     /**
      * Creates a pattern to match method return types.
      *
@@ -250,20 +251,20 @@ public class ExecutionPointcut implements Pointcut {
         if (returnTypePart == null || returnTypePart.equals("*")) {
             return Pattern.compile(".*");
         }
-        
+
         // Convert the return type pattern to regex
         String pattern = returnTypePart
-            .replace(".", "\\.")  // Escape dots
-            .replace("*", ".*")   // * matches anything
-            .replace("$", "\\$"); // Escape dollar signs for inner classes
-            
+                .replace(".", "\\.")  // Escape dots
+                .replace("*", ".*")   // * matches anything
+                .replace("$", "\\$"); // Escape dollar signs for inner classes
+
         // Handle array types - escape square brackets for regex
         pattern = pattern.replace("[", "\\[")
-            .replace("]", "\\]");
-        
+                .replace("]", "\\]");
+
         return Pattern.compile(pattern);
     }
-    
+
     /**
      * Creates a pattern to match class names including package wildcards.
      *
@@ -279,33 +280,33 @@ public class ExecutionPointcut implements Pointcut {
         if (classPart == null || classPart.equals("*")) {
             return Pattern.compile(".*");
         }
-        
+
         // Build regex pattern from parsed class part
         String pattern = classPart
-            .replace("$", "\\$")    // Escape dollar signs first (for inner classes)
-            .replace(".", "\\.");   // Escape dots
-            
+                .replace("$", "\\$")    // Escape dollar signs first (for inner classes)
+                .replace(".", "\\.");   // Escape dots
+
         // Handle .. wildcard for packages
         if (pattern.contains("\\.\\.")) {
             pattern = pattern.replace("\\.\\.", "(\\.[\\w\\.\\$]+)*");
         }
-        
+
         // Handle * wildcard
         pattern = pattern.replace("*", "[\\w\\$]*");
-        
+
         // If pattern doesn't start with *, anchor to word boundary
         if (!classPart.startsWith("*")) {
             pattern = "(^|\\.)?" + pattern;
         }
-        
+
         // If pattern doesn't end with * or .., anchor to end
         if (!classPart.endsWith("*") && !classPart.endsWith("..")) {
             pattern = pattern + "$";
         }
-        
+
         return Pattern.compile(pattern);
     }
-    
+
     /**
      * Creates a pattern to match method names.
      *
@@ -315,10 +316,10 @@ public class ExecutionPointcut implements Pointcut {
         if (methodPart == null || methodPart.equals("*")) {
             return Pattern.compile(".*");
         }
-        
+
         // Convert method pattern to regex
         String pattern = methodPart.replace("*", ".*");
-        
+
         // Anchor the pattern for exact matching
         if (!methodPart.contains("*")) {
             pattern = "^" + pattern + "$";
@@ -330,10 +331,10 @@ public class ExecutionPointcut implements Pointcut {
                 pattern = pattern + "$";
             }
         }
-        
+
         return Pattern.compile(pattern);
     }
-    
+
     /**
      * Creates a pattern to match method parameters.
      *
@@ -352,23 +353,23 @@ public class ExecutionPointcut implements Pointcut {
         if (parameterPart == null || parameterPart.equals("..")) {
             return null; // Matches any parameters
         }
-        
+
         if (parameterPart.isEmpty()) {
             // Empty parentheses means no parameters
             return Pattern.compile("^$");
         }
-        
+
         // Build pattern for parameter matching
         String[] params = splitParametersRespectingGenerics(parameterPart);
         StringBuilder patternBuilder = new StringBuilder();
-        
+
         for (int i = 0; i < params.length; i++) {
             String param = params[i].trim();
-            
+
             if (i > 0) {
                 patternBuilder.append(",");
             }
-            
+
             if (param.equals("..")) {
                 // .. matches any remaining parameters
                 patternBuilder.append(".*");
@@ -382,13 +383,13 @@ public class ExecutionPointcut implements Pointcut {
                 patternBuilder.append(typePattern);
             }
         }
-        
+
         String pattern = patternBuilder.toString();
         io.fairyproject.log.Log.debug("Created parameter pattern: '%s' from expression: '%s'", pattern, parameterPart);
-        
+
         return Pattern.compile(pattern);
     }
-    
+
     /**
      * Splits parameter list respecting generic type brackets.
      *
@@ -399,7 +400,7 @@ public class ExecutionPointcut implements Pointcut {
         java.util.List<String> result = new java.util.ArrayList<>();
         StringBuilder current = new StringBuilder();
         int depth = 0;
-        
+
         for (char c : params.toCharArray()) {
             if (c == '<') {
                 depth++;
@@ -412,14 +413,14 @@ public class ExecutionPointcut implements Pointcut {
             }
             current.append(c);
         }
-        
+
         if (!current.isEmpty()) {
             result.add(current.toString());
         }
-        
+
         return result.toArray(new String[0]);
     }
-    
+
     /**
      * Creates a regex pattern for a type including generic parameters.
      *
@@ -438,20 +439,20 @@ public class ExecutionPointcut implements Pointcut {
             io.fairyproject.log.Log.debug("Type pattern for '%s': '%s'", typeStr, result);
             return result;
         }
-        
+
         String baseType = typeStr.substring(0, genericStart).trim();
         String genericPart = typeStr.substring(genericStart);
-        
+
         // Convert base type
         String basePattern = createSimpleTypePattern(baseType);
-        
+
         // Convert generic part to regex
         String genericPattern = genericPart
-            .replace("<", "\\<")
-            .replace(">", "\\>")
-            .replace("?", "\\?")
-            .replace(" ", "\\s*");  // Allow flexible whitespace
-            
+                .replace("<", "\\<")
+                .replace(">", "\\>")
+                .replace("?", "\\?")
+                .replace(" ", "\\s*");  // Allow flexible whitespace
+
         // Handle type parameters inside generics
         // This is complex because we need to handle nested generics
         // For now, let's handle specific common cases
@@ -462,7 +463,7 @@ public class ExecutionPointcut implements Pointcut {
             for (int i = 0; i < parts.length; i++) {
                 if (i > 0) newPattern.append(",\\s*");
                 String part = parts[i].trim();
-                
+
                 if (part.equals("*")) {
                     // Wildcard - match any type
                     newPattern.append("[^,<>]+");
@@ -493,10 +494,10 @@ public class ExecutionPointcut implements Pointcut {
                 genericPattern = "\\<((.*\\.)?" + innerType + ")(<.*>)?\\>";
             }
         }
-        
+
         return basePattern + genericPattern;
     }
-    
+
     /**
      * Creates a pattern for a simple (non-generic) type.
      *
@@ -505,11 +506,11 @@ public class ExecutionPointcut implements Pointcut {
      */
     private String createSimpleTypePattern(String type) {
         String pattern = type.trim()
-            .replace(".", "\\.")
-            .replace("$", "\\$")
-            .replace("[", "\\[")
-            .replace("]", "\\]");
-            
+                .replace(".", "\\.")
+                .replace("$", "\\$")
+                .replace("[", "\\[")
+                .replace("]", "\\]");
+
         // Allow both simple and fully qualified names
         if (!type.contains(".") && !type.equals("*")) {
             // For simple names like "List", "Map", etc.
@@ -521,10 +522,10 @@ public class ExecutionPointcut implements Pointcut {
             String simpleName = type.substring(type.lastIndexOf('.') + 1);
             pattern = "(" + pattern + "|" + simpleName + ")";
         }
-        
+
         return pattern;
     }
-    
+
     /**
      * Checks if the method's modifiers match the modifier pattern.
      *
@@ -535,7 +536,7 @@ public class ExecutionPointcut implements Pointcut {
         if (modifierPattern == null) {
             return true;
         }
-        
+
         int modifiers = method.getModifiers();
         return switch (modifierPattern.pattern()) {
             case "public" -> Modifier.isPublic(modifiers);
@@ -544,7 +545,7 @@ public class ExecutionPointcut implements Pointcut {
             default -> true;
         };
     }
-    
+
     /**
      * Checks if the method's return type matches the return type pattern.
      *
@@ -555,16 +556,16 @@ public class ExecutionPointcut implements Pointcut {
         if (returnTypePattern == null) {
             return true;
         }
-        
+
         Class<?> returnType = method.getReturnType();
         String returnTypeName = returnType.getName();
         String simpleTypeName = returnType.getSimpleName();
-        
+
         // Try matching both fully qualified and simple name
         return returnTypePattern.matcher(returnTypeName).matches() ||
-               returnTypePattern.matcher(simpleTypeName).matches();
+                returnTypePattern.matcher(simpleTypeName).matches();
     }
-    
+
     /**
      * Checks if the target class name matches the class pattern.
      *
@@ -575,19 +576,19 @@ public class ExecutionPointcut implements Pointcut {
         if (classPattern == null) {
             return true;
         }
-        
+
         String className = targetClass.getName();
-        
+
         // Special handling for simple patterns like *Service
         if (classPart != null && classPart.startsWith("*") && !classPart.contains(".")) {
             String suffix = classPart.substring(1);
             return targetClass.getSimpleName().endsWith(suffix);
         }
-        
+
         // Try to match full class name
         return classPattern.matcher(className).matches();
     }
-    
+
     /**
      * Checks if the method name matches the method pattern.
      *
@@ -598,10 +599,10 @@ public class ExecutionPointcut implements Pointcut {
         if (methodPattern == null) {
             return true;
         }
-        
+
         return methodPattern.matcher(method.getName()).matches();
     }
-    
+
     /**
      * Checks if the method parameters match the parameter pattern.
      *
@@ -624,19 +625,19 @@ public class ExecutionPointcut implements Pointcut {
         // Get parameter types including generic information
         Type[] genericParamTypes = method.getGenericParameterTypes();
         Class<?>[] paramTypes = method.getParameterTypes();
-        
+
         // Create parameter string with generic type information
         String paramString = createParameterStringWithGenerics(paramTypes, genericParamTypes);
-        
+
         // Debug logging
         if (!paramString.isEmpty()) {
-            io.fairyproject.log.Log.debug("Parameter string for %s: '%s', pattern: '%s'", 
-                method.getName(), paramString, parameterPattern.pattern());
+            io.fairyproject.log.Log.debug("Parameter string for %s: '%s', pattern: '%s'",
+                    method.getName(), paramString, parameterPattern.pattern());
         }
-        
+
         return parameterPattern.matcher(paramString).matches();
     }
-    
+
     /**
      * Creates a string representation of parameter types including generic information.
      *
@@ -648,20 +649,20 @@ public class ExecutionPointcut implements Pointcut {
         if (paramTypes.length == 0) {
             return "";
         }
-        
+
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < paramTypes.length; i++) {
             if (i > 0) {
                 sb.append(",");
             }
-            
+
             // Get type representation including generics
             String typeStr = getTypeString(paramTypes[i], genericParamTypes[i]);
             sb.append(typeStr);
         }
         return sb.toString();
     }
-    
+
     /**
      * Gets the string representation of a type including generic information.
      *
@@ -672,10 +673,10 @@ public class ExecutionPointcut implements Pointcut {
     private String getTypeString(Class<?> rawType, Type genericType) {
         if (genericType instanceof ParameterizedType pType) {
             StringBuilder result = new StringBuilder();
-            
+
             // Get the raw type name
             result.append(((Class<?>) pType.getRawType()).getSimpleName());
-            
+
             // Add generic parameters
             Type[] typeArgs = pType.getActualTypeArguments();
             if (typeArgs.length > 0) {
@@ -688,7 +689,7 @@ public class ExecutionPointcut implements Pointcut {
                 }
                 result.append(">");
             }
-            
+
             return result.toString();
         } else if (genericType instanceof GenericArrayType arrayType) {
             return getTypeString(rawType.getComponentType(), arrayType.getGenericComponentType()) + "[]";
@@ -697,7 +698,7 @@ public class ExecutionPointcut implements Pointcut {
             return rawType.getSimpleName();
         }
     }
-    
+
     /**
      * Gets the string representation of a type argument.
      *
@@ -713,4 +714,5 @@ public class ExecutionPointcut implements Pointcut {
             default -> type.toString();
         };
     }
+
 }

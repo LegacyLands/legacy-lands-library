@@ -7,6 +7,7 @@ package net.legacy.library.script.exception;
  * @since 2025-03-12 16:52
  */
 public class ScriptException extends Exception {
+
     /**
      * Constructs a new script exception with the specified detail message.
      *
@@ -25,4 +26,5 @@ public class ScriptException extends Exception {
     public ScriptException(String message, Throwable cause) {
         super(message, cause);
     }
+
 }

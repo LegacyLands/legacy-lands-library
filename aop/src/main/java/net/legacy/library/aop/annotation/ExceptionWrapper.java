@@ -19,6 +19,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ExceptionWrapper {
+
     /**
      * The exception class to wrap thrown exceptions with.
      * The class must have a constructor that accepts (String message, Throwable cause).
@@ -48,4 +49,5 @@ public @interface ExceptionWrapper {
      * @return array of exception classes to exclude from wrapping
      */
     Class<? extends Throwable>[] exclude() default {};
+
 }

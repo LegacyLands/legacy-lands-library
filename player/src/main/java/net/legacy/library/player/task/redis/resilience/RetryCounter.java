@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
  * @since 2025-06-07 10:00
  */
 public interface RetryCounter {
+
     /**
      * Increments the retry count for the specified key and returns the new count.
      *
@@ -98,4 +99,5 @@ public interface RetryCounter {
      * perform necessary cleanup. This method should be idempotent.
      */
     void close();
+
 }

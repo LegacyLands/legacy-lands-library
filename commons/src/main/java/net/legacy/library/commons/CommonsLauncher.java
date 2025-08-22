@@ -22,6 +22,7 @@ import net.legacy.library.foundation.test.TestExecutionUtil;
 @FairyLaunch
 @InjectableComponent
 public class CommonsLauncher extends Plugin {
+
     /**
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the commons module's core logic during plugin startup.
@@ -32,7 +33,7 @@ public class CommonsLauncher extends Plugin {
     public void onPluginEnable() {
         VirtualThreadExecutors.initialize();
         VirtualThreadSchedulerManager.initialize();
-        
+
         if (DEBUG) {
             runDebugTests();
         }
@@ -50,4 +51,5 @@ public class CommonsLauncher extends Plugin {
     private void runDebugTests() {
         TestExecutionUtil.executeModuleTestRunner("commons", CommonsTestRunner.create());
     }
+
 }

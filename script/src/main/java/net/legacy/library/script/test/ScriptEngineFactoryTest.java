@@ -28,6 +28,7 @@ import net.legacy.library.script.factory.ScriptEngineFactory;
         expectedResult = "SUCCESS"
 )
 public class ScriptEngineFactoryTest {
+
     /**
      * Tests creation of Nashorn script engine.
      */
@@ -146,4 +147,5 @@ public class ScriptEngineFactoryTest {
             return false;
         }
     }
+
 }

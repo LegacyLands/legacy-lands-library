@@ -18,6 +18,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Monitored {
+
     /**
      * The name of the monitored operation.
      *
@@ -38,4 +39,5 @@ public @interface Monitored {
      * @return true if arguments should be included
      */
     boolean includeArgs() default false;
+
 }

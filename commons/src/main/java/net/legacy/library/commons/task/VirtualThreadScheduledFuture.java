@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledFuture;
 /**
  * A wrapper for {@link ScheduledFuture} and {@link ScheduledExecutorService}
  * to simplify resource management, particularly for tasks scheduled with virtual threads.
- * 
+ *
  * <p>This class encapsulates both the scheduled future and its associated executor service,
  * providing convenient methods to cancel tasks and manage executor lifecycle. When working
  * with shared schedulers (such as {@link TaskInterface#VIRTUAL_SCHEDULER}), care should be
@@ -21,13 +21,14 @@ import java.util.concurrent.ScheduledFuture;
 @Getter
 @AllArgsConstructor
 public class VirtualThreadScheduledFuture {
+
     private final ScheduledFuture<?> scheduledFuture;
     private final ScheduledExecutorService scheduledExecutorService;
 
     /**
      * Cancels the task and shuts down the executor service.
      * Equivalent to calling {@code close(true, false)}.
-     * 
+     *
      * <p><strong>Warning:</strong> If this instance wraps a shared scheduler
      * (such as {@link TaskInterface#VIRTUAL_SCHEDULER}), calling this method will
      * shut down the shared scheduler and affect other scheduled tasks.
@@ -39,7 +40,7 @@ public class VirtualThreadScheduledFuture {
 
     /**
      * Cancels the task and shuts down the executor service with specific options.
-     * 
+     *
      * <p><strong>Warning:</strong> If this instance wraps a shared scheduler
      * (such as {@link TaskInterface#VIRTUAL_SCHEDULER}), calling this method will
      * shut down the shared scheduler and affect other scheduled tasks.
@@ -60,7 +61,7 @@ public class VirtualThreadScheduledFuture {
 
     /**
      * Cancels only the scheduled task without shutting down the executor service.
-     * 
+     *
      * <p>This method is safe to use with shared schedulers as it does not affect
      * the underlying scheduler or other scheduled tasks.
      *
@@ -75,7 +76,7 @@ public class VirtualThreadScheduledFuture {
     /**
      * Cancels only the scheduled task without shutting down the executor service.
      * Equivalent to calling {@code cancel(true)}.
-     * 
+     *
      * <p>This method is safe to use with shared schedulers as it does not affect
      * the underlying scheduler or other scheduled tasks.
      *
@@ -85,4 +86,5 @@ public class VirtualThreadScheduledFuture {
     public boolean cancel() {
         return cancel(true);
     }
+
 }

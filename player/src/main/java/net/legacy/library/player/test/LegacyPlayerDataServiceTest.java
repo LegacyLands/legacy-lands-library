@@ -37,6 +37,7 @@ import java.util.UUID;
         validateLifecycle = true
 )
 public class LegacyPlayerDataServiceTest {
+
     /**
      * Test basic service creation and initialization with required configurations.
      */
@@ -328,4 +329,5 @@ public class LegacyPlayerDataServiceTest {
             return false;
         }
     }
+
 }

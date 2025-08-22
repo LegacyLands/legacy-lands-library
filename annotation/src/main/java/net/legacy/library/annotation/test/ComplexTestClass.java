@@ -30,6 +30,7 @@ import net.legacy.library.foundation.annotation.ModuleTest;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ComplexTestClass {
+
     private String complexData = "default-complex-data";
 
     /**
@@ -41,4 +42,5 @@ public class ComplexTestClass {
     public String performComplexOperation(String input) {
         return "Complex processing of: " + input + " with data: " + complexData;
     }
+
 }

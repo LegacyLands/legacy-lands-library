@@ -20,6 +20,7 @@ import java.time.Duration;
 @Getter
 @RequiredArgsConstructor
 public class RStreamTask {
+
     private final String actionName;
     private final String data;
     private final Duration expirationTime;
@@ -47,4 +48,5 @@ public class RStreamTask {
     public static RStreamTask of(Pair<String, String> dataPair, Duration expirationTime) {
         return new RStreamTask(dataPair.getLeft(), dataPair.getRight(), expirationTime);
     }
+
 }

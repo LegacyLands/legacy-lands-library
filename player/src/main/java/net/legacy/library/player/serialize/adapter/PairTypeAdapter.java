@@ -20,6 +20,7 @@ import java.lang.reflect.Type;
  */
 @TypeAdapterRegister(classType = Pair.class)
 public class PairTypeAdapter implements JsonSerializer<Pair<?, ?>>, JsonDeserializer<Pair<?, ?>> {
+
     /**
      * {@inheritDoc}
      *
@@ -52,4 +53,5 @@ public class PairTypeAdapter implements JsonSerializer<Pair<?, ?>>, JsonDeserial
         Object value = context.deserialize(jsonObject.get("right"), Object.class);
         return Pair.of(key, value);
     }
+
 }

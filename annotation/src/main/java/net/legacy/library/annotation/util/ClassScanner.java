@@ -22,6 +22,7 @@ import java.util.function.Predicate;
 @Getter
 @AllArgsConstructor(staticName = "of")
 public class ClassScanner {
+
     /**
      * List of base packages to scan.
      */
@@ -67,4 +68,5 @@ public class ClassScanner {
                 .filter(classFilter)
                 .collect(java.util.stream.Collectors.toSet());
     }
-} 
+
+}

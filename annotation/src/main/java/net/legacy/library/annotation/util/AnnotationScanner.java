@@ -19,6 +19,7 @@ import java.util.Set;
  */
 @UtilityClass
 public class AnnotationScanner {
+
     /**
      * Finds a set of classes annotated with the specified annotation within the given package and its sub-packages.
      *
@@ -47,4 +48,5 @@ public class AnnotationScanner {
     public static Set<Class<?>> findAnnotatedClasses(Collection<URL> urls, Class<? extends Annotation> annotationClass) {
         return new Reflections(new ConfigurationBuilder().setUrls(urls)).getTypesAnnotatedWith(annotationClass);
     }
+
 }

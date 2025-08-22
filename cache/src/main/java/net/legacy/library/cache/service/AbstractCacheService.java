@@ -22,6 +22,7 @@ import java.util.function.Supplier;
  * @since 2024-12-21 18:53
  */
 public abstract class AbstractCacheService<C, V> extends AbstractLockable<C> {
+
     /**
      * Creates a new cache service instance with the specified cache implementation.
      *
@@ -95,4 +96,5 @@ public abstract class AbstractCacheService<C, V> extends AbstractLockable<C> {
 
         return value;
     }
+
 }

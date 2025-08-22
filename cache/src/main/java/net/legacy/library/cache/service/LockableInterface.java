@@ -19,6 +19,7 @@ import java.util.function.Function;
  * @since 2024-12-21 19:13
  */
 public interface LockableInterface<R> {
+
     /**
      * Gets the underlying resource.
      *
@@ -36,4 +37,5 @@ public interface LockableInterface<R> {
      * @return the result of the executed function
      */
     <T> T execute(Function<R, Lock> getLockFunction, Function<R, T> function, LockSettings lockSettings);
+
 }

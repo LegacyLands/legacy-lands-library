@@ -12,6 +12,7 @@ import net.legacy.library.commons.injector.VarHandleReflectionInjector;
  */
 @UtilityClass
 public final class InjectorFactory {
+
     /**
      * Create a {@link VarHandleReflectionInjector} instance.
      *
@@ -22,4 +23,5 @@ public final class InjectorFactory {
     public static StaticInjectorInterface createVarHandleReflectionInjector() {
         return new VarHandleReflectionInjector();
     }
+
 }

@@ -26,9 +26,10 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AOPPointcut {
+
     /**
      * The pointcut expression defining where the aspect should be applied.
-     * 
+     *
      * <p>Supports the following expression types:
      * <ul>
      *   <li>{@code execution(...)}: Method execution matching</li>
@@ -39,4 +40,5 @@ public @interface AOPPointcut {
      * @return the pointcut expression
      */
     String value();
+
 }

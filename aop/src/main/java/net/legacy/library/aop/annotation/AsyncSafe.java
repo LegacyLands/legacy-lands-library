@@ -22,6 +22,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AsyncSafe {
+
     /**
      * Specifies the target thread type for method execution.
      *
@@ -158,4 +159,5 @@ public @interface AsyncSafe {
          */
         CUSTOM
     }
+
 }

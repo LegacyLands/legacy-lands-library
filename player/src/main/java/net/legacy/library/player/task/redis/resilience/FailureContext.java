@@ -32,6 +32,7 @@ import org.redisson.api.StreamMessageId;
 @Getter
 @Builder
 public class FailureContext {
+
     /**
      * The exception that caused the failure.
      *
@@ -95,4 +96,5 @@ public class FailureContext {
      * time-based retry strategies.
      */
     private final long failureTimestamp;
+
 }

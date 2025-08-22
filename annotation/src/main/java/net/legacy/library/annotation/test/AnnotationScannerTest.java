@@ -33,6 +33,7 @@ import java.util.Set;
         expectedResult = "SUCCESS"
 )
 public class AnnotationScannerTest {
+
     /**
      * Tests basic package-based annotation scanning.
      */
@@ -276,17 +277,21 @@ public class AnnotationScannerTest {
             // Base class with annotation
             @ScannerTestAnnotation("base-class")
             class BaseClass {
+
                 public String getType() {
                     return "base";
                 }
+
             }
 
             // Derived class that should inherit annotation behavior
             class DerivedClass extends BaseClass {
+
                 @Override
                 public String getType() {
                     return "derived";
                 }
+
             }
 
             String testPackage = "net.legacy.library.annotation.test";
@@ -311,48 +316,62 @@ public class AnnotationScannerTest {
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
     public @interface ScannerTestAnnotation {
+
         String value() default "scanner-test";
+
     }
 
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
     public @interface AnotherTestAnnotation {
+
         int priority() default 1;
+
     }
 
     // Define a test annotation that doesn't exist on any classes
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
     public @interface NonExistentAnnotation {
+
     }
 
     // Test classes with annotations
     @ScannerTestAnnotation("test-class-1")
     public static class TestClass1 {
+
         public String getValue() {
             return "test1";
         }
+
     }
 
     @ScannerTestAnnotation("test-class-2")
     @AnotherTestAnnotation(priority = 2)
     public static class TestClass2 {
+
         public String getValue() {
             return "test2";
         }
+
     }
 
     @AnotherTestAnnotation(priority = 3)
     public static class TestClass3 {
+
         public String getValue() {
             return "test3";
         }
+
     }
 
     // Class without annotations
     public static class PlainClass {
+
         public String getValue() {
             return "plain";
         }
+
     }
+
 }

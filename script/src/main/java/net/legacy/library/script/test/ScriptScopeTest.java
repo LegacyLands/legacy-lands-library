@@ -26,6 +26,7 @@ import net.legacy.library.script.scope.NashornScriptScope;
         expectedResult = "SUCCESS"
 )
 public class ScriptScopeTest {
+
     /**
      * Tests NashornScriptScope basic functionality.
      */
@@ -233,4 +234,5 @@ public class ScriptScopeTest {
             return false;
         }
     }
+
 }

@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public class GRPCTaskSchedulerClient {
+
     private final String host;
     private final int port;
     private final long timeoutMs;
@@ -248,7 +249,7 @@ public class GRPCTaskSchedulerClient {
             final boolean success = throwable == null;
 
             Throwable finalThrowable = (throwable instanceof CompletionException && throwable.getCause() != null)
-                                      ? throwable.getCause() : throwable;
+                    ? throwable.getCause() : throwable;
 
             TaskResultEvent event = success
                     ? new TaskResultEvent(taskId, method, result)
@@ -453,4 +454,5 @@ public class GRPCTaskSchedulerClient {
     private boolean isRetryable(Status status) {
         return status.getCode() == Status.Code.UNAVAILABLE || status.getCode() == Status.Code.RESOURCE_EXHAUSTED;
     }
-} 
+
+}

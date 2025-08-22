@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @InjectableComponent
 @RequiredArgsConstructor
 public class AOPService {
+
     private final AspectProxyFactory proxyFactory;
     private final ClassLoaderIsolationService isolationService;
 
@@ -197,4 +198,5 @@ public class AOPService {
 
         return result;
     }
+
 }

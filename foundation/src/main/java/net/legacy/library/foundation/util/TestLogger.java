@@ -18,6 +18,7 @@ import java.util.Arrays;
  */
 @UtilityClass
 public class TestLogger {
+
     private static final String TEST_PREFIX = "[TEST]";
     private static final String SUCCESS_ICON = "✅";
     private static final String FAILURE_ICON = "❌";
@@ -191,4 +192,5 @@ public class TestLogger {
                 .filter(line -> !line.trim().isEmpty())
                 .forEach(line -> Log.info("%s [%s] %s", TEST_PREFIX, moduleName, line.trim()));
     }
+
 }

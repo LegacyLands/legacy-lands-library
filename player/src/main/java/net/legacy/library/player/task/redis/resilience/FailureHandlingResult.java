@@ -36,6 +36,7 @@ import java.time.Duration;
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class FailureHandlingResult {
+
     /**
      * Whether to retry the operation.
      *
@@ -112,4 +113,5 @@ public class FailureHandlingResult {
     public static FailureHandlingResult giveUpSilently() {
         return giveUp(CompensationAction.NONE);
     }
+
 }

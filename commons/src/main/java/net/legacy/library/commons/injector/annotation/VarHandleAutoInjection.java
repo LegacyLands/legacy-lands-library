@@ -15,6 +15,7 @@ import java.lang.invoke.VarHandle;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface VarHandleAutoInjection {
+
     /**
      * The name of the target field for which the {@link VarHandle} is being generated.
      *
@@ -39,4 +40,5 @@ public @interface VarHandleAutoInjection {
      * @return the fully qualified class name, or an empty string if not specified
      */
     String staticMethodPackage() default "";
+
 }

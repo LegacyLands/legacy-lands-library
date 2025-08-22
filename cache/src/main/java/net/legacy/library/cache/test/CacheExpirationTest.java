@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
         expectedResult = "SUCCESS"
 )
 public class CacheExpirationTest {
+
     /**
      * Tests that items with TTL -1 never expire.
      */
@@ -160,4 +161,5 @@ public class CacheExpirationTest {
             return false;
         }
     }
+
 }

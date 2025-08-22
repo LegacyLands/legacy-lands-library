@@ -22,6 +22,7 @@ import javax.script.ScriptEngine;
  */
 @Getter
 public class NashornScriptEngine implements ScriptEngineInterface {
+
     private final ScriptEngine scriptEngine;
     private final Bindings engineScopeBindings;
 
@@ -220,4 +221,5 @@ public class NashornScriptEngine implements ScriptEngineInterface {
     public void removeGlobalVariable(String name) {
         getScriptEngine().getBindings(ScriptContext.ENGINE_SCOPE).remove(name);
     }
+
 }

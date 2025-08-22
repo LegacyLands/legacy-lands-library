@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
         expectedResult = "SUCCESS"
 )
 public class TaskChainBuilderTest {
+
     /**
      * Test basic task chain construction and execution
      */
@@ -331,4 +332,5 @@ public class TaskChainBuilderTest {
             return false;
         }
     }
+
 }

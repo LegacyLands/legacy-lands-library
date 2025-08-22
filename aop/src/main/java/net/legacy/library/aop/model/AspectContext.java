@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 @RequiredArgsConstructor
 public class AspectContext {
+
     private final Object target;
     private final Method method;
     private final Object[] arguments;
@@ -72,4 +73,5 @@ public class AspectContext {
     public boolean belongsTo(ClassLoader loader) {
         return Objects.equals(classLoader, loader);
     }
+
 }

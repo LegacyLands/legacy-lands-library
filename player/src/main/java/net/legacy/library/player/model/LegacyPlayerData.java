@@ -29,6 +29,7 @@ import java.util.function.Function;
 @Entity("legacy-player-data")
 @RequiredArgsConstructor
 public class LegacyPlayerData {
+
     /**
      * The unique identifier for the player.
      */
@@ -182,4 +183,5 @@ public class LegacyPlayerData {
         // noinspection unchecked
         return value == null ? defaultValue : (R) value;
     }
+
 }

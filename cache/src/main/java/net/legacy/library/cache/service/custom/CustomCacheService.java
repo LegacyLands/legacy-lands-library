@@ -14,6 +14,7 @@ import net.legacy.library.cache.service.CacheServiceInterface;
  * @since 2024-12-25 12:17
  */
 public class CustomCacheService<C, V> extends AbstractCacheService<C, V> implements CacheServiceInterface<C, V> {
+
     /**
      * Constructs a new CustomCacheService with the specified cache implementation.
      *
@@ -22,4 +23,5 @@ public class CustomCacheService<C, V> extends AbstractCacheService<C, V> impleme
     public CustomCacheService(C cache) {
         super(cache);
     }
+
 }

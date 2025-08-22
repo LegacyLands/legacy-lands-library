@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class PlayerDataPersistenceTimerTask implements TaskInterface<VirtualThreadScheduledFuture> {
+
     private final Duration delay;
     private final Duration interval;
     private final LockSettings lockSettings;
@@ -65,4 +66,5 @@ public class PlayerDataPersistenceTimerTask implements TaskInterface<VirtualThre
         return scheduleAtFixedRateWithVirtualThread(() -> PlayerDataPersistenceTask.of(lockSettings, legacyPlayerDataService, ttl).start(),
                 delay.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
     }
+
 }

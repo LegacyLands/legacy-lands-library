@@ -18,6 +18,7 @@ import lombok.Getter;
  * @since 2025-06-07 22:30
  */
 public abstract class AbstractModuleTestRunner {
+
     /**
      * The execution context for this test run.
      */
@@ -214,4 +215,5 @@ public abstract class AbstractModuleTestRunner {
         context.recordProcessingTime(duration);
         context.putContextData(operationName + "_duration", duration);
     }
+
 }

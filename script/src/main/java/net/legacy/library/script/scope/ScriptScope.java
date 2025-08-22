@@ -5,6 +5,7 @@ package net.legacy.library.script.scope;
  * @since 2025-03-13 14:31
  */
 public interface ScriptScope {
+
     /**
      * Gets the value.
      *
@@ -27,4 +28,5 @@ public interface ScriptScope {
      * @param name The name
      */
     void removeVariable(String name);
+
 }

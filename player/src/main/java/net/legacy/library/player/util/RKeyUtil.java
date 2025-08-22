@@ -15,6 +15,7 @@ import java.util.UUID;
  * @since 2025-01-03 19:37
  */
 public class RKeyUtil {
+
     private static final String PREFIX_LEGACY = "legacy:player:";
     private static final String SUFFIX_STREAM = ":stream";
     private static final String SUFFIX_MAP = ":map";
@@ -127,4 +128,5 @@ public class RKeyUtil {
     public static String getRLPDSReadWriteLockKey(String bucketKey) {
         return bucketKey + SUFFIX_RW_LOCK;
     }
+
 }

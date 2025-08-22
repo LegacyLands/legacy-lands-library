@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 @Getter
 @RequiredArgsConstructor
 public class ResilientRStreamAccepter implements RStreamAccepterInterface {
+
     private final RStreamAccepterInterface delegate;
     private final FailureHandler failureHandler;
     private final ScheduledExecutorService scheduler;
@@ -264,4 +265,5 @@ public class ResilientRStreamAccepter implements RStreamAccepterInterface {
             retryCounter.close();
         }
     }
+
 }

@@ -20,6 +20,7 @@ import net.legacy.library.commons.util.GsonUtil;
  */
 @AnnotationProcessor(TypeAdapterRegister.class)
 public class TypeAdapterRegisterProcessor implements CustomAnnotationProcessor {
+
     /**
      * Processes the annotated class by instantiating it and registering it
      * as a Gson type adapter for the specified class type.
@@ -44,4 +45,5 @@ public class TypeAdapterRegisterProcessor implements CustomAnnotationProcessor {
     public void exception(Class<?> clazz, Exception exception) {
         Log.error("Failed to process TypeAdapterRegister annotation", exception);
     }
+
 }

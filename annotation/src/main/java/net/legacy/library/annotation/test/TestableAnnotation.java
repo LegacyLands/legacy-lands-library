@@ -19,6 +19,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TestableAnnotation {
+
     /**
      * The test name for identification purposes.
      *
@@ -39,4 +40,5 @@ public @interface TestableAnnotation {
      * @return true if processing order should be validated
      */
     boolean validateOrder() default false;
+
 }

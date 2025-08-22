@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RequiredArgsConstructor
 public class EntityRStreamPubTask implements TaskInterface<CompletableFuture<?>> {
+
     private final LegacyEntityDataService service;
     private final EntityRStreamTask entityRStreamTask;
 
@@ -98,4 +99,5 @@ public class EntityRStreamPubTask implements TaskInterface<CompletableFuture<?>>
             );
         });
     }
-} 
+
+}

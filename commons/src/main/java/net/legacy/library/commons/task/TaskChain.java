@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public class TaskChain {
+
     private final List<Object> results;
     private final TaskInterface<?> taskInterface;
     private final List<CompletableFuture<Object>> futures;
@@ -267,4 +268,5 @@ public class TaskChain {
     public boolean hasTask(String name) {
         return nameToIndexMap.containsKey(name);
     }
+
 }

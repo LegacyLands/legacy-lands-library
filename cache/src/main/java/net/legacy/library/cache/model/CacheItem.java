@@ -12,6 +12,7 @@ import lombok.Data;
  */
 @Data
 public class CacheItem<V> {
+
     private final V value;
     private final long expirationTime;
 
@@ -42,4 +43,5 @@ public class CacheItem<V> {
 
         return expirationTime > -1 && System.currentTimeMillis() > expirationTime;
     }
+
 }

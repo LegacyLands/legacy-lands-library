@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public class CustomFailureHandler implements FailureHandler {
+
     private final RetryPolicy retryPolicy;
     private final CompensationAction compensationAction;
 
@@ -28,4 +29,5 @@ public class CustomFailureHandler implements FailureHandler {
 
         return FailureHandlingResult.giveUp(compensationAction);
     }
+
 }

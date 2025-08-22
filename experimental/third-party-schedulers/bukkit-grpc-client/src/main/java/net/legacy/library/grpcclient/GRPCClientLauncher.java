@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 @FairyLaunch
 @InjectableComponent
 public class GRPCClientLauncher extends Plugin {
+
     // DEBUG
     public static final boolean DEBUG = false;
 
@@ -31,4 +32,5 @@ public class GRPCClientLauncher extends Plugin {
             }
         }
     }
+
 }

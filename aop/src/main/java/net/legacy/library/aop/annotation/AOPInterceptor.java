@@ -16,6 +16,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AOPInterceptor {
+
     /**
      * Determines whether this interceptor should be registered as a global interceptor.
      * Global interceptors are applied to all AOP-enabled methods.
@@ -39,4 +40,5 @@ public @interface AOPInterceptor {
      * @return true if created by Fairy IoC, false otherwise
      */
     boolean isFromFairyIoC() default true;
+
 }

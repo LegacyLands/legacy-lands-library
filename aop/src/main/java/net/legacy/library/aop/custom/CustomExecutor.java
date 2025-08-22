@@ -16,6 +16,7 @@ import java.util.Properties;
  * @since 2025-06-20 18:43
  */
 public interface CustomExecutor {
+
     /**
      * Executes the method invocation with custom logic
      *
@@ -26,14 +27,14 @@ public interface CustomExecutor {
      * @throws Throwable if execution fails
      */
     Object execute(AspectContext context, MethodInvocation invocation, Properties properties) throws Throwable;
-    
+
     /**
      * Gets the name of this custom executor
      *
      * @return the executor name
      */
     String getName();
-    
+
     /**
      * Initializes the executor with configuration properties
      *
@@ -42,14 +43,14 @@ public interface CustomExecutor {
     default void initialize(Properties properties) {
         // Default implementation does nothing
     }
-    
+
     /**
      * Shuts down the executor and releases resources
      */
     default void shutdown() {
         // Default implementation does nothing
     }
-    
+
     /**
      * Checks if this executor supports the given method context
      *
@@ -59,4 +60,5 @@ public interface CustomExecutor {
     default boolean supports(AspectContext context) {
         return true;
     }
+
 }

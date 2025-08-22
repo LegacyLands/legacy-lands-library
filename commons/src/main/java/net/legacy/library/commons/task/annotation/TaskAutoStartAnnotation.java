@@ -24,10 +24,12 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TaskAutoStartAnnotation {
+
     /**
      * Determines whether the annotated class is created by @code Fairy IoC}.
      *
      * @return is created by @code Fairy IoC} or not
      */
     boolean isFromFairyIoC() default true;
+
 }

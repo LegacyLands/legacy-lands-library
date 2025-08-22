@@ -21,6 +21,7 @@ import net.legacy.library.foundation.test.TestExecutionUtil;
 @FairyLaunch
 @InjectableComponent
 public class AnnotationLauncher extends Plugin {
+
     /**
      * Debug mode flag. When set to true, enables comprehensive testing
      * of the annotation processing framework during plugin startup.
@@ -40,4 +41,5 @@ public class AnnotationLauncher extends Plugin {
     private void runDebugTests() {
         TestExecutionUtil.executeModuleTestRunner("annotation", AnnotationTestRunner.create());
     }
+
 }

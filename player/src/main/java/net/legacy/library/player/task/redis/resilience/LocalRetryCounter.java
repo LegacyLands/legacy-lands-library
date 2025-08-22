@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @RequiredArgsConstructor
 public class LocalRetryCounter implements RetryCounter {
+
     /**
      * Thread-safe map storing retry counts for each key
      */
@@ -248,4 +249,5 @@ public class LocalRetryCounter implements RetryCounter {
         counters.clear();
         expirationTimes.clear();
     }
+
 }

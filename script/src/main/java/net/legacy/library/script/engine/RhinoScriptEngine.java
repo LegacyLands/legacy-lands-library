@@ -18,6 +18,7 @@ import org.mozilla.javascript.ScriptableObject;
  */
 @Getter
 public class RhinoScriptEngine implements ScriptEngineInterface {
+
     private final Context rhinoContext;
     private final ScriptableObject rootScope;
 
@@ -208,4 +209,5 @@ public class RhinoScriptEngine implements ScriptEngineInterface {
     public void removeGlobalVariable(String name) {
         rootScope.delete(name);
     }
+
 }

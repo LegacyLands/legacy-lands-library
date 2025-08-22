@@ -28,6 +28,7 @@ import java.util.UUID;
  */
 @RStreamAccepterRegister
 public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepterInterface {
+
     /**
      * Creates a new {@link RStreamTask} for synchronizing player data based on a player's {@link UUID}.
      *
@@ -96,4 +97,5 @@ public class L1ToL2PlayerDataSyncByUuidRStreamAccepter implements RStreamAccepte
                     ack(rStream, streamMessageId);
                 });
     }
+
 }

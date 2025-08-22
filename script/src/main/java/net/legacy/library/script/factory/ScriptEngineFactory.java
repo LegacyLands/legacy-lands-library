@@ -14,6 +14,7 @@ import net.legacy.library.script.engine.V8ScriptEngine;
  */
 @UtilityClass
 public class ScriptEngineFactory {
+
     /**
      * Creates a {@link NashornScriptEngine}.
      *
@@ -43,4 +44,5 @@ public class ScriptEngineFactory {
     public static ScriptEngineInterface createV8Engine() {
         return new V8ScriptEngine();
     }
+
 }

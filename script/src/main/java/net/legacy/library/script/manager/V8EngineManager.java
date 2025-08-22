@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @since 2025-07-20 01:24
  */
 public class V8EngineManager {
+
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
 
     @Getter
@@ -87,4 +88,5 @@ public class V8EngineManager {
     public static boolean isInitialized() {
         return initialized.get();
     }
+
 }

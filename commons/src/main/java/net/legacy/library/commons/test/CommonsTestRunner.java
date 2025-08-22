@@ -33,6 +33,7 @@ import java.util.List;
         failFast = true
 )
 public class CommonsTestRunner extends AbstractModuleTestRunner {
+
     private static final String MODULE_NAME = "commons";
 
     private final TestTimer timer = new TestTimer();
@@ -261,4 +262,5 @@ public class CommonsTestRunner extends AbstractModuleTestRunner {
                 .withMetadata("passedTests", passedTests)
                 .withMetadata("failedTests", failedTests);
     }
+
 }

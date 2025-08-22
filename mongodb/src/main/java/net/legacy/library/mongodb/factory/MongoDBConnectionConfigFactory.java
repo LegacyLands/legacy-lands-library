@@ -14,6 +14,7 @@ import org.bson.UuidRepresentation;
  */
 @UtilityClass
 public final class MongoDBConnectionConfigFactory {
+
     /**
      * Creates a default {@link MongoDBConnectionConfig} instance using the standard UUID representation.
      *
@@ -54,4 +55,5 @@ public final class MongoDBConnectionConfigFactory {
     public static MongoDBConnectionConfig create(MongoClientSettings mongoClientSettings) {
         return new MongoDBConnectionConfig(mongoClientSettings);
     }
+
 }

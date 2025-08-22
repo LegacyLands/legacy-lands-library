@@ -10,6 +10,7 @@ package net.legacy.library.annotation.service;
  * @since 2024/1/7
  */
 public interface CustomAnnotationProcessor {
+
     /**
      * Invoked before processing a class.
      *
@@ -57,4 +58,5 @@ public interface CustomAnnotationProcessor {
     default void finallyAfter(Class<?> clazz) {
         // No-op by default
     }
+
 }

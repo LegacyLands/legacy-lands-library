@@ -26,6 +26,7 @@ import net.legacy.library.foundation.annotation.ModuleTest;
         expectedResult = "SUCCESS"
 )
 public class SimpleTestClass {
+
     /**
      * A simple method for testing purposes.
      *
@@ -34,4 +35,5 @@ public class SimpleTestClass {
     public String getTestMessage() {
         return "This is a simple test class";
     }
+
 }

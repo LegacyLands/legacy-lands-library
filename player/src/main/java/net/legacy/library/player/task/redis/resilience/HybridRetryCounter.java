@@ -35,6 +35,7 @@ import java.util.function.Predicate;
 @Builder
 @RequiredArgsConstructor
 public class HybridRetryCounter implements RetryCounter {
+
     /**
      * Local counter for high-performance scenarios
      */
@@ -274,4 +275,5 @@ public class HybridRetryCounter implements RetryCounter {
     public boolean wouldUseDistributed(String key) {
         return useDistributedPredicate.test(key);
     }
+
 }

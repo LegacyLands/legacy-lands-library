@@ -19,6 +19,7 @@ import java.util.UUID;
 @RegisterAsListener
 @InjectableComponent
 public class PlayerListener implements Listener {
+
     /**
      * Handles player quit events to initiate synchronization tasks for player data.
      *
@@ -33,7 +34,8 @@ public class PlayerListener implements Listener {
         UUID uniqueId = event.getPlayer().getUniqueId();
 
         // L1 L2 sync
-        LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().forEach((name, service) -> 
+        LegacyPlayerDataService.LEGACY_PLAYER_DATA_SERVICES.getResource().asMap().forEach((name, service) ->
                 L1ToL2PlayerDataSyncTask.of(uniqueId, service).start());
     }
+
 }

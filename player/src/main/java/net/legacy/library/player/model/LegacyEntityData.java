@@ -37,6 +37,7 @@ import java.util.function.Function;
 @Entity("legacy-entity-data")
 @RequiredArgsConstructor
 public class LegacyEntityData {
+
     /**
      * The unique identifier for the entity.
      */
@@ -391,4 +392,5 @@ public class LegacyEntityData {
 
         return changed;
     }
+
 }

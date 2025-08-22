@@ -27,6 +27,7 @@ import net.legacy.library.script.scope.NashornScriptScope;
         expectedResult = "SUCCESS"
 )
 public class NashornScriptEngineTest {
+
     /**
      * Tests basic script execution.
      */
@@ -272,4 +273,5 @@ public class NashornScriptEngineTest {
             return false;
         }
     }
+
 }

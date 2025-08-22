@@ -22,6 +22,7 @@ import java.util.function.BiFunction;
  */
 @Getter
 public class TaskChainBuilder {
+
     private final List<CompletableFuture<Object>> futures = new ArrayList<>();
     private final List<Object> modeResults = new ArrayList<>();
     private final Map<String, Integer> nameToIndexMap = new HashMap<>();
@@ -150,4 +151,5 @@ public class TaskChainBuilder {
             return CompletableFuture.completedFuture(result);
         }
     }
-} 
+
+}

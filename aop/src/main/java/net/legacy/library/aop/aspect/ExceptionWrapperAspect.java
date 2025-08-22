@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @InjectableComponent
 @AOPInterceptor(global = true, order = 400)
 public class ExceptionWrapperAspect implements MethodInterceptor {
+
     private final Map<Class<? extends Throwable>, Constructor<? extends Throwable>> constructorCache =
             new ConcurrentHashMap<>();
 
@@ -166,4 +167,5 @@ public class ExceptionWrapperAspect implements MethodInterceptor {
                 .replace("{args}", Arrays.toString(context.getArguments()))
                 .replace("{original}", message != null ? message : original.getClass().getSimpleName());
     }
+
 }

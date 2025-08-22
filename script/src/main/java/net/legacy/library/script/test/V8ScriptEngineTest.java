@@ -26,6 +26,7 @@ import net.legacy.library.script.factory.ScriptEngineFactory;
         expectedResult = "SUCCESS"
 )
 public class V8ScriptEngineTest {
+
     /**
      * Tests basic script execution.
      */
@@ -257,4 +258,5 @@ public class V8ScriptEngineTest {
             return false;
         }
     }
+
 }

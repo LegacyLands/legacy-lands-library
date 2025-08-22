@@ -26,6 +26,7 @@ import java.util.Set;
  */
 @UtilityClass
 public final class CacheServiceFactory {
+
     /**
      * Creates a {@link RedisCacheService} with the specified configuration.
      *
@@ -118,4 +119,5 @@ public final class CacheServiceFactory {
     public static FlexibleMultiLevelCacheService createFlexibleMultiLevelCacheService(Set<TieredCacheLevel<?, ?>> tieredCacheLevels) {
         return new FlexibleMultiLevelCacheService(tieredCacheLevels);
     }
+
 }

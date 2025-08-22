@@ -28,6 +28,7 @@ import java.util.Optional;
         expectedResult = "SUCCESS"
 )
 public class RandomGeneratorTest {
+
     /**
      * Tests basic RandomGenerator functionality with simple probability distribution.
      */
@@ -351,4 +352,5 @@ public class RandomGeneratorTest {
             return false;
         }
     }
+
 }

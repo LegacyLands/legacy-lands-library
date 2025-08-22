@@ -13,6 +13,7 @@ package net.legacy.library.foundation.test;
  */
 @FunctionalInterface
 public interface TestExecution {
+
     /**
      * Executes the test logic and returns a result summary.
      *
@@ -20,4 +21,5 @@ public interface TestExecution {
      * @throws Exception if test execution fails
      */
     TestResultSummary execute() throws Exception;
+
 }

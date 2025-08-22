@@ -29,6 +29,7 @@ import java.lang.invoke.VarHandle;
         validateLifecycle = true
 )
 public class VarHandleInjectionTest {
+
     /**
      * Test static field for VarHandle injection verification
      */
@@ -144,8 +145,10 @@ public class VarHandleInjectionTest {
         try {
             // Create a test class with invalid field name annotation
             class InvalidFieldTest {
+
                 @VarHandleAutoInjection(fieldName = "nonExistentField")
                 private static VarHandle invalidHandle;
+
             }
 
             VarHandleReflectionInjector injector = new VarHandleReflectionInjector();
@@ -176,8 +179,10 @@ public class VarHandleInjectionTest {
         try {
             // Create a test class without annotations
             class NoAnnotationTest {
+
                 private static VarHandle shouldBeNull = null;
                 private static String normalField = "unchanged";
+
             }
 
             VarHandleReflectionInjector injector = new VarHandleReflectionInjector();
@@ -210,10 +215,12 @@ public class VarHandleInjectionTest {
         try {
             // Create test class with private field
             class PrivateFieldTest {
+
                 private static String privateField = "private";
 
                 @VarHandleAutoInjection(fieldName = "privateField")
                 private static VarHandle privateFieldHandle;
+
             }
 
             VarHandleReflectionInjector injector = new VarHandleReflectionInjector();
@@ -292,4 +299,5 @@ public class VarHandleInjectionTest {
             return false;
         }
     }
+
 }

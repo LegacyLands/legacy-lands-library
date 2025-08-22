@@ -25,6 +25,7 @@ import java.util.function.Supplier;
  * @since 2024-12-21 20:03
  */
 public class RedisCacheService extends AbstractLockable<RedissonClient> implements RedisCacheServiceInterface {
+
     /**
      * Constructs a new Redis cache service with the specified Redisson client.
      *
@@ -153,4 +154,5 @@ public class RedisCacheService extends AbstractLockable<RedissonClient> implemen
             }
         }
     }
+
 }

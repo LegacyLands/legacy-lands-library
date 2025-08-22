@@ -17,6 +17,7 @@ import java.util.function.BiFunction;
  */
 @RequiredArgsConstructor
 public class ExecutionBuilder<T, R> {
+
     private final TaskChainBuilder builder;
     private final BiFunction<TaskInterface<?>, T, R> executionMode;
 
@@ -69,4 +70,5 @@ public class ExecutionBuilder<T, R> {
     public ChainContinuation run(String taskName, T taskData) {
         return execute(taskName, taskData);
     }
-} 
+
+}
