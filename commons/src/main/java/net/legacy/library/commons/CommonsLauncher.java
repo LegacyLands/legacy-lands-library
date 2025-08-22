@@ -3,7 +3,8 @@ package net.legacy.library.commons;
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.plugin.Plugin;
-import net.legacy.library.commons.task.TaskInterface;
+import net.legacy.library.commons.task.VirtualThreadExecutors;
+import net.legacy.library.commons.task.VirtualThreadSchedulerManager;
 import net.legacy.library.commons.test.CommonsTestRunner;
 import net.legacy.library.foundation.test.TestExecutionUtil;
 
@@ -29,6 +30,9 @@ public class CommonsLauncher extends Plugin {
 
     @Override
     public void onPluginEnable() {
+        VirtualThreadExecutors.initialize();
+        VirtualThreadSchedulerManager.initialize();
+        
         if (DEBUG) {
             runDebugTests();
         }
@@ -36,7 +40,8 @@ public class CommonsLauncher extends Plugin {
 
     @Override
     public void onPluginDisable() {
-        TaskInterface.VIRTUAL_SCHEDULER.close();
+        VirtualThreadExecutors.destroy();
+        VirtualThreadSchedulerManager.destroy();
     }
 
     /**
