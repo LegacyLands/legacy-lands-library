@@ -24,7 +24,9 @@ public class VirtualThreadExecutors {
      * Initializes the shared {@link ExecutorService} for virtual threads if it hasn't been already.
      */
     public static void initialize() {
-        SHARED_EXECUTOR_REF.compareAndSet(null, Executors.newVirtualThreadPerTaskExecutor());
+        SHARED_EXECUTOR_REF.compareAndSet(null, Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("LegacyLands-Virtual-Worker-", 0).factory()
+        ));
     }
 
     /**
@@ -78,7 +80,9 @@ public class VirtualThreadExecutors {
      * @return a new virtual thread-per-task {@link ExecutorService} instance
      */
     public static ExecutorService createEphemeralExecutor() {
-        return Executors.newVirtualThreadPerTaskExecutor();
+        return Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("LegacyLands-Commons-Ephemeral-Virtual-Worker-", 0).factory()
+        );
     }
 
 }

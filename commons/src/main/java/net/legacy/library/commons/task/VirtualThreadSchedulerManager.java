@@ -24,11 +24,12 @@ public class VirtualThreadSchedulerManager {
      * Initializes the shared {@link ScheduledExecutorService} if it hasn't been already.
      */
     public static void initialize() {
-        SHARED_SCHEDULER_REF.compareAndSet(null, Executors.newScheduledThreadPool(1, r -> {
-            Thread thread = new Thread(r, "TaskInterface-Virtual-Scheduler");
-            thread.setDaemon(true);
-            return thread;
-        }));
+        SHARED_SCHEDULER_REF.compareAndSet(null, Executors.newScheduledThreadPool(1,
+                Thread.ofPlatform()
+                        .name("LegacyLands-TaskInterface-Virtual-Scheduler-", 0)
+                        .daemon(true)
+                        .factory()
+        ));
     }
 
     /**

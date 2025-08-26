@@ -12,8 +12,8 @@ import java.util.concurrent.ScheduledFuture;
  *
  * <p>This class encapsulates both the scheduled future and its associated executor service,
  * providing convenient methods to cancel tasks and manage executor lifecycle. When working
- * with shared schedulers (such as {@link TaskInterface#VIRTUAL_SCHEDULER}), care should be
- * taken when calling shutdown methods to avoid affecting other scheduled tasks.
+ * with shared schedulers, care should be taken when calling shutdown methods to avoid affecting
+ * other scheduled tasks.
  *
  * @author qwq-dev
  * @since 2025-05-10 21:27
@@ -29,8 +29,7 @@ public class VirtualThreadScheduledFuture {
      * Cancels the task and shuts down the executor service.
      * Equivalent to calling {@code close(true, false)}.
      *
-     * <p><strong>Warning:</strong> If this instance wraps a shared scheduler
-     * (such as {@link TaskInterface#VIRTUAL_SCHEDULER}), calling this method will
+     * <p><strong>Warning:</strong> If this instance wraps a shared scheduler, calling this method will
      * shut down the shared scheduler and affect other scheduled tasks.
      */
     public void close() {
@@ -41,8 +40,7 @@ public class VirtualThreadScheduledFuture {
     /**
      * Cancels the task and shuts down the executor service with specific options.
      *
-     * <p><strong>Warning:</strong> If this instance wraps a shared scheduler
-     * (such as {@link TaskInterface#VIRTUAL_SCHEDULER}), calling this method will
+     * <p><strong>Warning:</strong> If this instance wraps a shared scheduler, calling this method will
      * shut down the shared scheduler and affect other scheduled tasks.
      *
      * @param mayInterruptIfRunning {@code true} to interrupt the task thread if running
