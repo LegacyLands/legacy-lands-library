@@ -1,8 +1,9 @@
-package net.legacy.library.script.scope;
+package net.legacy.library.script.scope.js;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.legacy.library.script.engine.RhinoScriptEngine;
+import net.legacy.library.script.engine.js.RhinoScriptEngine;
+import net.legacy.library.script.scope.ScriptScope;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;

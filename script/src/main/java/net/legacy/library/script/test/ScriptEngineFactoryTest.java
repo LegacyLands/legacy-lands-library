@@ -2,10 +2,10 @@ package net.legacy.library.script.test;
 
 import net.legacy.library.foundation.annotation.ModuleTest;
 import net.legacy.library.foundation.util.TestLogger;
-import net.legacy.library.script.engine.NashornScriptEngine;
-import net.legacy.library.script.engine.RhinoScriptEngine;
 import net.legacy.library.script.engine.ScriptEngineInterface;
-import net.legacy.library.script.engine.V8ScriptEngine;
+import net.legacy.library.script.engine.js.NashornScriptEngine;
+import net.legacy.library.script.engine.js.RhinoScriptEngine;
+import net.legacy.library.script.engine.js.V8ScriptEngine;
 import net.legacy.library.script.factory.ScriptEngineFactory;
 
 /**

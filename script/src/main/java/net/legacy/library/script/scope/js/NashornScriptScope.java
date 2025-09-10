@@ -1,7 +1,8 @@
-package net.legacy.library.script.scope;
+package net.legacy.library.script.scope.js;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.legacy.library.script.scope.ScriptScope;
 
 import javax.script.Bindings;
 import javax.script.SimpleBindings;

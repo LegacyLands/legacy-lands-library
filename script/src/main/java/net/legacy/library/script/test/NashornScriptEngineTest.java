@@ -5,7 +5,7 @@ import net.legacy.library.foundation.util.TestLogger;
 import net.legacy.library.script.engine.ScriptEngineInterface;
 import net.legacy.library.script.exception.ScriptException;
 import net.legacy.library.script.factory.ScriptEngineFactory;
-import net.legacy.library.script.scope.NashornScriptScope;
+import net.legacy.library.script.scope.js.NashornScriptScope;
 
 /**
  * Test class for NashornScriptEngine functionality.

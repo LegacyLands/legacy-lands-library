@@ -40,4 +40,7 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.mozilla/rhino
     implementation("org.mozilla:rhino:1.8.0")
+
+    // https://mvnrepository.com/artifact/org.apache.groovy/groovy-all
+    implementation("org.apache.groovy:groovy-all:5.0.0")
 }

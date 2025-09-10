@@ -1,10 +1,11 @@
 package net.legacy.library.script.factory;
 
 import lombok.experimental.UtilityClass;
-import net.legacy.library.script.engine.NashornScriptEngine;
-import net.legacy.library.script.engine.RhinoScriptEngine;
 import net.legacy.library.script.engine.ScriptEngineInterface;
-import net.legacy.library.script.engine.V8ScriptEngine;
+import net.legacy.library.script.engine.groovy.GroovyEngine;
+import net.legacy.library.script.engine.js.NashornScriptEngine;
+import net.legacy.library.script.engine.js.RhinoScriptEngine;
+import net.legacy.library.script.engine.js.V8ScriptEngine;
 
 /**
  * Factory for creating script engine instances.
@@ -43,6 +44,16 @@ public class ScriptEngineFactory {
      */
     public static ScriptEngineInterface createV8Engine() {
         return new V8ScriptEngine();
+    }
+
+    /**
+     * Creates a {@link GroovyEngine}.
+     *
+     * @return a new {@link GroovyEngine} instance
+     * @see GroovyEngine
+     */
+    public static ScriptEngineInterface createGroovyEngine() {
+        return new GroovyEngine();
     }
 
 }

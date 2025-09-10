@@ -1,9 +1,10 @@
-package net.legacy.library.script.engine;
+package net.legacy.library.script.engine.js;
 
 import lombok.Getter;
+import net.legacy.library.script.engine.ScriptEngineInterface;
 import net.legacy.library.script.exception.ScriptException;
-import net.legacy.library.script.scope.RhinoScriptScope;
 import net.legacy.library.script.scope.ScriptScope;
+import net.legacy.library.script.scope.js.RhinoScriptScope;
 import org.apache.commons.lang3.Validate;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;

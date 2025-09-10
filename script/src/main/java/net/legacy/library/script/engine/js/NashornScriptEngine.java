@@ -1,9 +1,10 @@
-package net.legacy.library.script.engine;
+package net.legacy.library.script.engine.js;
 
 import lombok.Getter;
+import net.legacy.library.script.engine.ScriptEngineInterface;
 import net.legacy.library.script.exception.ScriptException;
-import net.legacy.library.script.scope.NashornScriptScope;
 import net.legacy.library.script.scope.ScriptScope;
+import net.legacy.library.script.scope.js.NashornScriptScope;
 import org.apache.commons.lang3.Validate;
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 

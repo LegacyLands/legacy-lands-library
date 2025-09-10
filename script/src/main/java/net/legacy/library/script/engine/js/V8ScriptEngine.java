@@ -1,4 +1,4 @@
-package net.legacy.library.script.engine;
+package net.legacy.library.script.engine.js;
 
 import com.caoccao.javet.interop.V8Runtime;
 import com.caoccao.javet.interop.converters.JavetObjectConverter;
@@ -8,6 +8,7 @@ import com.caoccao.javet.values.reference.V8ValueObject;
 import io.fairyproject.log.Log;
 import lombok.Cleanup;
 import lombok.Getter;
+import net.legacy.library.script.engine.ScriptEngineInterface;
 import net.legacy.library.script.exception.ScriptException;
 import net.legacy.library.script.manager.V8EngineManager;
 import net.legacy.library.script.scope.ScriptScope;

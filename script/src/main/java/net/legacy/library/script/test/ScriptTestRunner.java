@@ -13,13 +13,14 @@ import net.legacy.library.script.factory.ScriptEngineFactory;
  * Test runner for validating script engine functionality.
  *
  * <p>This class orchestrates the execution of script engine tests, including
- * running JavaScript engine tests, scope management tests, and compilation tests.
+ * running JavaScript engine tests, Groovy engine tests, scope management tests, and compilation tests.
  * It provides comprehensive testing coverage for the script execution framework.
  *
  * @author qwq-dev
  * @version 1.0
  * @since 2025-06-22
  */
+@Getter
 @TestConfiguration(
         continueOnFailure = false,
         verboseLogging = true,
@@ -34,14 +35,10 @@ public class ScriptTestRunner extends AbstractModuleTestRunner {
 
     private static final String MODULE_NAME = "script";
 
-    @Getter
     private final ScriptEngineInterface nashornEngine;
-
-    @Getter
     private final ScriptEngineInterface rhinoEngine;
-
-    @Getter
     private final ScriptEngineInterface v8Engine;
+    private final ScriptEngineInterface groovyEngine;
 
     private final TestTimer timer = new TestTimer();
 
@@ -50,6 +47,7 @@ public class ScriptTestRunner extends AbstractModuleTestRunner {
         this.nashornEngine = ScriptEngineFactory.createNashornScriptEngine();
         this.rhinoEngine = ScriptEngineFactory.createRhinoScriptEngine();
         this.v8Engine = ScriptEngineFactory.createV8Engine();
+        this.groovyEngine = ScriptEngineFactory.createGroovyEngine();
     }
 
     /**
@@ -91,6 +89,12 @@ public class ScriptTestRunner extends AbstractModuleTestRunner {
         executeTestClass(V8ScriptEngineTest.class, "V8 Script Engine");
 
         timer.stopTimer("v8-tests");
+        timer.startTimer("groovy-tests");
+
+        // Test Groovy engine
+        executeTestClass(GroovyEngineTest.class, "Groovy Script Engine");
+
+        timer.stopTimer("groovy-tests");
         timer.startTimer("factory-tests");
 
         // Test Script Engine Factory
