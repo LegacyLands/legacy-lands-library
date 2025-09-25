@@ -17,6 +17,8 @@ fairy {
     fairyPackage.set("io.fairyproject")
 
     bukkitProperties().depends.add("fairy-lib-plugin")
+
+    bukkitProperties().depends.add("commons")
     bukkitProperties().depends.add("annotation")
     bukkitProperties().depends.add("foundation")
 
@@ -34,4 +36,7 @@ dependencies {
 
     // Foundation module
     compileOnly(project(":foundation"))
+
+    // ByteBuddy for dynamic class-based proxies
+    implementation("net.bytebuddy:byte-buddy:1.14.12")
 }

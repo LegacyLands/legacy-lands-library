@@ -40,7 +40,6 @@ public class AOPPointcutProcessor implements CustomAnnotationProcessor {
     public void process(Class<?> clazz) {
         // Skip if already processed
         if (PROCESSED_CLASSES.putIfAbsent(clazz, Boolean.TRUE) != null) {
-            Log.debug("[AOPPointcutProcessor] Class %s already processed, skipping", clazz.getName());
             return;
         }
 

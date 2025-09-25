@@ -22,7 +22,7 @@ public interface Pointcut {
      * frequently during proxy creation and method invocation.
      *
      * @param method the method to test
-     * @param targetClass the class declaring the method (may be different from method.getDeclaringClass() due to inheritance)
+     * @param targetClass the class declaring the method (which can differ from method.getDeclaringClass() due to inheritance)
      * @return {@code true} if the pointcut matches, {@code false} otherwise
      */
     boolean matches(Method method, Class<?> targetClass);

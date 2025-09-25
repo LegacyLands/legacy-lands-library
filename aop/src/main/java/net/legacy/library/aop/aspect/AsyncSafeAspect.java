@@ -18,7 +18,6 @@ import org.bukkit.Bukkit;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,17 +88,7 @@ public class AsyncSafeAspect implements MethodInterceptor {
             return invocation.proceed();
         }
 
-        // Check for re-entrant calls
-        if (!asyncSafe.allowReentrant()) {
-            String lockKey = generateLockKey(context);
-            ReentrantLock lock = methodLocks.computeIfAbsent(lockKey, k -> new ReentrantLock());
-
-            if (lock.isHeldByCurrentThread()) {
-                throw new IllegalStateException(
-                        "Re-entrant call detected for method: " + method.getName()
-                );
-            }
-        }
+        enforceReentrancyPolicy(asyncSafe, context, method);
 
         boolean isMainThread = Bukkit.isPrimaryThread();
         AsyncSafe.ThreadType targetThread = asyncSafe.target();
@@ -110,6 +99,28 @@ public class AsyncSafeAspect implements MethodInterceptor {
             case VIRTUAL -> executeVirtual(context, invocation, asyncSafe);
             case CUSTOM -> executeCustom(context, invocation, asyncSafe);
         };
+    }
+
+    private void enforceReentrancyPolicy(AsyncSafe asyncSafe, AspectContext context, Method method) {
+        if (asyncSafe.allowReentrant()) {
+            return;
+        }
+
+        String lockKey = generateLockKey(context);
+        ReentrantLock lock = methodLocks.computeIfAbsent(lockKey, key -> new ReentrantLock());
+        if (lock.isHeldByCurrentThread()) {
+            throw new IllegalStateException("Re-entrant call detected for method: " + method.getName());
+        }
+    }
+
+    private void enforceCustomReentrancy(AsyncSafe asyncSafe, AspectContext context, CustomLockStrategy lockStrategy) {
+        if (asyncSafe.allowReentrant()) {
+            return;
+        }
+
+        if (lockStrategy.isReentrant(context)) {
+            throw new IllegalStateException("Re-entrant call detected for method: " + context.getMethod().getName());
+        }
     }
 
     /**
@@ -184,17 +195,19 @@ public class AsyncSafeAspect implements MethodInterceptor {
     }
 
     private Object executeWithLock(AspectContext context, MethodInvocation invocation, AsyncSafe asyncSafe) throws Throwable {
-        if (!asyncSafe.allowReentrant()) {
-            String lockKey = generateLockKey(context);
-            ReentrantLock lock = methodLocks.get(lockKey);
+        if (asyncSafe.allowReentrant()) {
+            return invocation.proceed();
+        }
 
-            if (lock != null) {
-                lock.lock();
-                try {
-                    return invocation.proceed();
-                } finally {
-                    lock.unlock();
-                }
+        String lockKey = generateLockKey(context);
+        ReentrantLock lock = methodLocks.get(lockKey);
+
+        if (lock != null) {
+            lock.lock();
+            try {
+                return invocation.proceed();
+            } finally {
+                lock.unlock();
             }
         }
 
@@ -233,96 +246,84 @@ public class AsyncSafeAspect implements MethodInterceptor {
         CustomExecutorRegistry registry = CustomExecutorRegistry.getInstance();
 
         // Get custom executor
-        CustomExecutor executor = null;
-        if (!executorName.isEmpty()) {
-            executor = registry.getExecutor(executorName);
-            if (executor == null) {
-                throw new IllegalStateException("Custom executor not found: " + executorName);
-            }
+        CustomExecutor executor = executorName.isEmpty() ? null : registry.getExecutor(executorName);
+        if (!executorName.isEmpty() && executor == null) {
+            throw new IllegalStateException("Custom executor not found: " + executorName);
         }
 
         // Get custom lock strategy
-        CustomLockStrategy lockStrategy = null;
-        if (!lockStrategyName.isEmpty()) {
-            lockStrategy = registry.getLockStrategy(lockStrategyName);
-            if (lockStrategy == null) {
-                throw new IllegalStateException("Custom lock strategy not found: " + lockStrategyName);
-            }
-        } else {
-            lockStrategy = registry.getLockStrategy("default");
+        CustomLockStrategy lockStrategy = lockStrategyName.isEmpty()
+                ? registry.getLockStrategy("default")
+                : registry.getLockStrategy(lockStrategyName);
+        if (lockStrategy == null) {
+            throw new IllegalStateException("Custom lock strategy not found: " +
+                    (lockStrategyName.isEmpty() ? "default" : lockStrategyName));
         }
 
         // Get custom timeout handler
-        CustomTimeoutHandler timeoutHandler = null;
-        if (!timeoutHandlerName.isEmpty()) {
-            timeoutHandler = registry.getTimeoutHandler(timeoutHandlerName);
-            if (timeoutHandler == null) {
-                throw new IllegalStateException("Custom timeout handler not found: " + timeoutHandlerName);
-            }
-        } else {
-            timeoutHandler = registry.getTimeoutHandler("default");
+        CustomTimeoutHandler timeoutHandler = timeoutHandlerName.isEmpty()
+                ? registry.getTimeoutHandler("default")
+                : registry.getTimeoutHandler(timeoutHandlerName);
+        if (timeoutHandler == null) {
+            throw new IllegalStateException("Custom timeout handler not found: " +
+                    (timeoutHandlerName.isEmpty() ? "default" : timeoutHandlerName));
         }
 
         // Check for re-entrant calls with custom lock strategy
-        if (!asyncSafe.allowReentrant() && lockStrategy.isReentrant(context)) {
-            throw new IllegalStateException(
-                    "Re-entrant call detected for method: " + context.getMethod().getName()
-            );
-        }
-
-        final CustomTimeoutHandler finalTimeoutHandler = timeoutHandler;
-        final CustomLockStrategy finalLockStrategy = lockStrategy;
-        final CustomExecutor finalExecutor = executor;
+        enforceCustomReentrancy(asyncSafe, context, lockStrategy);
 
         // Execute with custom components
-        if (finalExecutor != null) {
+        if (executor != null) {
             // Use custom executor
             long startTime = System.currentTimeMillis();
-            finalTimeoutHandler.beforeExecution(context, asyncSafe.timeout(), properties);
+            timeoutHandler.beforeExecution(context, asyncSafe.timeout(), properties);
 
             try {
-                Object result = finalExecutor.execute(context, new MethodInvocation() {
+                Object result = executor.execute(context, new MethodInvocation() {
                     @Override
                     public Object proceed() throws Throwable {
-                        return executeWithCustomLock(context, invocation, finalLockStrategy, properties);
+                        return executeWithCustomLock(context, invocation, lockStrategy, properties);
+                    }
+
+                    @Override
+                    public Object[] getArguments() {
+                        return context.getArguments().clone();
                     }
                 }, properties);
 
                 // Check if result is a CompletableFuture and handle timeout
                 if (result instanceof CompletableFuture) {
+                    // noinspection unchecked
                     result = waitForResultWithCustomHandler((CompletableFuture<Object>) result, asyncSafe.timeout(),
-                            context, finalTimeoutHandler, properties);
+                            context, timeoutHandler, properties);
                 }
 
-                finalTimeoutHandler.afterExecution(context, result,
+                timeoutHandler.afterExecution(context, result,
                         System.currentTimeMillis() - startTime, properties);
                 return result;
-            } catch (Throwable e) {
-                if (e instanceof TimeoutException) {
-                    return finalTimeoutHandler.handleTimeout(context, null, asyncSafe.timeout(), properties);
+            } catch (Throwable throwable) {
+                if (throwable instanceof TimeoutException) {
+                    return timeoutHandler.handleTimeout(context, null, asyncSafe.timeout(), properties);
                 }
-                throw e;
+                throw throwable;
             }
         } else {
             // Use default execution with custom lock and timeout handling
-            return executeWithCustomLock(context, invocation, finalLockStrategy, properties);
+            return executeWithCustomLock(context, invocation, lockStrategy, properties);
         }
     }
 
     private Object executeWithCustomLock(AspectContext context, MethodInvocation invocation,
                                          CustomLockStrategy lockStrategy, Properties properties) throws Throwable {
         if (lockStrategy != null) {
-            return lockStrategy.executeWithLock(context, new Callable<Object>() {
-                @Override
-                public Object call() throws Exception {
-                    try {
-                        return invocation.proceed();
-                    } catch (Throwable e) {
-                        if (e instanceof Exception) {
-                            throw (Exception) e;
-                        }
-                        throw new RuntimeException(e);
+            return lockStrategy.executeWithLock(context, () -> {
+                try {
+                    return invocation.proceed();
+                } catch (Throwable throwable) {
+                    if (throwable instanceof Exception) {
+                        throw (Exception) throwable;
                     }
+                    throw new RuntimeException(throwable);
                 }
             }, properties);
         } else {

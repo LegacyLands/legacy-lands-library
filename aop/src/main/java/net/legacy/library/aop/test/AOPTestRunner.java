@@ -53,7 +53,14 @@ public class AOPTestRunner extends AbstractModuleTestRunner {
             AOPAnnotationTest.class,
             AOPCustomTest.class,
             AOPPointcutTest.class,
-            ParameterMatchingTest.class
+            ParameterMatchingTest.class,
+            AOPDistributedTransactionTest.class,
+            AOPSecurityTest.class,
+            AOPCircuitBreakerTest.class,
+            AOPRetryTest.class,
+            AOPValidationTracingTest.class,
+            ClassLoaderIsolationTest.class,
+            ConfigurationServiceTest.class
     };
 
     @Getter

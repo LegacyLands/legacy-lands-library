@@ -1,7 +1,13 @@
 package net.legacy.library.aop.registry;
 
 import net.legacy.library.aop.aspect.AsyncSafeAspect;
+import net.legacy.library.aop.aspect.CircuitBreakerAspect;
+import net.legacy.library.aop.aspect.DistributedTransactionAspect;
 import net.legacy.library.aop.aspect.MonitoringAspect;
+import net.legacy.library.aop.aspect.RetryAspect;
+import net.legacy.library.aop.aspect.SecurityAspect;
+import net.legacy.library.aop.aspect.TracingAspect;
+import net.legacy.library.aop.aspect.ValidationAspect;
 import net.legacy.library.aop.interceptor.MethodInterceptor;
 
 import java.util.Map;
@@ -59,6 +65,60 @@ public class InterceptorRegistry {
      */
     public static AsyncSafeAspect getAsyncSafeAspect() {
         return get(AsyncSafeAspect.class);
+    }
+
+    /**
+     * Gets the DistributedTransactionAspect instance.
+     *
+     * @return the DistributedTransactionAspect, or {@code null} if not registered
+     */
+    public static DistributedTransactionAspect getDistributedTransactionAspect() {
+        return get(DistributedTransactionAspect.class);
+    }
+
+    /**
+     * Gets the SecurityAspect instance.
+     *
+     * @return the SecurityAspect, or {@code null} if not registered
+     */
+    public static SecurityAspect getSecurityAspect() {
+        return get(SecurityAspect.class);
+    }
+
+    /**
+     * Gets the CircuitBreakerAspect instance.
+     *
+     * @return the CircuitBreakerAspect, or {@code null} if not registered
+     */
+    public static CircuitBreakerAspect getCircuitBreakerAspect() {
+        return get(CircuitBreakerAspect.class);
+    }
+
+    /**
+     * Gets the RetryAspect instance.
+     *
+     * @return the RetryAspect, or {@code null} if not registered
+     */
+    public static RetryAspect getRetryAspect() {
+        return get(RetryAspect.class);
+    }
+
+    /**
+     * Gets the ValidationAspect instance.
+     *
+     * @return the ValidationAspect, or {@code null} if not registered
+     */
+    public static ValidationAspect getValidationAspect() {
+        return get(ValidationAspect.class);
+    }
+
+    /**
+     * Gets the TracingAspect instance.
+     *
+     * @return the TracingAspect, or {@code null} if not registered
+     */
+    public static TracingAspect getTracingAspect() {
+        return get(TracingAspect.class);
     }
 
     /**

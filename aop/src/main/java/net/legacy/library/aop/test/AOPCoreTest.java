@@ -1,9 +1,15 @@
 package net.legacy.library.aop.test;
 
 import net.legacy.library.aop.annotation.AsyncSafe;
+import net.legacy.library.aop.annotation.Logged;
 import net.legacy.library.aop.annotation.Monitored;
+import net.legacy.library.aop.aspect.CircuitBreakerAspect;
+import net.legacy.library.aop.aspect.LoggingAspect;
 import net.legacy.library.aop.aspect.MonitoringAspect;
+import net.legacy.library.aop.aspect.RetryAspect;
+import net.legacy.library.aop.aspect.ValidationAspect;
 import net.legacy.library.aop.factory.AOPFactory;
+import net.legacy.library.aop.model.MethodMetrics;
 import net.legacy.library.aop.proxy.AspectProxyFactory;
 import net.legacy.library.aop.service.AOPService;
 import net.legacy.library.aop.service.ClassLoaderIsolationService;
@@ -41,7 +47,25 @@ public class AOPCoreTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -53,10 +77,7 @@ public class AOPCoreTest {
             TestService service = aopFactory.create(TestServiceImpl.class);
 
             // Validate proxy creation succeeded - check for non-null and different class
-            boolean proxyCreated = service != null &&
-                    !service.getClass().equals(TestServiceImpl.class);
-
-            if (!proxyCreated) {
+            if (service == null || service.getClass().equals(TestServiceImpl.class)) {
                 TestLogger.logFailure("aop", "Basic proxy creation failed: proxy was not created");
                 return false;
             }
@@ -65,13 +86,13 @@ public class AOPCoreTest {
             String testInput = "test input";
             String result = service.processData(testInput);
             // Validate result structure and content rather than exact match
-            boolean validResult = result != null &&
+            boolean resultValid = result != null &&
                     result.startsWith("Processed:") &&
                     result.contains(testInput.toUpperCase());
 
-            TestLogger.logInfo("aop", "Basic proxy creation test: proxyCreated=%s, validResult=%s", proxyCreated, validResult);
+            TestLogger.logInfo("aop", "Basic proxy creation test: proxyCreated=%s, resultValid=%s", true, resultValid);
 
-            return validResult;
+            return resultValid;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "Basic proxy creation test failed: %s", exception.getMessage());
             return false;
@@ -85,27 +106,43 @@ public class AOPCoreTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Create a simple object with no AOP annotations
             SimpleTestObject original = new SimpleTestObject();
             SimpleTestObject proxied = aopService.createProxy(original);
 
             // Should return the same object when no interceptors apply
-            boolean sameObject = proxied == original;
-
-            if (!sameObject) {
+            if (proxied != original) {
                 TestLogger.logFailure("aop", "No interceptor fallback failed: created unnecessary proxy");
                 return false;
             }
 
             // Verify method execution still works
             String result = proxied.simpleMethod();
-            boolean validResult = "simple".equals(result);
+            boolean resultValid = "simple".equals(result);
 
-            TestLogger.logInfo("aop", "No interceptor fallback test: sameObject=%s, validResult=%s", sameObject, validResult);
+            TestLogger.logInfo("aop", "No interceptor fallback test: sameObject=%s, validResult=%s", true, resultValid);
 
-            return validResult;
+            return resultValid;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "No interceptor fallback test failed: %s", exception.getMessage());
             return false;
@@ -119,7 +156,25 @@ public class AOPCoreTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -135,15 +190,12 @@ public class AOPCoreTest {
             int result = service.calculateSum(a, b);
             int expectedSum = a + b;
 
-            // Validate result
-            boolean validResult = result == expectedSum;
-
-            if (!validResult) {
+            if (result != expectedSum) {
                 TestLogger.logFailure("aop", "Multiple aspect composition failed: expected 8, got %d", result);
                 return false;
             }
 
-            TestLogger.logInfo("aop", "Multiple aspect composition test: validResult=%s", validResult);
+            TestLogger.logInfo("aop", "Multiple aspect composition test: validResult=%s", true);
 
             return true;
         } catch (Exception exception) {
@@ -159,7 +211,25 @@ public class AOPCoreTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -167,19 +237,18 @@ public class AOPCoreTest {
 
             AOPFactory aopFactory = new AOPFactory(aopService);
 
-            // Test service availability - services should be created successfully
-            // Note: These should always be non-null since constructor succeeded
-            boolean servicesAvailable = true;
-
             // Create and test a proxy
             TestService service = aopFactory.create(TestServiceImpl.class);
             int result = service.calculateSum(1, 2);
 
-            boolean validExecution = result == 3;
+            if (result != 3) {
+                TestLogger.logFailure("aop", "AOP service lifecycle test: expected sum=3, got %d", result);
+                return false;
+            }
 
-            TestLogger.logInfo("aop", "AOP service lifecycle test: servicesAvailable=%s, validExecution=%s", servicesAvailable, validExecution);
+            TestLogger.logInfo("aop", "AOP service lifecycle test: servicesAvailable=%s, validExecution=%s", true, true);
 
-            return validExecution;
+            return true;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "AOP service lifecycle test failed: %s", exception.getMessage());
             return false;
@@ -193,7 +262,25 @@ public class AOPCoreTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -237,7 +324,25 @@ public class AOPCoreTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -253,20 +358,71 @@ public class AOPCoreTest {
             // Wait for result and validate
             String result = future.get(5, java.util.concurrent.TimeUnit.SECONDS);
             String inputLower = "async test";
-            boolean validResult = result != null &&
-                    result.toLowerCase().contains("async") &&
-                    result.toLowerCase().contains(inputLower);
-
-            if (!validResult) {
+            if (result == null
+                    || !result.toLowerCase().contains("async")
+                    || !result.toLowerCase().contains(inputLower)) {
                 TestLogger.logFailure("aop", "Async method handling failed: invalid result %s", result);
                 return false;
             }
 
-            TestLogger.logInfo("aop", "Async method handling test: validResult=%s", validResult);
+            TestLogger.logInfo("aop", "Async method handling test: validResult=%s", true);
 
             return true;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "Async method handling test failed: %s", exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Tests proxy creation for concrete classes without interfaces using ByteBuddy fallback.
+     */
+    public static boolean testClassProxyFallback() {
+        try {
+            ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
+            AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
+
+            MonitoringAspect monitoringAspect = new MonitoringAspect();
+            LoggingAspect loggingAspect = new LoggingAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    monitoringAspect,
+                    null,
+                    loggingAspect
+            );
+
+            aopService.initialize();
+            aopService.registerTestInterceptors(ClassOnlyComponent.class);
+
+            AOPFactory aopFactory = new AOPFactory(aopService);
+            ClassOnlyComponent component = aopFactory.create(ClassOnlyComponent.class);
+
+            if (component == null || component.getClass().equals(ClassOnlyComponent.class)) {
+                TestLogger.logFailure("aop", "Class proxy fallback failed: proxy was not created");
+                return false;
+            }
+
+            String payload = "class-test";
+            String response = component.performOperation(payload);
+
+            MethodMetrics metrics = aopService.getMonitoringMetrics("class-proxy-operation");
+            boolean resultValid = response != null && response.contains(payload);
+            boolean metricsValid = metrics != null && metrics.getInvocationCount() == 1;
+
+            TestLogger.logInfo("aop", "Class proxy fallback test: proxyCreated=%s, resultValid=%s, metricsValid=%s",
+                    true, resultValid, metricsValid);
+
+            return resultValid && metricsValid;
+        } catch (Exception exception) {
+            TestLogger.logFailure("aop", "Class proxy fallback test failed: %s", exception.getMessage());
             return false;
         }
     }
@@ -323,6 +479,19 @@ public class AOPCoreTest {
             if (Math.random() < 0.5) {
                 throw new RuntimeException("Random failure for testing");
             }
+        }
+
+    }
+
+    /**
+     * Concrete component without interfaces to validate class-based proxying.
+     */
+    public static class ClassOnlyComponent {
+
+        @Monitored(name = "class-proxy-operation", includeArgs = true)
+        @Logged(includeArgs = true, includeResult = true)
+        public String performOperation(String payload) {
+            return "Handled: " + payload;
         }
 
     }

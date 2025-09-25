@@ -1,13 +1,12 @@
 package net.legacy.library.aop.interceptor;
 
 /**
- * Functional interface representing a method invocation in the interceptor chain.
+ * Interface representing a method invocation in the interceptor chain.
  *
  * @author qwq-dev
  * @version 1.0
  * @since 2025-06-20 18:43
  */
-@FunctionalInterface
 public interface MethodInvocation {
 
     /**
@@ -17,5 +16,12 @@ public interface MethodInvocation {
      * @throws Throwable if the invocation fails at any point in the chain
      */
     Object proceed() throws Throwable;
+
+    /**
+     * Gets the arguments passed to the method.
+     *
+     * @return array of method arguments
+     */
+    Object[] getArguments();
 
 }

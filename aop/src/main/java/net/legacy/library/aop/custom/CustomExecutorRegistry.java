@@ -198,15 +198,21 @@ public class CustomExecutorRegistry {
             public Object handleTimeout(AspectContext context, CompletableFuture<?> future,
                                         long timeout, Properties properties) throws Throwable {
                 future.cancel(true);
-                throw new TimeoutException(
-                        "Method execution timed out after " + timeout + "ms: " +
-                                context.getMethod().getName()
-                );
+                String fallback = properties != null ? properties.getProperty("fallbackResult") : null;
+                if (fallback != null) {
+                    return fallback;
+                }
+
+                String messageTemplate = properties != null && properties.getProperty("message") != null
+                        ? properties.getProperty("message")
+                        : "Method execution timed out after %dms: %s";
+                throw new TimeoutException(String.format(messageTemplate, timeout, context.getMethod().getName()));
             }
         });
 
         // Register default lock strategy
         registerLockStrategy(new CustomLockStrategy() {
+            private static final String LOCK_KEY_ATTRIBUTE = "async.safe.lockKey";
             private final ConcurrentHashMap<String, ReentrantLock> locks =
                     new ConcurrentHashMap<>();
 
@@ -219,7 +225,8 @@ public class CustomExecutorRegistry {
             public <T> T executeWithLock(AspectContext context,
                                          Callable<T> operation,
                                          Properties properties) throws Exception {
-                String lockKey = generateLockKey(context);
+                String lockKey = resolveLockKey(context, properties);
+                context.setAttribute(LOCK_KEY_ATTRIBUTE, lockKey);
                 ReentrantLock lock = locks.computeIfAbsent(lockKey,
                         k -> new ReentrantLock());
 
@@ -233,7 +240,10 @@ public class CustomExecutorRegistry {
 
             @Override
             public boolean isReentrant(AspectContext context) {
-                String lockKey = generateLockKey(context);
+                String lockKey = context.getAttribute(LOCK_KEY_ATTRIBUTE);
+                if (lockKey == null) {
+                    lockKey = resolveLockKey(context, null);
+                }
                 ReentrantLock lock = locks.get(lockKey);
                 return lock != null && lock.isHeldByCurrentThread();
             }
@@ -242,6 +252,13 @@ public class CustomExecutorRegistry {
                 return context.getTarget().getClass().getName() + "#" +
                         context.getMethod().getName() + "#" +
                         context.getMethod().getParameterCount();
+            }
+
+            private String resolveLockKey(AspectContext context, Properties properties) {
+                if (properties != null && properties.getProperty("lockKey") != null) {
+                    return properties.getProperty("lockKey");
+                }
+                return generateLockKey(context);
             }
         });
     }

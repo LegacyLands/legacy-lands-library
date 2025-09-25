@@ -26,6 +26,10 @@ public class AspectInvocationHandler implements InvocationHandler {
     private final List<MethodInterceptor> interceptors;
     private final ClassLoaderIsolationService isolationService;
 
+    protected Object getTarget() {
+        return target;
+    }
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         // Handle Object methods
@@ -88,24 +92,41 @@ public class AspectInvocationHandler implements InvocationHandler {
 
         if (index >= interceptors.size()) {
             // End of chain - invoke the actual method
-            return () -> {
-                try {
-                    return method.invoke(target, args);
-                } catch (InvocationTargetException invocationTargetException) {
-                    // Unwrap the actual exception
-                    throw invocationTargetException.getTargetException();
+            return new MethodInvocation() {
+                @Override
+                public Object proceed() throws Throwable {
+                    try {
+                        return method.invoke(target, args);
+                    } catch (InvocationTargetException invocationTargetException) {
+                        // Unwrap the actual exception
+                        throw invocationTargetException.getTargetException();
+                    }
+                }
+
+                @Override
+                public Object[] getArguments() {
+                    return args != null ? args.clone() : new Object[0];
                 }
             };
         }
 
         // Create chain recursively
         MethodInterceptor interceptor = interceptors.get(index);
-        return () -> {
-            AspectContext context = AspectContext.create(target, method, args);
-            MethodInvocation next = createInvocationChain(
-                    target, method, args, interceptors, index + 1
-            );
-            return interceptor.intercept(context, next);
+        MethodInvocation next = createInvocationChain(
+                target, method, args, interceptors, index + 1
+        );
+
+        return new MethodInvocation() {
+            @Override
+            public Object proceed() throws Throwable {
+                AspectContext context = AspectContext.create(target, method, args);
+                return interceptor.intercept(context, next);
+            }
+
+            @Override
+            public Object[] getArguments() {
+                return args != null ? args.clone() : new Object[0];
+            }
         };
     }
 

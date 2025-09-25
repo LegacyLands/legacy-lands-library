@@ -44,10 +44,9 @@ public class AOPInterceptorProcessor implements CustomAnnotationProcessor {
      * @param clazz the annotated class to be processed
      */
     @Override
-    public void process(Class<?> clazz) throws Exception {
+    public void process(Class<?> clazz) {
         // Skip if already processed
         if (PROCESSED_CLASSES.putIfAbsent(clazz, Boolean.TRUE) != null) {
-            Log.debug("[AOPInterceptorProcessor] Class %s already processed, skipping", clazz.getName());
             return;
         }
 

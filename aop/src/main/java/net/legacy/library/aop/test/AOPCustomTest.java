@@ -2,6 +2,9 @@ package net.legacy.library.aop.test;
 
 import net.legacy.library.aop.annotation.AsyncSafe;
 import net.legacy.library.aop.aspect.AsyncSafeAspect;
+import net.legacy.library.aop.aspect.CircuitBreakerAspect;
+import net.legacy.library.aop.aspect.RetryAspect;
+import net.legacy.library.aop.aspect.ValidationAspect;
 import net.legacy.library.aop.custom.CustomExecutor;
 import net.legacy.library.aop.custom.CustomExecutorRegistry;
 import net.legacy.library.aop.custom.CustomLockStrategy;
@@ -45,7 +48,25 @@ public class AOPCustomTest {
             // Initialize AOP components
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();

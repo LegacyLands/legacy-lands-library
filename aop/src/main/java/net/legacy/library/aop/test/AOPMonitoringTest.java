@@ -1,7 +1,10 @@
 package net.legacy.library.aop.test;
 
 import net.legacy.library.aop.annotation.Monitored;
+import net.legacy.library.aop.aspect.CircuitBreakerAspect;
 import net.legacy.library.aop.aspect.MonitoringAspect;
+import net.legacy.library.aop.aspect.RetryAspect;
+import net.legacy.library.aop.aspect.ValidationAspect;
 import net.legacy.library.aop.factory.AOPFactory;
 import net.legacy.library.aop.proxy.AspectProxyFactory;
 import net.legacy.library.aop.service.AOPService;
@@ -38,7 +41,25 @@ public class AOPMonitoringTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -74,7 +95,25 @@ public class AOPMonitoringTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -112,7 +151,25 @@ public class AOPMonitoringTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();
@@ -148,7 +205,25 @@ public class AOPMonitoringTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register MonitoringAspect since TestServiceImpl uses @Monitored
             MonitoringAspect monitoringAspect = new MonitoringAspect();

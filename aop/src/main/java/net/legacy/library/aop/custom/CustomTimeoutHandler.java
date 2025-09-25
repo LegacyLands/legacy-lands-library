@@ -42,6 +42,7 @@ public interface CustomTimeoutHandler {
      *
      * @param properties configuration properties
      */
+    @SuppressWarnings("unused")
     default void initialize(Properties properties) {
         // Default implementation does nothing
     }
@@ -53,6 +54,7 @@ public interface CustomTimeoutHandler {
      * @param timeout the configured timeout
      * @param properties configuration properties
      */
+    @SuppressWarnings("unused")
     default void beforeExecution(AspectContext context, long timeout, Properties properties) {
         // Default implementation does nothing
     }
@@ -65,6 +67,7 @@ public interface CustomTimeoutHandler {
      * @param executionTime the actual execution time
      * @param properties configuration properties
      */
+    @SuppressWarnings("unused")
     default void afterExecution(AspectContext context, Object result,
                                 long executionTime, Properties properties) {
         // Default implementation does nothing

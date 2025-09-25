@@ -2,39 +2,36 @@ package net.legacy.library.aop.service;
 
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.log.Log;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.aop.aspect.AsyncSafeAspect;
+import net.legacy.library.aop.aspect.CircuitBreakerAspect;
+import net.legacy.library.aop.aspect.DistributedTransactionAspect;
+import net.legacy.library.aop.aspect.LoggingAspect;
 import net.legacy.library.aop.aspect.MonitoringAspect;
+import net.legacy.library.aop.aspect.RetryAspect;
+import net.legacy.library.aop.aspect.SecurityAspect;
+import net.legacy.library.aop.aspect.TracingAspect;
+import net.legacy.library.aop.aspect.ValidationAspect;
+import net.legacy.library.aop.config.AOPModuleConfiguration;
 import net.legacy.library.aop.interceptor.MethodInterceptor;
 import net.legacy.library.aop.model.MethodMetrics;
 import net.legacy.library.aop.proxy.AspectProxyFactory;
 import net.legacy.library.aop.registry.InterceptorRegistry;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Core service implementation for managing AOP (Aspect-Oriented Programming) functionality with ClassLoader isolation.
- *
- * <p>This service serves as the central orchestrator for all AOP operations, providing comprehensive
- * proxy creation capabilities with interceptor management, lifecycle control, and resource cleanup.
- * The service is designed to operate in multi-ClassLoader environments, ensuring proper isolation
- * between different plugin contexts in Minecraft server environments.
- *
- * <p>The service integrates with the annotation processing system to automatically discover and
- * register interceptors, while maintaining thread-safe operations through concurrent data structures.
- * It supports both global interceptors that apply to all proxies and class-specific interceptors
- * for targeted aspect application.
+ * Coordinates proxy creation, interceptor registration, and ClassLoader-scoped lifecycle for the AOP module.
  *
  * @author qwq-dev
- * @version 1.0
- * @see AspectProxyFactory
- * @see ClassLoaderIsolationService
- * @see InterceptorRegistry
- * @see MethodInterceptor
- * @since 2025-06-19 17:41
+ * @version 2.0
+ * @since 2025-06-20 10:00
  */
 @InjectableComponent
 @RequiredArgsConstructor
@@ -42,156 +39,279 @@ public class AOPService {
 
     private final AspectProxyFactory proxyFactory;
     private final ClassLoaderIsolationService isolationService;
+    private final DistributedTransactionAspect distributedTransactionAspect;
+    private final SecurityAspect securityAspect;
+    private final CircuitBreakerAspect circuitBreakerAspect;
+    private final RetryAspect retryAspect;
+    private final ValidationAspect validationAspect;
+    private final TracingAspect tracingAspect;
+    private final MonitoringAspect monitoringAspect;
+    private final AsyncSafeAspect asyncSafeAspect;
+    private final LoggingAspect loggingAspect;
 
     private final Map<Class<?>, List<MethodInterceptor>> globalInterceptors = new ConcurrentHashMap<>();
 
+    @Getter
+    private volatile AOPModuleConfiguration moduleConfiguration = AOPModuleConfiguration.enableAll();
+
+    public AOPService(AspectProxyFactory proxyFactory,
+                      ClassLoaderIsolationService isolationService,
+                      DistributedTransactionAspect distributedTransactionAspect,
+                      SecurityAspect securityAspect,
+                      CircuitBreakerAspect circuitBreakerAspect,
+                      RetryAspect retryAspect,
+                      ValidationAspect validationAspect,
+                      TracingAspect tracingAspect) {
+        this(proxyFactory,
+                isolationService,
+                distributedTransactionAspect,
+                securityAspect,
+                circuitBreakerAspect,
+                retryAspect,
+                validationAspect,
+                tracingAspect,
+                null,
+                null,
+                null);
+    }
+
     /**
-     * Creates a dynamic proxy for the specified target object with comprehensive AOP capabilities.
-     *
-     * <p>This method automatically discovers and applies all relevant interceptors for the target
-     * object's class, including both global interceptors and class-specific interceptors. The
-     * proxy creation process includes ClassLoader isolation and graceful fallback mechanisms.
-     *
-     * <p>If no interceptors are applicable to the target object, the original object is returned
-     * unchanged to maintain optimal performance. In case of proxy creation failure, the method
-     * falls back to returning the original object while logging the error for debugging purposes.
-     *
-     * @param target the target object to be proxied, must not be {@code null}
-     * @param <T>    the type of the target object
-     * @return the proxied object with AOP capabilities, or the original object if no interceptors apply or proxy creation fails
-     * @throws IllegalArgumentException if the target object is {@code null}
-     * @see AspectProxyFactory#createProxy(Object, List)
+     * Bootstraps the AOP module based on configuration flags and available aspects.
      */
+    public synchronized void initialize() {
+        moduleConfiguration = moduleConfiguration != null ? moduleConfiguration : AOPModuleConfiguration.enableAll();
+
+        globalInterceptors.clear();
+
+        Log.info("Initializing AOP service (tracing=%s, retry=%s, security=%s, tx=%s, monitoring=%s, async=%s, logging=%s, faultTolerance=%s)",
+                moduleConfiguration.isTracingEnabled(),
+                moduleConfiguration.isRetryEnabled(),
+                moduleConfiguration.isSecurityEnabled(),
+                moduleConfiguration.isDistributedTransactionEnabled(),
+                moduleConfiguration.isMonitoringEnabled(),
+                moduleConfiguration.isAsyncSafeEnabled(),
+                moduleConfiguration.isLoggingEnabled(),
+                moduleConfiguration.isFaultToleranceEnabled());
+
+        isolationService.setModuleConfiguration(moduleConfiguration);
+
+        // Register managed interceptors in priority order
+        registerManagedInterceptor(validationAspect);
+        registerManagedInterceptor(loggingAspect);
+        registerManagedInterceptor(monitoringAspect);
+        registerManagedInterceptor(asyncSafeAspect);
+        registerManagedInterceptor(circuitBreakerAspect);
+        registerManagedInterceptor(retryAspect);
+        registerManagedInterceptor(tracingAspect);
+        registerManagedInterceptor(distributedTransactionAspect);
+        registerManagedInterceptor(securityAspect);
+    }
+
+    /**
+     * Updates the module configuration used during initialization and proxy creation.
+     *
+     * @param configuration module configuration to apply; falling back to {@link AOPModuleConfiguration#enableAll()} when {@code null}
+     */
+    public void setModuleConfiguration(AOPModuleConfiguration configuration) {
+        this.moduleConfiguration = configuration != null ? configuration : AOPModuleConfiguration.enableAll();
+    }
+
+    /**
+     * Registers enterprise-level aspects as class-specific interceptors for the supplied test classes.
+     */
+    public void registerTestInterceptors(Class<?>... testClasses) {
+        ensureConfigurationLoaded();
+
+        for (Class<?> testClass : testClasses) {
+            registerClassInterceptorIfEnabled(testClass, validationAspect);
+            registerClassInterceptorIfEnabled(testClass, loggingAspect);
+            registerClassInterceptorIfEnabled(testClass, monitoringAspect);
+            registerClassInterceptorIfEnabled(testClass, asyncSafeAspect);
+            registerClassInterceptorIfEnabled(testClass, circuitBreakerAspect);
+            registerClassInterceptorIfEnabled(testClass, retryAspect);
+            registerClassInterceptorIfEnabled(testClass, tracingAspect);
+            registerClassInterceptorIfEnabled(testClass, distributedTransactionAspect);
+            registerClassInterceptorIfEnabled(testClass, securityAspect);
+        }
+    }
+
+    /**
+     * Creates a dynamic proxy for the specified target object.
+     */
+    @SuppressWarnings("DataFlowIssue") // NULL IN TEST
     public <T> T createProxy(T target) {
         if (target == null) {
             throw new IllegalArgumentException("Target object cannot be null");
         }
+        ensureConfigurationLoaded();
 
-        List<MethodInterceptor> interceptors = getInterceptorsForClass(target.getClass());
-
+        Class<?> targetClass = target.getClass();
+        List<MethodInterceptor> interceptors = getInterceptorsForClass(targetClass);
         if (interceptors.isEmpty()) {
-            // No interceptors, return original object
             return target;
         }
 
-        try {
-            return proxyFactory.createProxy(target, interceptors);
-        } catch (Exception exception) {
-            Log.error("Failed to create proxy for %s: %s", target.getClass().getName(), exception.getMessage());
-            return target;
+        if (hasApplicableInterceptor(targetClass, interceptors)) {
+            try {
+                return proxyFactory.createProxy(target, interceptors);
+            } catch (Exception exception) {
+                Log.error("Failed to create proxy for %s: %s", target.getClass().getName(), exception.getMessage());
+            }
         }
+
+        return target;
     }
 
     /**
-     * Creates a dynamic proxy with both custom and automatically discovered interceptors.
-     *
-     * <p>This method combines the provided custom interceptors with all applicable global and
-     * class-specific interceptors discovered through the annotation processing system. The
-     * resulting proxy will execute all interceptors in their defined order priority.
-     *
-     * <p>Custom interceptors are added first, followed by global and class-specific interceptors,
-     * ensuring that explicitly provided aspects have precedence while still benefiting from
-     * automatic aspect discovery and registration.
-     *
-     * @param target       the target object to be proxied, must not be {@code null}
-     * @param interceptors additional custom interceptors to apply, must not be {@code null}
-     * @param <T>          the type of the target object
-     * @return the proxied object with combined AOP capabilities
-     * @throws IllegalArgumentException if target or interceptors are {@code null}
-     * @see #createProxy(Object)
+     * Creates a dynamic proxy with both custom and auto-discovered interceptors.
      */
     public <T> T createProxy(T target, List<MethodInterceptor> interceptors) {
-        if (target == null || interceptors == null) {
-            throw new IllegalArgumentException("Target and interceptors cannot be null");
+        if (target == null) {
+            throw new IllegalArgumentException("Target object cannot be null");
+        }
+        if (interceptors == null) {
+            throw new IllegalArgumentException("Interceptors cannot be null");
+        }
+        ensureConfigurationLoaded();
+
+        Class<?> targetClass = target.getClass();
+        List<MethodInterceptor> allInterceptors = new ArrayList<>(interceptors);
+        allInterceptors.addAll(getInterceptorsForClass(targetClass));
+
+        if (allInterceptors.isEmpty()) {
+            return target;
         }
 
-        List<MethodInterceptor> allInterceptors = new ArrayList<>(interceptors);
-        allInterceptors.addAll(getInterceptorsForClass(target.getClass()));
+        if (hasApplicableInterceptor(targetClass, allInterceptors)) {
+            return proxyFactory.createProxy(target, allInterceptors);
+        }
 
-        return proxyFactory.createProxy(target, allInterceptors);
+        return target;
+    }
+
+    private boolean hasApplicableInterceptor(Class<?> targetClass, List<MethodInterceptor> interceptors) {
+        if (interceptors.isEmpty()) {
+            return false;
+        }
+
+        Method[] candidateMethods = gatherCandidateMethods(targetClass);
+        for (Method method : candidateMethods) {
+            for (MethodInterceptor interceptor : interceptors) {
+                if (interceptor.supports(method)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private Method[] gatherCandidateMethods(Class<?> targetClass) {
+        List<Method> methods = new ArrayList<>();
+        methods.addAll(Arrays.asList(targetClass.getMethods()));
+        methods.addAll(Arrays.asList(targetClass.getDeclaredMethods()));
+        return methods.toArray(Method[]::new);
     }
 
     /**
-     * Registers a global interceptor that applies to all proxies.
-     *
-     * @param interceptor the interceptor to register
+     * Registers a global interceptor.
      */
     public void registerGlobalInterceptor(MethodInterceptor interceptor) {
-        List<MethodInterceptor> interceptors = globalInterceptors.computeIfAbsent(Object.class, k -> new ArrayList<>());
-        // Avoid duplicate registration
+        if (interceptor == null) {
+            return;
+        }
+
+        List<MethodInterceptor> interceptors = globalInterceptors.computeIfAbsent(Object.class, key -> new ArrayList<>());
         if (!interceptors.contains(interceptor)) {
             interceptors.add(interceptor);
         }
     }
 
-    /**
-     * Registers an interceptor for a specific class.
-     *
-     * @param targetClass the target class
-     * @param interceptor the interceptor to register
-     */
     public void registerInterceptor(Class<?> targetClass, MethodInterceptor interceptor) {
+        if (interceptor == null) {
+            return;
+        }
         proxyFactory.registerInterceptor(targetClass, interceptor);
     }
 
-    /**
-     * Gets the monitoring metrics for a specific operation.
-     *
-     * @param operationName the operation name
-     * @return the metrics, or {@code null} if not found
-     */
     public MethodMetrics getMonitoringMetrics(String operationName) {
-        MonitoringAspect monitoringAspect = InterceptorRegistry.getMonitoringAspect();
-        if (monitoringAspect == null) {
-            Log.warn("MonitoringAspect not found in registry!");
+        MonitoringAspect monitoring = monitoringAspect != null ? monitoringAspect : InterceptorRegistry.getMonitoringAspect();
+        if (monitoring == null) {
+            Log.warn("MonitoringAspect not available in current configuration");
             return null;
         }
-        return monitoringAspect.getMetrics(operationName);
+        return monitoring.getMetrics(operationName);
     }
 
-    /**
-     * Clears all monitoring metrics.
-     */
     public void clearMonitoringMetrics() {
-        MonitoringAspect monitoringAspect = InterceptorRegistry.getMonitoringAspect();
-        if (monitoringAspect != null) {
-            monitoringAspect.clearMetrics();
+        MonitoringAspect monitoring = monitoringAspect != null ? monitoringAspect : InterceptorRegistry.getMonitoringAspect();
+        if (monitoring != null) {
+            monitoring.clearMetrics();
         }
     }
 
-    /**
-     * Cleans up resources for a specific ClassLoader.
-     *
-     * @param classLoader the ClassLoader to clean up
-     */
     public void cleanupClassLoader(ClassLoader classLoader) {
         isolationService.cleanup(classLoader);
         Log.info("Cleaned up AOP resources for ClassLoader: %s", classLoader);
     }
 
-    /**
-     * Shuts down the AOP service and releases resources.
-     */
     public void shutdown() {
-        // Shutdown AsyncSafeAspect if available
-        AsyncSafeAspect asyncSafeAspect = InterceptorRegistry.getAsyncSafeAspect();
         if (asyncSafeAspect != null) {
             asyncSafeAspect.shutdown();
         }
-
-        globalInterceptors.clear();
+        if (retryAspect != null) {
+            retryAspect.shutdown();
+        }
         clearMonitoringMetrics();
-        InterceptorRegistry.clear();
+        globalInterceptors.clear();
+    }
+
+    private void registerManagedInterceptor(MethodInterceptor interceptor) {
+        if (!isFeatureEnabled(interceptor)) {
+            return;
+        }
+
+        registerGlobalInterceptor(interceptor);
+        InterceptorRegistry.register(interceptor);
+    }
+
+    private void registerClassInterceptorIfEnabled(Class<?> targetClass, MethodInterceptor interceptor) {
+        if (!isFeatureEnabled(interceptor)) {
+            return;
+        }
+        registerInterceptor(targetClass, interceptor);
+    }
+
+    private boolean isFeatureEnabled(MethodInterceptor interceptor) {
+        if (interceptor == null) {
+            return false;
+        }
+        ensureConfigurationLoaded();
+
+        return switch (interceptor) {
+            case DistributedTransactionAspect ignored -> moduleConfiguration.isDistributedTransactionEnabled();
+            case SecurityAspect ignored -> moduleConfiguration.isSecurityEnabled();
+            case CircuitBreakerAspect ignored -> moduleConfiguration.isFaultToleranceEnabled();
+            case RetryAspect ignored -> moduleConfiguration.isRetryEnabled();
+            case TracingAspect ignored -> moduleConfiguration.isTracingEnabled();
+            case MonitoringAspect ignored -> moduleConfiguration.isMonitoringEnabled();
+            case AsyncSafeAspect ignored -> moduleConfiguration.isAsyncSafeEnabled();
+            case LoggingAspect ignored -> moduleConfiguration.isLoggingEnabled();
+            default -> true;
+        };
+    }
+
+    private void ensureConfigurationLoaded() {
+        if (moduleConfiguration == null) {
+            moduleConfiguration = AOPModuleConfiguration.enableAll();
+        }
     }
 
     private List<MethodInterceptor> getInterceptorsForClass(Class<?> targetClass) {
-        // Add global interceptors
-        List<MethodInterceptor> result = new ArrayList<>(globalInterceptors.getOrDefault(Object.class, new ArrayList<>()));
+        List<MethodInterceptor> result = new ArrayList<>(globalInterceptors.getOrDefault(Object.class, List.of()));
 
-        // Add class-specific interceptors (but avoid duplicates)
         List<MethodInterceptor> classSpecific = proxyFactory.getInterceptors(targetClass);
         for (MethodInterceptor interceptor : classSpecific) {
-            if (!result.contains(interceptor)) {
+            if (!result.contains(interceptor) && isFeatureEnabled(interceptor)) {
                 result.add(interceptor);
             }
         }

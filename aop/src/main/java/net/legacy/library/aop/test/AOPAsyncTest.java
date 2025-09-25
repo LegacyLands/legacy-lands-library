@@ -2,6 +2,9 @@ package net.legacy.library.aop.test;
 
 import net.legacy.library.aop.annotation.AsyncSafe;
 import net.legacy.library.aop.aspect.AsyncSafeAspect;
+import net.legacy.library.aop.aspect.CircuitBreakerAspect;
+import net.legacy.library.aop.aspect.RetryAspect;
+import net.legacy.library.aop.aspect.ValidationAspect;
 import net.legacy.library.aop.factory.AOPFactory;
 import net.legacy.library.aop.proxy.AspectProxyFactory;
 import net.legacy.library.aop.service.AOPService;
@@ -40,7 +43,25 @@ public class AOPAsyncTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
@@ -52,14 +73,12 @@ public class AOPAsyncTest {
 
             // Execute on sync thread
             String result = service.processData("sync test");
-            boolean validResult = "Processed: SYNC TEST".equals(result);
-
-            if (!validResult) {
+            if (!"Processed: SYNC TEST".equals(result)) {
                 TestLogger.logFailure("aop", "Sync thread execution failed: expected 'Processed: SYNC TEST', got %s", result);
                 return false;
             }
 
-            TestLogger.logInfo("aop", "Sync thread execution test: validResult=%s", validResult);
+            TestLogger.logInfo("aop", "Sync thread execution test: validResult=%s", true);
             return true;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "Sync thread execution test failed: %s", exception.getMessage());
@@ -74,7 +93,25 @@ public class AOPAsyncTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
@@ -89,14 +126,12 @@ public class AOPAsyncTest {
 
             // Wait for completion and validate
             String result = future.get(10, java.util.concurrent.TimeUnit.SECONDS);
-            boolean validResult = result != null && result.contains("async test");
-
-            if (!validResult) {
+            if (result == null || !result.contains("async test")) {
                 TestLogger.logFailure("aop", "Async thread execution failed: invalid result %s", result);
                 return false;
             }
 
-            TestLogger.logInfo("aop", "Async thread execution test: validResult=%s", validResult);
+            TestLogger.logInfo("aop", "Async thread execution test: validResult=%s", true);
             return true;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "Async thread execution test failed: %s", exception.getMessage());
@@ -108,34 +143,81 @@ public class AOPAsyncTest {
      * Tests virtual thread execution for efficient concurrent processing.
      */
     public static boolean testVirtualThreadExecution() {
+        TestLogger.logInfo("aop", "Starting virtual thread execution test");
+
         try {
+            // Initialize virtual thread executors before creating services
+            TestLogger.logInfo("aop", "Initializing virtual thread executors");
+            net.legacy.library.commons.task.VirtualThreadExecutors.initialize();
+            TestLogger.logInfo("aop", "Virtual thread executors initialized successfully");
+
+            TestLogger.logInfo("aop", "Creating ClassLoaderIsolationService");
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
+            TestLogger.logInfo("aop", "ClassLoaderIsolationService created successfully");
+
+            TestLogger.logInfo("aop", "Creating AspectProxyFactory");
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+            TestLogger.logInfo("aop", "AspectProxyFactory created successfully");
+
+            TestLogger.logInfo("aop", "Creating AOPService");
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+            TestLogger.logInfo("aop", "AOPService created successfully");
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
+            TestLogger.logInfo("aop", "Creating AsyncSafeAspect");
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
+            TestLogger.logInfo("aop", "AsyncSafeAspect created successfully");
+
+            TestLogger.logInfo("aop", "Registering AsyncSafeAspect with AOPService");
             aopService.registerGlobalInterceptor(asyncSafeAspect);
+            TestLogger.logInfo("aop", "AsyncSafeAspect registered successfully");
 
+            TestLogger.logInfo("aop", "Creating AOPFactory");
             AOPFactory aopFactory = new AOPFactory(aopService);
+            TestLogger.logInfo("aop", "AOPFactory created successfully");
 
+            TestLogger.logInfo("aop", "Creating TestService proxy");
             TestService service = aopFactory.create(TestServiceImpl.class);
+            TestLogger.logInfo("aop", "TestService proxy created successfully");
 
             // Execute on virtual thread
+            TestLogger.logInfo("aop", "Executing processWithVirtualThread method");
             String result = service.processWithVirtualThread("virtual test");
+            TestLogger.logInfo("aop", "Virtual thread execution completed, result: %s", result);
 
             // Validate result format (should include thread information)
-            boolean resultValid = result != null && result.contains("virtual test");
-
-            if (!resultValid) {
+            if (result == null || !result.contains("virtual test")) {
                 TestLogger.logFailure("aop", "Virtual thread execution failed: invalid result %s", result);
                 return false;
             }
 
-            TestLogger.logInfo("aop", "Virtual thread execution test: resultValid=%s", resultValid);
+            TestLogger.logInfo("aop", "Virtual thread execution test: resultValid=%s", true);
             return true;
+        } catch (NullPointerException nullPointerException) {
+            TestLogger.logFailure("aop", "Virtual thread execution test failed with NullPointerException: %s", nullPointerException.getMessage());
+            TestLogger.logFailure("aop", "NullPointerException stack trace:", nullPointerException);
+            return false;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "Virtual thread execution test failed: %s", exception.getMessage());
+            TestLogger.logFailure("aop", "Exception stack trace:", exception);
             return false;
         }
     }
@@ -147,7 +229,25 @@ public class AOPAsyncTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
@@ -179,13 +279,31 @@ public class AOPAsyncTest {
     }
 
     /**
-     * Tests re-entrancy control mechanisms in async execution.
+     * Tests reentrancy control mechanisms in async execution.
      */
     public static boolean testReentrancyControl() {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
@@ -198,14 +316,12 @@ public class AOPAsyncTest {
             // Test basic method execution (should work)
             String result = service.processData("reentrancy test");
 
-            boolean validResult = "Processed: REENTRANCY TEST".equals(result);
-
-            if (!validResult) {
+            if (!"Processed: REENTRANCY TEST".equals(result)) {
                 TestLogger.logFailure("aop", "Reentrancy control failed: expected 'Processed: REENTRANCY TEST', got %s", result);
                 return false;
             }
 
-            TestLogger.logInfo("aop", "Reentrancy control test: validResult=%s", validResult);
+            TestLogger.logInfo("aop", "Reentrancy control test: validResult=%s", true);
             return true;
         } catch (Exception exception) {
             TestLogger.logFailure("aop", "Reentrancy control test failed: %s", exception.getMessage());
@@ -220,7 +336,25 @@ public class AOPAsyncTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
@@ -271,7 +405,25 @@ public class AOPAsyncTest {
         try {
             ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
             AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
-            AOPService aopService = new AOPService(proxyFactory, isolationService);
+
+            // Create enterprise-level aspects that can be instantiated without dependencies
+            CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
+            RetryAspect retryAspect = new RetryAspect();
+            ValidationAspect validationAspect = new ValidationAspect();
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,  // DistributedTransactionAspect requires dependency injection
+                    null,  // SecurityAspect requires dependency injection
+                    circuitBreakerAspect,
+                    retryAspect,
+                    validationAspect,
+                    null   // TracingAspect requires dependency injection
+            );
+
+            // Initialize the AOP service to register all aspects
+            aopService.initialize();
 
             // Register AsyncSafeAspect since TestServiceImpl uses @AsyncSafe
             AsyncSafeAspect asyncSafeAspect = new AsyncSafeAspect();
@@ -285,9 +437,7 @@ public class AOPAsyncTest {
             CompletableFuture<String> future = service.processDataAsync("future test");
 
             // Verify it's actually a CompletableFuture and not wrapped
-            boolean isCompletableFuture = future != null;
-
-            if (!isCompletableFuture) {
+            if (future == null) {
                 TestLogger.logFailure("aop", "CompletableFuture handling failed: result is not a CompletableFuture");
                 return false;
             }
@@ -295,14 +445,12 @@ public class AOPAsyncTest {
             // Wait for result
             try {
                 String result = future.get(5, java.util.concurrent.TimeUnit.SECONDS);
-                boolean validResult = result != null && result.contains("future test");
-
-                if (!validResult) {
+                if (result == null || !result.contains("future test")) {
                     TestLogger.logFailure("aop", "CompletableFuture handling failed: invalid result %s", result);
                     return false;
                 }
 
-                TestLogger.logInfo("aop", "CompletableFuture handling test: isCompletableFuture=%s, validResult=%s", isCompletableFuture, validResult);
+                TestLogger.logInfo("aop", "CompletableFuture handling test: isCompletableFuture=%s, validResult=%s", true, true);
                 return true;
             } catch (Exception futureException) {
                 TestLogger.logFailure("aop", "CompletableFuture handling failed during execution: %s", futureException.getMessage());

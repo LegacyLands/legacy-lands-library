@@ -66,7 +66,7 @@ public class WithinPointcut implements Pointcut {
         String regex = pattern
                 .replace("$", "\\$")           // Escape dollar signs first (for inner classes)
                 .replace(".", "\\.")           // Escape dots
-                .replace("..", "\\.[\\w\\.]*") // .. means any number of packages
+                .replace("..", "\\.[\\w\\.]*") // The double-dot token means any number of packages
                 .replace("*", "[\\w]*");       // * means any characters (but not dots)
 
         // If pattern doesn't start with *, anchor it to the beginning

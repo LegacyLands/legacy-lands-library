@@ -242,7 +242,7 @@ public class RStreamAccepterInvokeTask implements TaskInterface<VirtualThreadSch
             }
         };
 
-        return scheduleAtFixedRateWithVirtualThread(runnable, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+        return scheduleWithFixedDelayWithVirtualThread(runnable, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
 }

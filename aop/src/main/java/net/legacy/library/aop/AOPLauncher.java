@@ -7,6 +7,7 @@ import io.fairyproject.container.PreDestroy;
 import io.fairyproject.plugin.Plugin;
 import lombok.Getter;
 import net.legacy.library.annotation.service.AnnotationProcessingServiceInterface;
+import net.legacy.library.aop.config.AOPModuleConfiguration;
 import net.legacy.library.aop.service.AOPService;
 import net.legacy.library.aop.test.AOPTestRunner;
 import net.legacy.library.foundation.test.TestExecutionUtil;
@@ -33,11 +34,7 @@ import java.util.List;
 @InjectableComponent
 public class AOPLauncher extends Plugin {
 
-    /**
-     * Debug mode flag. When set to true, enables comprehensive testing
-     * of the annotation processing framework during plugin startup.
-     */
-    private static final boolean DEBUG = true;
+    private final boolean debugEnabled = true;
 
     @Autowired
     public AOPService aopService;
@@ -55,8 +52,10 @@ public class AOPLauncher extends Plugin {
                 this.getClassLoader(), AOPLauncher.class.getClassLoader()
         );
 
-        // Run tests in debug mode (only once)
-        if (DEBUG) {
+        aopService.setModuleConfiguration(AOPModuleConfiguration.enableAll());
+        aopService.initialize();
+
+        if (debugEnabled) {
             runDebugTests();
         }
     }

@@ -270,7 +270,7 @@ public class ExecutionPointcut implements Pointcut {
      *
      * <p>This method handles various wildcard patterns:
      * <ul>
-     *   <li>{@code ..} - matches any number of packages</li>
+     *   <li>{@literal ..} - matches any number of packages</li>
      *   <li>{@code *} - matches any characters in a single segment</li>
      * </ul>
      *
@@ -286,7 +286,7 @@ public class ExecutionPointcut implements Pointcut {
                 .replace("$", "\\$")    // Escape dollar signs first (for inner classes)
                 .replace(".", "\\.");   // Escape dots
 
-        // Handle .. wildcard for packages
+        // Handle the double-dot wildcard for packages
         if (pattern.contains("\\.\\.")) {
             pattern = pattern.replace("\\.\\.", "(\\.[\\w\\.\\$]+)*");
         }
@@ -299,7 +299,7 @@ public class ExecutionPointcut implements Pointcut {
             pattern = "(^|\\.)?" + pattern;
         }
 
-        // If pattern doesn't end with * or .., anchor to end
+        // If pattern doesn't end with * or the double-dot wildcard, anchor to end
         if (!classPart.endsWith("*") && !classPart.endsWith("..")) {
             pattern = pattern + "$";
         }
@@ -344,7 +344,7 @@ public class ExecutionPointcut implements Pointcut {
      *   <li>{@code ()} - matches no parameters</li>
      *   <li>{@code (String, int)} - matches specific parameter types</li>
      *   <li>{@code (List<String>, Map<?, ?>)} - matches generic types</li>
-     *   <li>{@code (String, ..)} - matches String followed by any parameters</li>
+     *   <li>{@code (String, {@literal ..})} - matches String followed by any parameters</li>
      * </ul>
      *
      * @return a Pattern for matching parameters, or null for any parameters
@@ -371,7 +371,7 @@ public class ExecutionPointcut implements Pointcut {
             }
 
             if (param.equals("..")) {
-                // .. matches any remaining parameters
+                // The double-dot wildcard matches any remaining parameters
                 patternBuilder.append(".*");
                 break;
             } else if (param.equals("*")) {
@@ -385,8 +385,6 @@ public class ExecutionPointcut implements Pointcut {
         }
 
         String pattern = patternBuilder.toString();
-        io.fairyproject.log.Log.debug("Created parameter pattern: '%s' from expression: '%s'", pattern, parameterPart);
-
         return Pattern.compile(pattern);
     }
 
@@ -433,11 +431,8 @@ public class ExecutionPointcut implements Pointcut {
         if (genericStart == -1) {
             // Simple type without generics in the pattern
             // But it should match types with or without generics
-            String basePattern = createSimpleTypePattern(typeStr);
             // Allow optional generic parameters in the actual type
-            String result = basePattern + "(<.*>)?";
-            io.fairyproject.log.Log.debug("Type pattern for '%s': '%s'", typeStr, result);
-            return result;
+            return createSimpleTypePattern(typeStr) + "(<.*>)?";
         }
 
         String baseType = typeStr.substring(0, genericStart).trim();
@@ -608,10 +603,10 @@ public class ExecutionPointcut implements Pointcut {
      *
      * <p>Supports matching of:
      * <ul>
-     *   <li>{@code null} pattern (from "..") matches any parameters</li>
+     *   <li>{@code null} pattern (from {@literal ..}) matches any parameters</li>
      *   <li>Empty pattern matches no parameters</li>
      *   <li>Specific type patterns including generics</li>
-     *   <li>Wildcards and ".." for variable arguments</li>
+     *   <li>Wildcards and the {@literal ..} token for variable arguments</li>
      * </ul>
      *
      * @param method the method to check
@@ -628,12 +623,6 @@ public class ExecutionPointcut implements Pointcut {
 
         // Create parameter string with generic type information
         String paramString = createParameterStringWithGenerics(paramTypes, genericParamTypes);
-
-        // Debug logging
-        if (!paramString.isEmpty()) {
-            io.fairyproject.log.Log.debug("Parameter string for %s: '%s', pattern: '%s'",
-                    method.getName(), paramString, parameterPattern.pattern());
-        }
 
         return parameterPattern.matcher(paramString).matches();
     }

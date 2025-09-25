@@ -41,6 +41,7 @@ public interface CustomLockStrategy {
      *
      * @param properties configuration properties
      */
+    @SuppressWarnings("unused")
     default void initialize(Properties properties) {
         // Default implementation does nothing
     }

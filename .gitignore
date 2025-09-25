@@ -136,3 +136,6 @@ disabled_plugins/
 
 # PromptX
 .promptx/
+
+# Serena
+.serena/

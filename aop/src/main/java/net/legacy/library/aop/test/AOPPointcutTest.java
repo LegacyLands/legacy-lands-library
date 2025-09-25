@@ -312,10 +312,7 @@ public class AOPPointcutTest {
         @Override
         public Object intercept(net.legacy.library.aop.model.AspectContext context,
                                 net.legacy.library.aop.interceptor.MethodInvocation invocation) throws Throwable {
-            // Use Log directly for debug messages in interceptor
-            io.fairyproject.log.Log.debug("Test interceptor before: %s", context.getMethod().getName());
             Object result = invocation.proceed();
-            io.fairyproject.log.Log.debug("Test interceptor after: %s with result: %s", context.getMethod().getName(), result);
             return result;
         }
 

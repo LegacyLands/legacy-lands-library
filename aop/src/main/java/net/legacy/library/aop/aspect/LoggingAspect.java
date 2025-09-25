@@ -141,8 +141,8 @@ public class LoggingAspect implements MethodInterceptor {
 
     private void logMessage(Logged.LogLevel level, String format, Object... args) {
         switch (level) {
-            case TRACE -> Log.debug("[TRACE] " + format, args);
-            case DEBUG -> Log.debug(format, args);
+            case TRACE -> Log.info("[TRACE] " + format, args);
+            case DEBUG -> Log.info("[DEBUG] " + format, args);
             case INFO -> Log.info(format, args);
             case WARN -> Log.warn(format, args);
             case ERROR -> Log.error(format, args);
