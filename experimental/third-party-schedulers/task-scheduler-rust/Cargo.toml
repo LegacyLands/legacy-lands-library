@@ -12,7 +12,7 @@ name = "task-scheduler"
 path = "src/bin/task-scheduler.rs"
 
 [dependencies]
-tonic = { version = "0.13.0", features = [
+tonic = { version = "0.14.2", features = [
     "transport",
     "codegen",
     "prost",
