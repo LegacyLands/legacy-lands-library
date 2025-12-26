@@ -47,6 +47,10 @@ public class VirtualThreadExecutors {
 
     /**
      * Shuts down the shared virtual thread executor gracefully.
+     *
+     * <p><b>Important:</b> This method uses blocking operations ({@code awaitTermination})
+     * that would cause virtual thread pinning. It should be called from a platform thread
+     * (e.g., main thread or shutdown hook), not from a virtual thread.
      */
     public static void destroy() {
         ExecutorService executor = SHARED_EXECUTOR_REF.getAndSet(null);

@@ -366,6 +366,21 @@ public class CustomTaskInterfaceExample {
 }
 ```
 
+### Virtual Thread Pinning Warning
+
+> **Important for Java 21 Virtual Threads**
+
+When using virtual threads in this module, be aware of the "pinning" issue: if a virtual thread blocks inside a
+`synchronized` block/method, it cannot unmount from its carrier thread, degrading performance.
+
+**Guidelines:**
+
+1. **Avoid `synchronized`** in code that may be called from virtual threads. Use `java.util.concurrent.locks.ReentrantLock` instead.
+2. **Shutdown methods** like `VirtualThreadExecutors.destroy()` and `VirtualThreadSchedulerManager.destroy()` use blocking
+   operations (`awaitTermination`) and should be called from **platform threads only** (e.g., main thread or shutdown hooks).
+3. **Testing**: Add JVM argument `-Djdk.tracePinnedThreads=short` to detect pinning events during development.
+4. **Java 24 has resolved this issue** ([JEP 491](https://openjdk.org/jeps/491) delivered). Upgrade to remove these restrictions.
+
 ### [GsonUtil](src/main/java/net/legacy/library/commons/util/GsonUtil.java)
 
 `GsonUtil` provides a thread-safe way to manage and customize a shared `Gson` instance. It allows for consistent `Gson`

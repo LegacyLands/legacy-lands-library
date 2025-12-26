@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.experimental.UtilityClass;
 
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -23,6 +24,12 @@ import java.util.function.Supplier;
 public class GsonUtil {
 
     /**
+     * Lock for thread-safe operations, using {@link ReentrantLock} instead of {@code synchronized}
+     * to avoid virtual thread pinning in Java 21+.
+     */
+    private static final ReentrantLock LOCK = new ReentrantLock();
+
+    /**
      * A shared {@link GsonBuilder} instance to accumulate configurations.
      */
     private static final GsonBuilder GSON_BUILDER = new GsonBuilder();
@@ -35,23 +42,36 @@ public class GsonUtil {
     /**
      * Customizes the shared GsonBuilder and updates the Gson instance.
      *
-     * <p>The customization is performed in a thread-safe manner by synchronizing on the class.
+     * <p>The customization is performed in a thread-safe manner using {@link ReentrantLock},
+     * which avoids virtual thread pinning unlike {@code synchronized} blocks.
      *
      * @param consumer the customization action to apply to the GsonBuilder
      */
-    public static synchronized void customizeGsonBuilder(Consumer<GsonBuilder> consumer) {
-        consumer.accept(GSON_BUILDER);
-        GSON = GSON_BUILDER.create();
+    public static void customizeGsonBuilder(Consumer<GsonBuilder> consumer) {
+        LOCK.lock();
+        try {
+            consumer.accept(GSON_BUILDER);
+            GSON = GSON_BUILDER.create();
+        } finally {
+            LOCK.unlock();
+        }
     }
 
     /**
      * Sets a new Gson instance using the provided GsonBuilder supplier.
      *
+     * <p>This method uses {@link ReentrantLock} to avoid virtual thread pinning.
+     *
      * @param supplier the supplier that provides a configured GsonBuilder
      */
-    public static synchronized void setNewGson(Supplier<GsonBuilder> supplier) {
-        GsonBuilder builder = supplier.get();
-        GSON = builder.create();
+    public static void setNewGson(Supplier<GsonBuilder> supplier) {
+        LOCK.lock();
+        try {
+            GsonBuilder builder = supplier.get();
+            GSON = builder.create();
+        } finally {
+            LOCK.unlock();
+        }
     }
 
     /**

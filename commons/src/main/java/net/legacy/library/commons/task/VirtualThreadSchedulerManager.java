@@ -50,6 +50,10 @@ public class VirtualThreadSchedulerManager {
 
     /**
      * Shuts down the shared scheduled executor service gracefully.
+     *
+     * <p><b>Important:</b> This method uses blocking operations ({@code awaitTermination})
+     * that would cause virtual thread pinning. It should be called from a platform thread
+     * (e.g., main thread or shutdown hook), not from a virtual thread.
      */
     public static void destroy() {
         ScheduledExecutorService scheduler = SHARED_SCHEDULER_REF.getAndSet(null);

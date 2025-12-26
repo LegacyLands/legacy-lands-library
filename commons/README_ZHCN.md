@@ -357,6 +357,21 @@ public class CustomTaskInterfaceExample {
 }
 ```
 
+### 虚拟线程 Pinning 警告
+
+> **Java 21 虚拟线程重要提示**
+
+在本模块中使用虚拟线程时，请注意 "pinning" 问题：如果虚拟线程在 `synchronized` 块/方法内阻塞，
+它将无法从载体线程卸载，导致性能下降。
+
+**使用指南：**
+
+1. **避免使用 `synchronized`**：在可能被虚拟线程调用的代码中，请使用 `java.util.concurrent.locks.ReentrantLock` 替代。
+2. **关闭方法**：`VirtualThreadExecutors.destroy()` 和 `VirtualThreadSchedulerManager.destroy()` 使用阻塞操作
+   （`awaitTermination`），应**仅从平台线程调用**（如主线程或关闭钩子）。
+3. **测试检测**：开发时添加 JVM 参数 `-Djdk.tracePinnedThreads=short` 以检测 pinning 事件。
+4. **Java 24 已解决此问题**（[JEP 491](https://openjdk.org/jeps/491) 已交付），升级后可移除这些限制。
+
 ### [GsonUtil](src/main/java/net/legacy/library/commons/util/GsonUtil.java)
 
 `GsonUtil` 提供了一种线程安全的方式来管理和自定义共享的 `Gson` 实例。它允许在您的应用程序中保持一致的 `Gson`
