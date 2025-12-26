@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Aspect for securing method execution with authentication and authorization.
@@ -194,7 +195,8 @@ public class SecurityAspect implements MethodInterceptor {
         long currentTime = System.currentTimeMillis();
         long windowStart = currentTime - (secured.timeWindow() * 1000L);
 
-        synchronized (state) {
+        state.lock.lock();
+        try {
             // Clean old requests
             state.requestTimes.removeIf(time -> time < windowStart);
 
@@ -205,6 +207,8 @@ public class SecurityAspect implements MethodInterceptor {
 
             // Add current request
             state.requestTimes.add(currentTime);
+        } finally {
+            state.lock.unlock();
         }
     }
 
@@ -287,9 +291,13 @@ public class SecurityAspect implements MethodInterceptor {
 
     /**
      * Rate limit state for tracking request timestamps.
+     *
+     * <p>Uses {@link ReentrantLock} instead of {@code synchronized} to avoid
+     * virtual thread pinning in Java 21.
      */
     private static class RateLimitState {
 
+        private final ReentrantLock lock = new ReentrantLock();
         private final java.util.List<Long> requestTimes = new java.util.ArrayList<>();
 
     }
