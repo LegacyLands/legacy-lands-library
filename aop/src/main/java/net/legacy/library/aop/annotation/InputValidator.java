@@ -16,7 +16,7 @@ public interface InputValidator {
     /**
      * Validates the input value.
      *
-     * @param value the value to validate
+     * @param value   the value to validate
      * @param context the validation context
      * @return true if valid, false otherwise
      */
@@ -25,7 +25,7 @@ public interface InputValidator {
     /**
      * Gets the error message to use when validation fails.
      *
-     * @param value the invalid value
+     * @param value   the invalid value
      * @param context the validation context
      * @return error message
      */

@@ -58,7 +58,11 @@ public class AOPTestRunner extends AbstractModuleTestRunner {
             AOPSecurityTest.class,
             AOPCircuitBreakerTest.class,
             AOPRetryTest.class,
+            AOPRateLimiterTest.class,
+            AOPDynamicConfigTest.class,
             AOPValidationTracingTest.class,
+            AOPExceptionWrapperTest.class,
+            AOPLoggingTest.class,
             ClassLoaderIsolationTest.class,
             ConfigurationServiceTest.class
     };

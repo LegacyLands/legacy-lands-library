@@ -80,7 +80,7 @@ public interface ConfigurationSource {
     /**
      * Saves a configuration property to this source.
      *
-     * @param key the configuration key
+     * @param key   the configuration key
      * @param value the configuration value
      * @return true if the property was saved successfully
      */

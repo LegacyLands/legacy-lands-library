@@ -77,8 +77,8 @@ public class DistributedTransactionCoordinator {
      * Begins a nested distributed transaction.
      *
      * @param parentContext the parent transaction context
-     * @param annotation the distributed transaction annotation
-     * @param methodName the method name for transaction identification
+     * @param annotation    the distributed transaction annotation
+     * @param methodName    the method name for transaction identification
      * @return the nested transaction context
      */
     public TransactionContext beginNestedTransaction(TransactionContext parentContext,
@@ -356,7 +356,7 @@ public class DistributedTransactionCoordinator {
      * Checks if a participant is read-only.
      *
      * @param participant the participant to check
-     * @param context the transaction context
+     * @param context     the transaction context
      * @return true if the participant is read-only
      */
     private boolean isReadOnlyParticipant(TransactionParticipant participant, TransactionContext context) {
@@ -375,7 +375,7 @@ public class DistributedTransactionCoordinator {
      * Executes compensation for a failed participant.
      *
      * @param participant the failed participant
-     * @param context the transaction context
+     * @param context     the transaction context
      */
     private void executeCompensation(TransactionParticipant participant, TransactionContext context) {
         try {

@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>The factory prefers JDK dynamic proxies whenever the target implements at least one interface.
  * For concrete classes it generates a ByteBuddy subclass that carries an invocation handler field and
  * mirrors the target state before and after each invocation to keep field mutations in sync.
- * 
+ *
  * @author qwq-dev
  * @version 2.0
  * @since 2025-06-20 10:00

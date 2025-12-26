@@ -2,6 +2,7 @@ package net.legacy.library.aop.aspect;
 
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.container.PreDestroy;
+import io.fairyproject.log.Log;
 import net.legacy.library.aop.annotation.AOPInterceptor;
 import net.legacy.library.aop.annotation.Retry;
 import net.legacy.library.aop.interceptor.MethodInterceptor;
@@ -23,7 +24,7 @@ import java.util.stream.Stream;
 
 /**
  * Implements {@link Retry} support with configurable backoff strategies and optional fallbacks.
- * 
+ *
  * @author qwq-dev
  * @version 1.0
  * @since 2025-06-19 17:41
@@ -70,7 +71,7 @@ public class RetryAspect implements MethodInterceptor {
 
     private Object executeSync(Object target, Method method, Retry retry, MethodInvocation invocation,
                                Object[] originalArguments) throws Throwable {
-        int maxAttempts = normalizeAttempts(retry.maxAttempts());
+        int maxAttempts = resolveMaxAttempts(retry, target);
         Throwable lastError = null;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -139,7 +140,7 @@ public class RetryAspect implements MethodInterceptor {
                 return;
             }
 
-            int maxAttempts = normalizeAttempts(retry.maxAttempts());
+            int maxAttempts = resolveMaxAttempts(retry, target);
             boolean retryable = shouldRetry(failure, retry);
 
             if (retryable && attempt < maxAttempts) {
@@ -251,18 +252,50 @@ public class RetryAspect implements MethodInterceptor {
                 double multiplier = Math.max(1.0, retry.backoffMultiplier());
                 delay = (long) (initialDelay * Math.pow(multiplier, attemptIndex - 1));
             }
+            case EXPONENTIAL_JITTER -> {
+                // Exponential backoff with full jitter for better distribution
+                double multiplier = Math.max(1.0, retry.backoffMultiplier());
+                long exponentialDelay = (long) (initialDelay * Math.pow(multiplier, attemptIndex - 1));
+                long maxDelay = retry.maxDelay() > 0 ? retry.maxDelay() : Long.MAX_VALUE;
+                long cappedDelay = Math.min(exponentialDelay, maxDelay);
+                // Full jitter: random value between 0 and calculated delay
+                delay = ThreadLocalRandom.current().nextLong(Math.max(1, cappedDelay));
+            }
             default -> delay = initialDelay;
         }
 
-        double jitterFactor = Math.max(0.0, Math.min(1.0, retry.jitterFactor()));
-        if (jitterFactor > 0.0) {
-            double jitterRange = delay * jitterFactor;
-            double jitter = (ThreadLocalRandom.current().nextDouble() * 2 - 1) * jitterRange;
-            delay = Math.max(0L, (long) (delay + jitter));
+        // Apply additional jitter for non-EXPONENTIAL_JITTER strategies
+        if (retry.backoffStrategy() != Retry.BackoffStrategy.EXPONENTIAL_JITTER) {
+            double jitterFactor = Math.max(0.0, Math.min(1.0, retry.jitterFactor()));
+            if (jitterFactor > 0.0) {
+                double jitterRange = delay * jitterFactor;
+                double jitter = (ThreadLocalRandom.current().nextDouble() * 2 - 1) * jitterRange;
+                delay = Math.max(0L, (long) (delay + jitter));
+            }
         }
 
         long maxDelay = retry.maxDelay() > 0 ? retry.maxDelay() : Long.MAX_VALUE;
         return Math.min(delay, maxDelay);
+    }
+
+    private int resolveMaxAttempts(Retry retry, Object target) {
+        // Try to resolve from supplier first
+        if (!retry.maxAttemptsSupplier().isEmpty() && target != null) {
+            try {
+                Method supplierMethod = target.getClass().getDeclaredMethod(retry.maxAttemptsSupplier());
+                supplierMethod.setAccessible(true);
+                Object result = supplierMethod.invoke(target);
+                if (result instanceof Number) {
+                    int attempts = ((Number) result).intValue();
+                    return normalizeAttempts(attempts);
+                }
+            } catch (Exception exception) {
+                Log.warn("Failed to resolve maxAttemptsSupplier '%s': %s",
+                        retry.maxAttemptsSupplier(), exception.getMessage());
+            }
+        }
+
+        return normalizeAttempts(retry.maxAttempts());
     }
 
     private int normalizeAttempts(int maxAttempts) {

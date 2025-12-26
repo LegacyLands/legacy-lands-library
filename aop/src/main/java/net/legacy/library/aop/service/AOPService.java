@@ -7,13 +7,16 @@ import lombok.RequiredArgsConstructor;
 import net.legacy.library.aop.aspect.AsyncSafeAspect;
 import net.legacy.library.aop.aspect.CircuitBreakerAspect;
 import net.legacy.library.aop.aspect.DistributedTransactionAspect;
+import net.legacy.library.aop.aspect.DynamicConfigAspect;
 import net.legacy.library.aop.aspect.LoggingAspect;
 import net.legacy.library.aop.aspect.MonitoringAspect;
+import net.legacy.library.aop.aspect.RateLimiterAspect;
 import net.legacy.library.aop.aspect.RetryAspect;
 import net.legacy.library.aop.aspect.SecurityAspect;
 import net.legacy.library.aop.aspect.TracingAspect;
 import net.legacy.library.aop.aspect.ValidationAspect;
 import net.legacy.library.aop.config.AOPModuleConfiguration;
+import net.legacy.library.aop.fault.RateLimiter.RateLimiterMetrics;
 import net.legacy.library.aop.interceptor.MethodInterceptor;
 import net.legacy.library.aop.model.MethodMetrics;
 import net.legacy.library.aop.proxy.AspectProxyFactory;
@@ -48,6 +51,8 @@ public class AOPService {
     private final MonitoringAspect monitoringAspect;
     private final AsyncSafeAspect asyncSafeAspect;
     private final LoggingAspect loggingAspect;
+    private final RateLimiterAspect rateLimiterAspect;
+    private final DynamicConfigAspect dynamicConfigAspect;
 
     private final Map<Class<?>, List<MethodInterceptor>> globalInterceptors = new ConcurrentHashMap<>();
 
@@ -72,6 +77,8 @@ public class AOPService {
                 tracingAspect,
                 null,
                 null,
+                null,
+                null,
                 null);
     }
 
@@ -83,7 +90,7 @@ public class AOPService {
 
         globalInterceptors.clear();
 
-        Log.info("Initializing AOP service (tracing=%s, retry=%s, security=%s, tx=%s, monitoring=%s, async=%s, logging=%s, faultTolerance=%s)",
+        Log.info("Initializing AOP service (tracing=%s, retry=%s, security=%s, tx=%s, monitoring=%s, async=%s, logging=%s, faultTolerance=%s, rateLimiter=%s, dynamicConfig=%s)",
                 moduleConfiguration.isTracingEnabled(),
                 moduleConfiguration.isRetryEnabled(),
                 moduleConfiguration.isSecurityEnabled(),
@@ -91,15 +98,19 @@ public class AOPService {
                 moduleConfiguration.isMonitoringEnabled(),
                 moduleConfiguration.isAsyncSafeEnabled(),
                 moduleConfiguration.isLoggingEnabled(),
-                moduleConfiguration.isFaultToleranceEnabled());
+                moduleConfiguration.isFaultToleranceEnabled(),
+                moduleConfiguration.isRateLimiterEnabled(),
+                moduleConfiguration.isDynamicConfigEnabled());
 
         isolationService.setModuleConfiguration(moduleConfiguration);
 
-        // Register managed interceptors in priority order
+        // Register managed interceptors in priority order (lowest order = highest priority)
+        registerManagedInterceptor(dynamicConfigAspect);   // order 10 - config injection first
         registerManagedInterceptor(validationAspect);
         registerManagedInterceptor(loggingAspect);
         registerManagedInterceptor(monitoringAspect);
         registerManagedInterceptor(asyncSafeAspect);
+        registerManagedInterceptor(rateLimiterAspect);     // order 65
         registerManagedInterceptor(circuitBreakerAspect);
         registerManagedInterceptor(retryAspect);
         registerManagedInterceptor(tracingAspect);
@@ -123,10 +134,12 @@ public class AOPService {
         ensureConfigurationLoaded();
 
         for (Class<?> testClass : testClasses) {
+            registerClassInterceptorIfEnabled(testClass, dynamicConfigAspect);
             registerClassInterceptorIfEnabled(testClass, validationAspect);
             registerClassInterceptorIfEnabled(testClass, loggingAspect);
             registerClassInterceptorIfEnabled(testClass, monitoringAspect);
             registerClassInterceptorIfEnabled(testClass, asyncSafeAspect);
+            registerClassInterceptorIfEnabled(testClass, rateLimiterAspect);
             registerClassInterceptorIfEnabled(testClass, circuitBreakerAspect);
             registerClassInterceptorIfEnabled(testClass, retryAspect);
             registerClassInterceptorIfEnabled(testClass, tracingAspect);
@@ -249,6 +262,34 @@ public class AOPService {
         }
     }
 
+    /**
+     * Gets the rate limiter metrics for a specific key.
+     *
+     * @param key the rate limiter key
+     * @return the rate limiter metrics, or null if not available
+     */
+    public RateLimiterMetrics getRateLimiterMetrics(String key) {
+        if (rateLimiterAspect == null) {
+            Log.warn("RateLimiterAspect not available in current configuration");
+            return null;
+        }
+        return rateLimiterAspect.getMetrics(key);
+    }
+
+    /**
+     * Gets the circuit breaker metrics for a specific key.
+     *
+     * @param key the circuit breaker key
+     * @return the circuit breaker metrics, or null if not available
+     */
+    public net.legacy.library.aop.fault.CircuitBreaker.CircuitBreakerMetrics getCircuitBreakerMetrics(String key) {
+        if (circuitBreakerAspect == null) {
+            Log.warn("CircuitBreakerAspect not available in current configuration");
+            return null;
+        }
+        return circuitBreakerAspect.getMetrics(key);
+    }
+
     public void cleanupClassLoader(ClassLoader classLoader) {
         isolationService.cleanup(classLoader);
         Log.info("Cleaned up AOP resources for ClassLoader: %s", classLoader);
@@ -260,6 +301,15 @@ public class AOPService {
         }
         if (retryAspect != null) {
             retryAspect.shutdown();
+        }
+        if (rateLimiterAspect != null) {
+            rateLimiterAspect.clearAll();
+        }
+        if (circuitBreakerAspect != null) {
+            circuitBreakerAspect.clearAll();
+        }
+        if (dynamicConfigAspect != null) {
+            dynamicConfigAspect.clearCaches();
         }
         clearMonitoringMetrics();
         globalInterceptors.clear();
@@ -296,6 +346,8 @@ public class AOPService {
             case MonitoringAspect ignored -> moduleConfiguration.isMonitoringEnabled();
             case AsyncSafeAspect ignored -> moduleConfiguration.isAsyncSafeEnabled();
             case LoggingAspect ignored -> moduleConfiguration.isLoggingEnabled();
+            case RateLimiterAspect ignored -> moduleConfiguration.isRateLimiterEnabled();
+            case DynamicConfigAspect ignored -> moduleConfiguration.isDynamicConfigEnabled();
             default -> true;
         };
     }

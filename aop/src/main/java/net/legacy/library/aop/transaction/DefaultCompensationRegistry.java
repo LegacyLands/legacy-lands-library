@@ -110,7 +110,7 @@ public class DefaultCompensationRegistry implements CompensationRegistry {
 
     /**
      * Clears all registered compensation strategies.
-     * 
+     *
      * <p>This method is primarily used for testing and cleanup purposes.
      */
     public void clear() {

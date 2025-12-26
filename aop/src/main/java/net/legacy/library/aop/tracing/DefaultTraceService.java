@@ -189,7 +189,7 @@ public class DefaultTraceService implements TraceService {
      * Completes a trace with the specified status.
      *
      * @param context the trace context
-     * @param status the completion status
+     * @param status  the completion status
      */
     private void completeTrace(TraceContext context, TraceContext.TraceStatus status) {
         context.complete(status);
@@ -212,7 +212,7 @@ public class DefaultTraceService implements TraceService {
      * Completes a trace with an error.
      *
      * @param context the trace context
-     * @param error the error that occurred
+     * @param error   the error that occurred
      */
     private void completeTraceWithError(TraceContext context, Throwable error) {
         context.completeWithError(error);

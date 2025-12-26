@@ -20,15 +20,15 @@ public class SecurityContext {
 
     private final Object principal;
     private final boolean authenticated;
-    
+
     @Getter(AccessLevel.NONE)
     private final String[] roles;
-    
+
     @Getter(AccessLevel.NONE)
     private final String[] permissions;
     private final String provider;
     private final String methodName;
-    
+
     @Getter(AccessLevel.NONE)
     private final Object[] arguments;
     private final Map<String, Object> attributes;

@@ -36,11 +36,11 @@ public class TraceContext {
     /**
      * Constructs a new trace context.
      *
-     * @param traceId the trace ID
-     * @param spanId the span ID
-     * @param parentSpanId the parent span ID, or null if this is the root span
+     * @param traceId       the trace ID
+     * @param spanId        the span ID
+     * @param parentSpanId  the parent span ID, or null if this is the root span
      * @param operationName the operation name
-     * @param serviceName the service name
+     * @param serviceName   the service name
      */
     public TraceContext(String traceId, String spanId, String parentSpanId,
                         String operationName, String serviceName) {
@@ -72,7 +72,7 @@ public class TraceContext {
     /**
      * Adds an attribute to the trace.
      *
-     * @param key the attribute key
+     * @param key   the attribute key
      * @param value the attribute value
      */
     public void addAttribute(String key, String value) {
@@ -82,7 +82,7 @@ public class TraceContext {
     /**
      * Adds a metric to the trace.
      *
-     * @param key the metric key
+     * @param key   the metric key
      * @param value the metric value
      */
     public void addMetric(String key, double value) {
@@ -92,7 +92,7 @@ public class TraceContext {
     /**
      * Adds a baggage item.
      *
-     * @param key the baggage key
+     * @param key   the baggage key
      * @param value the baggage value
      */
     public void addBaggage(String key, Object value) {

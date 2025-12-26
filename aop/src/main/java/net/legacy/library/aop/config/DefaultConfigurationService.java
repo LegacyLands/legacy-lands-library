@@ -34,7 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DefaultConfigurationService implements ConfigurationService {
 
     private static final String GLOBAL_LISTENER_KEY = "__GLOBAL__";
-    
+
     private final List<ConfigurationSource> sources = new CopyOnWriteArrayList<>();
     private final Map<String, Object> configurationCache = new ConcurrentHashMap<>();
     private final Map<String, ConfigurationMetadata> metadataCache = new ConcurrentHashMap<>();
@@ -427,8 +427,8 @@ public class DefaultConfigurationService implements ConfigurationService {
      * Converts a value to the target type.
      *
      * @param value the value to convert
-     * @param type the target type
-     * @param <T> the type parameter
+     * @param type  the target type
+     * @param <T>   the type parameter
      * @return the converted value
      */
     @SuppressWarnings("unchecked")
@@ -460,9 +460,9 @@ public class DefaultConfigurationService implements ConfigurationService {
     /**
      * Applies a validation rule to a configuration value.
      *
-     * @param key the configuration key
+     * @param key   the configuration key
      * @param value the value to validate
-     * @param rule the validation rule
+     * @param rule  the validation rule
      * @return the validation result
      */
     private ValidationResult applyValidationRule(String key, Object value, String rule) {
@@ -540,7 +540,7 @@ public class DefaultConfigurationService implements ConfigurationService {
     /**
      * Notifies change listeners of a configuration change.
      *
-     * @param key the configuration key
+     * @param key      the configuration key
      * @param oldValue the old value
      * @param newValue the new value
      */

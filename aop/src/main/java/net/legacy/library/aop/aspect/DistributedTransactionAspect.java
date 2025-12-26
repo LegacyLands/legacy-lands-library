@@ -97,8 +97,8 @@ public class DistributedTransactionAspect implements MethodInterceptor {
     /**
      * Determines the execution context based on propagation behavior.
      *
-     * @param context the aspect context
-     * @param transactional the transaction annotation
+     * @param context        the aspect context
+     * @param transactional  the transaction annotation
      * @param currentContext the current transaction context
      * @return the execution context to use
      */
@@ -141,10 +141,10 @@ public class DistributedTransactionAspect implements MethodInterceptor {
     /**
      * Executes the method within a transaction context.
      *
-     * @param context the aspect context
-     * @param invocation the method invocation
+     * @param context            the aspect context
+     * @param invocation         the method invocation
      * @param transactionContext the transaction context
-     * @param transactional the transaction annotation
+     * @param transactional      the transaction annotation
      * @return the method result
      * @throws Throwable if execution fails
      */
@@ -227,7 +227,7 @@ public class DistributedTransactionAspect implements MethodInterceptor {
      * Determines if a transaction should be rolled back based on the exception.
      *
      * @param transactional the transaction annotation
-     * @param throwable the thrown exception
+     * @param throwable     the thrown exception
      * @return true if the transaction should be rolled back
      */
     private boolean shouldRollback(DistributedTransaction transactional, Throwable throwable) {
@@ -324,10 +324,10 @@ public class DistributedTransactionAspect implements MethodInterceptor {
     /**
      * Executes the method invocation with timeout monitoring.
      *
-     * @param context the aspect context
-     * @param invocation the method invocation
-     * @param timeoutMillis the timeout in milliseconds
-     * @param startTime the start time
+     * @param context            the aspect context
+     * @param invocation         the method invocation
+     * @param timeoutMillis      the timeout in milliseconds
+     * @param startTime          the start time
      * @param transactionContext the transaction context
      * @return the method result
      * @throws Throwable if execution fails or times out

@@ -41,7 +41,7 @@ public class CircuitBreaker {
     /**
      * Constructs a new circuit breaker.
      *
-     * @param name the circuit breaker name
+     * @param name   the circuit breaker name
      * @param config the circuit breaker configuration
      */
     public CircuitBreaker(String name, CircuitBreakerConfig config) {
@@ -92,6 +92,7 @@ public class CircuitBreaker {
                 return;
             }
 
+            failureCount.incrementAndGet();
             lastFailureTime.set(System.currentTimeMillis());
 
             if (currentState == CircuitState.HALF_OPEN) {

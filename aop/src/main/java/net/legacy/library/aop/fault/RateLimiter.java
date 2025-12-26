@@ -42,7 +42,7 @@ public class RateLimiter {
     /**
      * Constructs a new rate limiter.
      *
-     * @param name the rate limiter name
+     * @param name   the rate limiter name
      * @param config the rate limiter configuration
      */
     public RateLimiter(String name, RateLimiterConfig config) {
@@ -118,7 +118,7 @@ public class RateLimiter {
     /**
      * Waits for the next available slot in the rate limit window.
      *
-     * @param permits the number of permits to acquire
+     * @param permits     the number of permits to acquire
      * @param maxWaitTime the maximum time to wait in milliseconds
      * @return true if the permit was acquired
      * @throws InterruptedException if the thread was interrupted

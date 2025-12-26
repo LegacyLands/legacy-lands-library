@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 
 /**
  * Captures distributed tracing information for methods annotated with {@link Traced}.
- * 
+ *
  * @author qwq-dev
  * @version 1.0
  * @since 2025-06-19 17:41

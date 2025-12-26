@@ -396,7 +396,9 @@ public class AOPCoreTest {
                     null,
                     monitoringAspect,
                     null,
-                    loggingAspect
+                    loggingAspect,
+                    null,
+                    null
             );
 
             aopService.initialize();

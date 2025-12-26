@@ -26,7 +26,7 @@ public class DefaultSecurityProvider implements SecurityProvider {
      * Creates a simple security context for testing.
      *
      * @param username the username
-     * @param roles the roles
+     * @param roles    the roles
      * @return security context
      */
     public static SecurityContext createTestContext(String username, String... roles) {
@@ -97,8 +97,8 @@ public class DefaultSecurityProvider implements SecurityProvider {
     /**
      * Sets the current security context.
      *
-     * @param principal the principal
-     * @param roles the roles
+     * @param principal   the principal
+     * @param roles       the roles
      * @param permissions the permissions
      */
     public void setCurrentContext(Object principal, String[] roles, String[] permissions) {

@@ -168,9 +168,9 @@ public class InMemoryTransactionLogStore implements TransactionLogStore {
      * Creates a new transaction log entry with the given parameters.
      *
      * @param transactionId the transaction ID
-     * @param logType the log type
-     * @param message the log message
-     * @param metadata additional metadata
+     * @param logType       the log type
+     * @param message       the log message
+     * @param metadata      additional metadata
      * @return the created log entry
      */
     private TransactionLogEntry createLogEntry(String transactionId, LogType logType,
@@ -204,7 +204,7 @@ public class InMemoryTransactionLogStore implements TransactionLogStore {
 
     /**
      * Clears all stored logs and contexts.
-     * 
+     *
      * <p>This method is primarily used for testing and cleanup purposes.
      */
     public void clear() {

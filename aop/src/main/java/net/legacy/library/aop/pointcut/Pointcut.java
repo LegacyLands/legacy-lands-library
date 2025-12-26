@@ -21,7 +21,7 @@ public interface Pointcut {
      * method invocation. Implementations should be efficient as this may be called
      * frequently during proxy creation and method invocation.
      *
-     * @param method the method to test
+     * @param method      the method to test
      * @param targetClass the class declaring the method (which can differ from method.getDeclaringClass() due to inheritance)
      * @return {@code true} if the pointcut matches, {@code false} otherwise
      */

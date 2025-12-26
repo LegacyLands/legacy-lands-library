@@ -29,8 +29,8 @@ public class RetryPolicy {
     /**
      * Constructs a new retry policy.
      *
-     * @param name the retry policy name
-     * @param config the retry configuration
+     * @param name      the retry policy name
+     * @param config    the retry configuration
      * @param scheduler the scheduler for delayed retries
      */
     public RetryPolicy(String name, RetryConfig config, ScheduledExecutorService scheduler) {
@@ -43,7 +43,7 @@ public class RetryPolicy {
      * Executes a task with retry logic.
      *
      * @param task the task to execute
-     * @param <T> the return type
+     * @param <T>  the return type
      * @return a CompletableFuture that completes with the result
      */
     public <T> CompletableFuture<T> executeWithRetry(RetryTask<T> task) {
@@ -58,10 +58,10 @@ public class RetryPolicy {
     /**
      * Executes a single attempt of the task.
      *
-     * @param task the task to execute
+     * @param task         the task to execute
      * @param resultFuture the result future
      * @param attemptCount the current attempt count
-     * @param <T> the return type
+     * @param <T>          the return type
      */
     private <T> void executeAttempt(RetryTask<T> task, CompletableFuture<T> resultFuture,
                                     AtomicInteger attemptCount) {
@@ -80,11 +80,11 @@ public class RetryPolicy {
     /**
      * Attempts to execute the task.
      *
-     * @param task the task to execute
-     * @param resultFuture the result future
-     * @param attemptCount the current attempt count
+     * @param task           the task to execute
+     * @param resultFuture   the result future
+     * @param attemptCount   the current attempt count
      * @param currentAttempt the current attempt number
-     * @param <T> the return type
+     * @param <T>            the return type
      */
     private <T> void attemptExecution(RetryTask<T> task, CompletableFuture<T> resultFuture,
                                       AtomicInteger attemptCount, int currentAttempt) {
@@ -112,12 +112,12 @@ public class RetryPolicy {
     /**
      * Handles execution failure.
      *
-     * @param task the task that failed
-     * @param resultFuture the result future
-     * @param attemptCount the current attempt count
-     * @param throwable the failure exception
+     * @param task           the task that failed
+     * @param resultFuture   the result future
+     * @param attemptCount   the current attempt count
+     * @param throwable      the failure exception
      * @param currentAttempt the current attempt number
-     * @param <T> the return type
+     * @param <T>            the return type
      */
     private <T> void handleFailure(RetryTask<T> task, CompletableFuture<T> resultFuture,
                                    AtomicInteger attemptCount, Throwable throwable,
@@ -135,7 +135,7 @@ public class RetryPolicy {
     /**
      * Checks if we should retry based on the exception and attempt count.
      *
-     * @param throwable the exception that occurred
+     * @param throwable      the exception that occurred
      * @param currentAttempt the current attempt number
      * @return true if we should retry
      */

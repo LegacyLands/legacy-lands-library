@@ -30,7 +30,7 @@ public class TransactionException extends RuntimeException {
      * Constructs a new transaction exception with the specified message and cause.
      *
      * @param message the error message
-     * @param cause the cause of the exception
+     * @param cause   the cause of the exception
      */
     public TransactionException(String message, Throwable cause) {
         super(message, cause);
@@ -41,8 +41,8 @@ public class TransactionException extends RuntimeException {
     /**
      * Constructs a new transaction exception with transaction context.
      *
-     * @param message the error message
-     * @param transactionId the transaction ID
+     * @param message           the error message
+     * @param transactionId     the transaction ID
      * @param transactionStatus the transaction status
      */
     public TransactionException(String message, String transactionId, TransactionStatus transactionStatus) {
@@ -54,10 +54,10 @@ public class TransactionException extends RuntimeException {
     /**
      * Constructs a new transaction exception with transaction context and cause.
      *
-     * @param message the error message
-     * @param transactionId the transaction ID
+     * @param message           the error message
+     * @param transactionId     the transaction ID
      * @param transactionStatus the transaction status
-     * @param cause the cause of the exception
+     * @param cause             the cause of the exception
      */
     public TransactionException(String message, String transactionId, TransactionStatus transactionStatus, Throwable cause) {
         super(message, cause);

@@ -19,9 +19,9 @@ public interface ConfigurationService {
     /**
      * Gets a configuration value by key.
      *
-     * @param key the configuration key
+     * @param key  the configuration key
      * @param type the target type
-     * @param <T> the type parameter
+     * @param <T>  the type parameter
      * @return the configuration value
      */
     <T> T get(String key, Class<T> type);
@@ -29,10 +29,10 @@ public interface ConfigurationService {
     /**
      * Gets a configuration value by key with default value.
      *
-     * @param key the configuration key
-     * @param type the target type
+     * @param key          the configuration key
+     * @param type         the target type
      * @param defaultValue the default value
-     * @param <T> the type parameter
+     * @param <T>          the type parameter
      * @return the configuration value
      */
     <T> T get(String key, Class<T> type, T defaultValue);
@@ -40,9 +40,9 @@ public interface ConfigurationService {
     /**
      * Gets a configuration value by key asynchronously.
      *
-     * @param key the configuration key
+     * @param key  the configuration key
      * @param type the target type
-     * @param <T> the type parameter
+     * @param <T>  the type parameter
      * @return a CompletableFuture that completes with the configuration value
      */
     <T> CompletableFuture<T> getAsync(String key, Class<T> type);
@@ -50,7 +50,7 @@ public interface ConfigurationService {
     /**
      * Sets a configuration value.
      *
-     * @param key the configuration key
+     * @param key   the configuration key
      * @param value the configuration value
      * @return true if the configuration was updated successfully
      */
@@ -59,7 +59,7 @@ public interface ConfigurationService {
     /**
      * Sets a configuration value asynchronously.
      *
-     * @param key the configuration key
+     * @param key   the configuration key
      * @param value the configuration value
      * @return a CompletableFuture that completes when the configuration is updated
      */
@@ -105,7 +105,7 @@ public interface ConfigurationService {
     /**
      * Adds a configuration change listener.
      *
-     * @param key the configuration key to listen for, or null for all keys
+     * @param key      the configuration key to listen for, or null for all keys
      * @param listener the change listener
      */
     void addChangeListener(String key, ConfigurationChangeListener listener);
@@ -120,7 +120,7 @@ public interface ConfigurationService {
     /**
      * Validates a configuration value.
      *
-     * @param key the configuration key
+     * @param key   the configuration key
      * @param value the configuration value
      * @return the validation result
      */
@@ -162,7 +162,7 @@ public interface ConfigurationService {
         /**
          * Called when a configuration value changes.
          *
-         * @param key the configuration key
+         * @param key      the configuration key
          * @param oldValue the old value
          * @param newValue the new value
          */

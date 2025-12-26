@@ -1,26 +1,24 @@
-### AOP Module
+### AOP 模块
 
-An enterprise-grade aspect engine tailored for the Legacy Lands plugin ecosystem. The module delivers
-fully managed cross-cutting capabilities—transaction coordination, security, validation, observability,
-asynchronous safety, and fault tolerance—while preserving ClassLoader isolation between plugins. Proxy
-generation combines JDK dynamic proxies with ByteBuddy class proxies so both interface-based services
-and concrete components can be enhanced transparently without altering business code.
+企业级面向切面编程引擎，专为 Legacy Lands 插件生态打造。该模块提供全托管的跨领域能力——事务协调、安全审计、
+输入校验、性能监控、异步安全与容错保护，同时保持插件间的 ClassLoader 隔离。代理生成结合 JDK 动态代理与
+ByteBuddy 类代理，使接口服务与具体组件都能透明增强，无需修改业务代码。
 
-### Usage
+### 依赖配置
 
 ```kotlin
-// Dependencies
+// build.gradle.kts
 dependencies {
     compileOnly("net.legacy.library:annotation:1.0-SNAPSHOT")
     compileOnly("net.legacy.library:commons:1.0-SNAPSHOT")
     compileOnly("net.legacy.library:foundation:1.0-SNAPSHOT")
 
-    // AOP module
+    // AOP 模块
     compileOnly("net.legacy.library:aop:1.0-SNAPSHOT")
 }
 ```
 
-### Quick Start
+### 快速开始
 
 ```java
 @FairyLaunch
@@ -47,57 +45,56 @@ public class AOPLauncher extends Plugin {
 }
 ```
 
-### Architecture Overview
+### 架构概述
 
-The AOP module uses a hybrid proxy pipeline that automatically selects the optimal proxy strategy:
+AOP 模块采用混合代理管线，自动选择最优代理策略：
 
-- **JDK Dynamic Proxies**: Used for interface types, providing standard proxy behavior
-- **ByteBuddy Class Proxies**: Used for concrete classes, preserving field state through synchronized copy-on-invoke
-  semantics
-- **ClassLoader Isolation**: Each plugin maintains its own aspect metadata, preventing cross-plugin interference
+- **JDK 动态代理**：用于接口类型，提供标准代理行为
+- **ByteBuddy 类代理**：用于具体类，通过同步复制语义保持字段状态
+- **ClassLoader 隔离**：每个插件维护独立的切面元数据，防止跨插件干扰
 
-### Proxy Creation Flow
+### 代理创建流程
 
-1. `AOPService` receives a target object or class for proxying
-2. `AspectProxyFactory` determines the appropriate proxy type (JDK or ByteBuddy)
-3. Applicable interceptors are gathered based on method annotations
-4. Interceptors are ordered by priority and wrapped into an execution chain
-5. The proxy is returned, ready for transparent method interception
+1. `AOPService` 接收需要代理的目标对象或类
+2. `AspectProxyFactory` 决定代理类型（JDK 或 ByteBuddy）
+3. 根据方法注解收集适用的拦截器
+4. 按优先级排序拦截器并包装成执行链
+5. 返回代理实例，准备进行透明方法拦截
 
-### Built-in Aspects
+### 内置切面
 
-| Aspect | Annotation | Order | Description |
-|--------|------------|-------|-------------|
-| DynamicConfigAspect | `@DynamicConfig` | 10 | Runtime configuration injection with hot-reload |
-| TracingAspect | `@Traced` | 30 | Distributed tracing with span management |
-| DistributedTransactionAspect | `@DistributedTransaction` | 50 | Two-phase commit coordination |
-| RetryAspect | `@Retry` | 60 | Automatic retry with configurable backoff strategies |
-| RateLimiterAspect | `@RateLimiter` | 65 | Rate limiting with multiple strategies |
-| CircuitBreakerAspect | `@CircuitBreaker` | 70 | Fault tolerance with state machine |
-| ValidationAspect | `@ValidInput` | 90 | Input validation with custom validators |
-| SecurityAspect | `@Secured` | 100 | Authentication, authorization, and audit |
-| MonitoringAspect | `@Monitored` | 100 | Metrics collection and slow-call detection |
-| AsyncSafeAspect | `@AsyncSafe` | 200 | Thread affinity and reentrancy protection |
-| LoggingAspect | `@Logged` | 300 | Structured logging with templates |
-| ExceptionWrapperAspect | `@ExceptionWrapper` | 400 | Exception normalization and mapping |
+| 切面 | 注解 | 顺序 | 描述 |
+|-----|------|-----|------|
+| DynamicConfigAspect | `@DynamicConfig` | 10 | 运行时配置注入，支持热加载 |
+| TracingAspect | `@Traced` | 30 | 分布式追踪与 Span 管理 |
+| DistributedTransactionAspect | `@DistributedTransaction` | 50 | 两阶段提交协调 |
+| RetryAspect | `@Retry` | 60 | 自动重试，可配置退避策略 |
+| RateLimiterAspect | `@RateLimiter` | 65 | 多策略限流 |
+| CircuitBreakerAspect | `@CircuitBreaker` | 70 | 状态机容错 |
+| ValidationAspect | `@ValidInput` | 90 | 输入校验与自定义验证器 |
+| SecurityAspect | `@Secured` | 100 | 认证、授权与审计 |
+| MonitoringAspect | `@Monitored` | 100 | 指标收集与慢调用检测 |
+| AsyncSafeAspect | `@AsyncSafe` | 200 | 线程亲和与重入保护 |
+| LoggingAspect | `@Logged` | 300 | 模板化结构日志 |
+| ExceptionWrapperAspect | `@ExceptionWrapper` | 400 | 异常规范化与映射 |
 
-### Manual Service Initialization
+### 手动服务初始化
 
-For standalone usage without Fairy IoC, you can manually create the AOP service:
+脱离 Fairy IoC 独立使用时，可手动创建 AOP 服务：
 
 ```java
 public class ManualAOPSetup {
     public void setupAOP() {
-        // 1. Create core services
+        // 1. 创建核心服务
         ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
         AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
 
-        // 2. Create aspects you need
+        // 2. 创建所需切面
         RetryAspect retryAspect = new RetryAspect();
         CircuitBreakerAspect circuitBreakerAspect = new CircuitBreakerAspect();
         RateLimiterAspect rateLimiterAspect = new RateLimiterAspect();
 
-        // 3. Create AOP service with selected aspects
+        // 3. 使用选定切面创建 AOP 服务
         AOPService aopService = new AOPService(
                 proxyFactory,
                 isolationService,
@@ -114,10 +111,10 @@ public class ManualAOPSetup {
                 null   // DynamicConfigAspect
         );
 
-        // 4. Initialize the service
+        // 4. 初始化服务
         aopService.initialize();
 
-        // 5. Create proxied instances
+        // 5. 创建代理实例
         AOPFactory aopFactory = new AOPFactory(aopService);
         MyService service = aopFactory.create(MyServiceImpl.class);
     }
@@ -126,62 +123,62 @@ public class ManualAOPSetup {
 
 ## AOPFactory API
 
-The `AOPFactory` provides convenient methods for creating AOP-enhanced objects:
+`AOPFactory` 提供创建 AOP 增强对象的便捷方法：
 
-| Method | Description |
-|--------|-------------|
-| `create(Class<T>)` | Creates a new instance with AOP capabilities |
-| `create(Class<T>, List<MethodInterceptor>)` | Creates instance with custom interceptors |
-| `enhance(T)` | Enhances an existing object with AOP capabilities |
-| `enhance(T, List<MethodInterceptor>)` | Enhances existing object with custom interceptors |
-| `createSingleton(Class<T>)` | Creates or retrieves singleton instance from container |
+| 方法 | 描述 |
+|------|------|
+| `create(Class<T>)` | 创建具有 AOP 能力的新实例 |
+| `create(Class<T>, List<MethodInterceptor>)` | 使用自定义拦截器创建实例 |
+| `enhance(T)` | 为现有对象添加 AOP 能力 |
+| `enhance(T, List<MethodInterceptor>)` | 使用自定义拦截器增强现有对象 |
+| `createSingleton(Class<T>)` | 从容器创建或获取单例实例 |
 
-### AOPService Key Methods
+### AOPService 关键方法
 
-| Method | Description |
-|--------|-------------|
-| `initialize()` | Initializes AOP service and registers all aspects |
-| `registerTestInterceptors(Class<?>...)` | Registers interceptors for test classes |
-| `createProxy(T)` | Creates proxy for an object |
-| `createProxy(T, List<MethodInterceptor>)` | Creates proxy with custom interceptors |
-| `registerGlobalInterceptor(MethodInterceptor)` | Registers a global interceptor |
-| `getMonitoringMetrics()` | Gets monitoring metrics map |
-| `getRateLimiterMetrics()` | Gets rate limiter metrics |
-| `getCircuitBreakerMetrics()` | Gets circuit breaker metrics |
-| `cleanupClassLoader(ClassLoader)` | Cleans up ClassLoader-specific resources |
-| `shutdown()` | Performs complete shutdown and cleanup |
+| 方法 | 描述 |
+|------|------|
+| `initialize()` | 初始化 AOP 服务并注册所有切面 |
+| `registerTestInterceptors(Class<?>...)` | 为测试类注册拦截器 |
+| `createProxy(T)` | 为对象创建代理 |
+| `createProxy(T, List<MethodInterceptor>)` | 使用自定义拦截器创建代理 |
+| `registerGlobalInterceptor(MethodInterceptor)` | 注册全局拦截器 |
+| `getMonitoringMetrics()` | 获取监控指标映射 |
+| `getRateLimiterMetrics()` | 获取限流器指标 |
+| `getCircuitBreakerMetrics()` | 获取断路器指标 |
+| `cleanupClassLoader(ClassLoader)` | 清理 ClassLoader 相关资源 |
+| `shutdown()` | 执行完整关闭和清理 |
 
-## Retry Pattern
+## 重试模式
 
-The `@Retry` annotation provides automatic retry for transient failures with configurable backoff strategies.
+`@Retry` 注解为瞬时故障提供自动重试，支持可配置的退避策略。
 
-### Retry Configuration Options
+### 重试配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `maxAttempts` | Maximum number of retry attempts | 3 |
-| `initialDelay` | Initial delay in milliseconds | 1000 |
-| `maxDelay` | Maximum delay in milliseconds | 30000 |
-| `backoffStrategy` | Backoff strategy (FIXED, LINEAR, EXPONENTIAL, EXPONENTIAL_JITTER, RANDOM) | EXPONENTIAL |
-| `backoffMultiplier` | Multiplier for exponential backoff | 2.0 |
-| `jitterFactor` | Jitter factor for EXPONENTIAL_JITTER | 0.1 |
-| `retryOn` | Exception types to retry on (empty = all) | {} |
-| `ignoreExceptions` | Exception types to ignore (no retry) | {} |
-| `fallbackMethod` | Fallback method name | "" |
-| `includeExceptionInFallback` | Include exception as fallback parameter | false |
-| `propagateContext` | Propagate context across retries | true |
-| `timeout` | Timeout for each attempt (0 = no timeout) | 0 |
-| `maxAttemptsSupplier` | Dynamic max attempts supplier method | "" |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `maxAttempts` | 最大重试次数 | 3 |
+| `initialDelay` | 初始延迟（毫秒） | 1000 |
+| `maxDelay` | 最大延迟（毫秒） | 30000 |
+| `backoffStrategy` | 退避策略（FIXED, LINEAR, EXPONENTIAL, EXPONENTIAL_JITTER, RANDOM） | EXPONENTIAL |
+| `backoffMultiplier` | 指数退避乘数 | 2.0 |
+| `jitterFactor` | EXPONENTIAL_JITTER 的抖动因子 | 0.1 |
+| `retryOn` | 需要重试的异常类型（空 = 所有） | {} |
+| `ignoreExceptions` | 忽略的异常类型（不重试） | {} |
+| `fallbackMethod` | 降级方法名 | "" |
+| `includeExceptionInFallback` | 降级时包含异常参数 | false |
+| `propagateContext` | 跨重试传播上下文 | true |
+| `timeout` | 每次尝试超时（0 = 无超时） | 0 |
+| `maxAttemptsSupplier` | 动态最大次数提供者方法 | "" |
 
-### Backoff Strategies
+### 退避策略
 
-- **FIXED**: Constant delay between retries
-- **LINEAR**: Linearly increasing delay
-- **EXPONENTIAL**: Exponentially increasing delay with configurable multiplier
-- **EXPONENTIAL_JITTER**: Exponential delay with random jitter to prevent thundering herd
-- **RANDOM**: Random delay within specified bounds
+- **FIXED**：重试间隔固定
+- **LINEAR**：线性递增延迟
+- **EXPONENTIAL**：指数递增延迟，可配置乘数
+- **EXPONENTIAL_JITTER**：指数延迟加随机抖动，防止惊群效应
+- **RANDOM**：指定范围内的随机延迟
 
-### Basic Retry Usage
+### 基础重试用法
 
 ```java
 public interface RetryService {
@@ -297,7 +294,7 @@ public class TestRetryService implements RetryService {
 }
 ```
 
-### Retry Test Example
+### 重试测试示例
 
 ```java
 public class RetryExample {
@@ -320,47 +317,47 @@ public class RetryExample {
         AOPFactory aopFactory = new AOPFactory(aopService);
         RetryService service = aopFactory.create(TestRetryService.class);
 
-        // This will fail twice, then succeed on the third attempt
+        // 前两次失败，第三次成功
         String result = service.flakyOperation("retry-test");
         // result: "Flaky operation succeeded: retry-test (Attempt #3)"
 
-        // This will fail and use fallback
+        // 失败后使用 fallback
         String fallbackResult = service.failingWithFallback("fallback");
         // fallbackResult: "Fallback invoked for fallback due to IllegalStateException"
     }
 }
 ```
 
-## Circuit Breaker Pattern
+## 断路器模式
 
-The `@CircuitBreaker` annotation implements the circuit breaker pattern for fault tolerance.
+`@CircuitBreaker` 注解实现断路器模式，提供容错保护。
 
-### Circuit Breaker Configuration Options
+### 断路器配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `failureRateThreshold` | Failure rate threshold (0.0-1.0) | 0.5 |
-| `failureCountThreshold` | Failure count to trip circuit | 5 |
-| `minimumNumberOfCalls` | Minimum calls before evaluation | 10 |
-| `slidingWindowSize` | Sliding window size in milliseconds | 60000 |
-| `waitDurationInOpenState` | Wait duration in open state (ms) | 30000 |
-| `openDurationSupplier` | Dynamic open duration supplier | "" |
-| `permittedNumberOfCallsInHalfOpenState` | Calls allowed in half-open state | 3 |
-| `timeoutDuration` | Call timeout duration (0 = no timeout) | 0 |
-| `fallbackMethod` | Fallback method name | "" |
-| `recordFailurePredicate` | Exception types to record as failures | {} |
-| `ignoreExceptions` | Exception types to ignore | {} |
-| `automaticTransitionFromOpenToHalfOpen` | Auto transition to half-open | true |
-| `enableMetrics` | Enable metrics collection | true |
-| `name` | Circuit breaker name for metrics | "" |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `failureRateThreshold` | 失败率阈值（0.0-1.0） | 0.5 |
+| `failureCountThreshold` | 触发跳闸的失败次数 | 5 |
+| `minimumNumberOfCalls` | 评估前的最小调用次数 | 10 |
+| `slidingWindowSize` | 滑动窗口大小（毫秒） | 60000 |
+| `waitDurationInOpenState` | 开启状态等待时间（毫秒） | 30000 |
+| `openDurationSupplier` | 动态开启时间提供者 | "" |
+| `permittedNumberOfCallsInHalfOpenState` | 半开状态允许的调用数 | 3 |
+| `timeoutDuration` | 调用超时时间（0 = 无超时） | 0 |
+| `fallbackMethod` | 降级方法名 | "" |
+| `recordFailurePredicate` | 记录为失败的异常类型 | {} |
+| `ignoreExceptions` | 忽略的异常类型 | {} |
+| `automaticTransitionFromOpenToHalfOpen` | 自动转换到半开状态 | true |
+| `enableMetrics` | 启用指标收集 | true |
+| `name` | 用于指标的断路器名称 | "" |
 
-### Circuit States
+### 断路器状态
 
-- **CLOSED**: Normal operation, all calls are allowed
-- **OPEN**: Circuit is tripped, calls are blocked and fallback is invoked
-- **HALF_OPEN**: Testing state, limited calls allowed to probe recovery
+- **CLOSED**：正常运行，所有调用放行
+- **OPEN**：断路器跳闸，调用被阻断并触发 fallback
+- **HALF_OPEN**：测试状态，允许有限调用探测恢复
 
-### Circuit Breaker Configuration
+### 断路器配置
 
 ```java
 public interface CircuitBreakerService {
@@ -395,9 +392,9 @@ public class TestCircuitBreakerService implements CircuitBreakerService {
     public String riskyOperation(String input) throws Exception {
         int currentCall = callCounter.incrementAndGet();
 
-        // Simulate failures for circuit breaker testing
-        // First 6 calls fail to ensure circuit breaker opens (need 5 minimum calls with 3 failures)
-        // After circuit breaker recovery, calls should succeed
+        // 模拟断路器测试的失败场景
+        // 前 6 次调用失败，确保断路器开启（需要 5 次最小调用且 3 次失败）
+        // 断路器恢复后调用应成功
         if (circuitShouldFail && currentCall <= 6) {
             throw new RuntimeException("Simulated failure #" + currentCall);
         }
@@ -406,7 +403,7 @@ public class TestCircuitBreakerService implements CircuitBreakerService {
     }
 
     /**
-     * Resets the circuit breaker failure simulation for recovery testing.
+     * 重置断路器失败模拟，用于恢复测试。
      */
     public void resetForRecovery() {
         this.circuitShouldFail = false;
@@ -429,7 +426,7 @@ public class TestCircuitBreakerService implements CircuitBreakerService {
 }
 ```
 
-### Circuit Breaker Test Example
+### 断路器测试示例
 
 ```java
 public class CircuitBreakerExample {
@@ -467,39 +464,39 @@ public class CircuitBreakerExample {
             }
         }
 
-        // After enough failures, circuit should open
+        // 足够失败后断路器应开启
         // failureCount >= 3 && openStateObserved == true
     }
 }
 ```
 
-## Rate Limiter Pattern
+## 限流模式
 
-The `@RateLimiter` annotation provides rate limiting with multiple strategies.
+`@RateLimiter` 注解提供多策略限流。
 
-### Rate Limiter Configuration Options
+### 限流配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `limit` | Maximum requests allowed (required) | - |
-| `period` | Time period in milliseconds (required) | - |
-| `strategy` | Rate limiting strategy (FIXED_WINDOW, SLIDING_WINDOW, TOKEN_BUCKET, LEAKY_BUCKET) | FIXED_WINDOW |
-| `keyExpression` | Key expression for per-key limiting (e.g., `{#arg0}`) | "" |
-| `fallbackMethod` | Fallback method name | "" |
-| `waitForNextSlot` | Whether to block and wait for next slot | false |
-| `maxWaitTime` | Maximum wait time in milliseconds | 5000 |
-| `distributed` | Enable distributed rate limiting | false |
-| `distributedLockTimeout` | Distributed lock timeout (ms) | 5000 |
-| `name` | Rate limiter name for metrics | "" |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `limit` | 时间周期内允许的最大请求数（必需） | - |
+| `period` | 时间周期（毫秒，必需） | - |
+| `strategy` | 限流策略（FIXED_WINDOW, SLIDING_WINDOW, TOKEN_BUCKET, LEAKY_BUCKET） | FIXED_WINDOW |
+| `keyExpression` | 按键限流的表达式（如 `{#arg0}`） | "" |
+| `fallbackMethod` | 被限流时调用的降级方法名 | "" |
+| `waitForNextSlot` | 是否阻塞等待下一个可用窗口 | false |
+| `maxWaitTime` | 最大等待时间（毫秒） | 5000 |
+| `distributed` | 启用分布式限流 | false |
+| `distributedLockTimeout` | 分布式锁超时时间（毫秒） | 5000 |
+| `name` | 用于指标的限流器名称 | "" |
 
-### Rate Limiting Strategies
+### 限流策略
 
-- **FIXED_WINDOW**: Fixed time window counter
-- **SLIDING_WINDOW**: Sliding time window for smoother limiting
-- **TOKEN_BUCKET**: Token bucket algorithm for burst handling
-- **LEAKY_BUCKET**: Leaky bucket algorithm for constant rate output
+- **FIXED_WINDOW**：固定时间窗口计数器
+- **SLIDING_WINDOW**：滑动时间窗口，更平滑的限流
+- **TOKEN_BUCKET**：令牌桶算法，支持突发流量
+- **LEAKY_BUCKET**：漏桶算法，恒定速率输出
 
-### Rate Limiter Configuration
+### 限流配置
 
 ```java
 public interface RateLimitService {
@@ -558,7 +555,7 @@ public class TestRateLimitService implements RateLimitService {
 }
 ```
 
-### Rate Limiter Test Example
+### 限流测试示例
 
 ```java
 public class RateLimiterExample {
@@ -584,7 +581,7 @@ public class RateLimiterExample {
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
 
-        // Execute 10 calls, limit is 5 per second
+        // 执行 10 次调用，限制每秒 5 次
         for (int i = 0; i < 10; i++) {
             try {
                 service.fixedWindowOperation("test-" + i);
@@ -596,27 +593,27 @@ public class RateLimiterExample {
 
         // successCount == 5, failCount == 5
 
-        // Per-user rate limiting
+        // 按用户限流
         AtomicInteger userASuccess = new AtomicInteger(0);
         AtomicInteger userBSuccess = new AtomicInteger(0);
 
-        // User A makes 3 calls (limit is 2)
+        // 用户 A 调用 3 次（限制 2 次）
         for (int i = 0; i < 3; i++) {
             try {
                 service.perUserOperation("userA", "data-" + i);
                 userASuccess.incrementAndGet();
             } catch (Exception exception) {
-                // Rate limited
+                // 被限流
             }
         }
 
-        // User B makes 3 calls (separate limit)
+        // 用户 B 调用 3 次（独立限制）
         for (int i = 0; i < 3; i++) {
             try {
                 service.perUserOperation("userB", "data-" + i);
                 userBSuccess.incrementAndGet();
             } catch (Exception exception) {
-                // Rate limited
+                // 被限流
             }
         }
 
@@ -625,11 +622,11 @@ public class RateLimiterExample {
 }
 ```
 
-## Dynamic Configuration
+## 动态配置
 
-The `@DynamicConfig` annotation enables runtime configuration injection with hot-reload support.
+`@DynamicConfig` 注解支持运行时配置注入与热加载。
 
-### Dynamic Config Configuration
+### 动态配置示例
 
 ```java
 public interface ConfigService {
@@ -687,7 +684,7 @@ public class TestSystemPropertyConfigService implements SystemPropertyConfigServ
 }
 ```
 
-### Dynamic Config Test Example
+### 动态配置测试示例
 
 ```java
 public class DynamicConfigExample {
@@ -714,7 +711,7 @@ public class DynamicConfigExample {
         String result = service.getConfiguration();
         // result: "timeout=30, maxRetries=3, enabled=true"
 
-        // Verify metadata was registered
+        // 验证元数据已注册
         var metadata = configService.getMetadata("app.timeout");
         // metadata.getDefaultValue() == "30"
         // metadata.getDescription() == "Timeout in seconds"
@@ -722,36 +719,36 @@ public class DynamicConfigExample {
 }
 ```
 
-### Dynamic Config Configuration Options
+### 动态配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `key` | Configuration key or path (supports dot notation) | "" |
-| `defaultValue` | Default value when configuration is not found | "" |
-| `source` | Configuration source to use | "" |
-| `required` | Whether configuration is required (fails on missing) | false |
-| `refreshInterval` | Refresh interval in milliseconds (0 = no refresh) | 0 |
-| `cache` | Whether to cache the configuration value | true |
-| `profiles` | Environment profiles for which this configuration applies | {} |
-| `validation` | Validation rules (e.g., "min=1", "max=100", "regex=.*") | {} |
-| `version` | Configuration version for rollback capabilities | "" |
-| `watch` | Whether to watch for configuration changes | false |
-| `onChangeCallback` | Callback method name when configuration changes | "" |
-| `description` | Configuration description for documentation | "" |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `key` | 配置键或路径（支持点号分隔） | "" |
+| `defaultValue` | 配置未找到时的默认值 | "" |
+| `source` | 使用的配置源 | "" |
+| `required` | 配置是否必需（缺失时失败） | false |
+| `refreshInterval` | 刷新间隔（毫秒，0 = 不刷新） | 0 |
+| `cache` | 是否缓存配置值 | true |
+| `profiles` | 适用的环境配置文件 | {} |
+| `validation` | 验证规则（如 "min=1", "max=100", "regex=.*"） | {} |
+| `version` | 用于回滚的配置版本 | "" |
+| `watch` | 是否监听配置变更 | false |
+| `onChangeCallback` | 配置变更时的回调方法名 | "" |
+| `description` | 用于文档的配置描述 | "" |
 
-## Monitoring & Observability
+## 监控与可观测性
 
 ### MonitoringAspect
 
-Captures invocation counts, percentiles, failure rates through `MethodMetrics`.
+通过 `MethodMetrics` 捕获调用次数、百分位延迟、失败率。
 
-#### Monitored Configuration Options
+#### 监控配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `name` | Metric name (required) | - |
-| `warnThreshold` | Warning threshold in milliseconds | 1000 |
-| `includeArgs` | Include arguments in metrics | false |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `name` | 指标名称（必需） | - |
+| `warnThreshold` | 警告阈值（毫秒） | 1000 |
+| `includeArgs` | 在监控数据中包含方法参数 | false |
 
 ```java
 public interface MonitoredService {
@@ -762,27 +759,27 @@ public interface MonitoredService {
 }
 ```
 
-Access metrics via `AOPService#getMonitoringMetrics()` and reset with `clearMonitoringMetrics()`.
+通过 `AOPService#getMonitoringMetrics()` 访问指标，使用 `clearMonitoringMetrics()` 重置。
 
 ### TracingAspect
 
-Creates nested spans with sampling, tag injection, and async continuation support.
+创建嵌套 Span，支持采样、标签注入和异步延续。
 
-#### Traced Configuration Options
+#### 追踪配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `operationName` | Custom operation name for span | "" |
-| `serviceName` | Service name for tracing | "" |
-| `includeParameters` | Include method parameters in span | true |
-| `maxParameterSize` | Maximum parameter size to record | 100 |
-| `includeReturnValue` | Include return value in span | false |
-| `forceNewSpan` | Force creation of new span | false |
-| `samplingRate` | Sampling rate (0.0-1.0, -1 = default) | -1.0 |
-| `alwaysTrace` | Always trace (overrides sampling) | false |
-| `tags` | Additional tags for span | {} |
-| `includeStackTraces` | Include stack traces on error | true |
-| `maxNestingDepth` | Maximum nesting depth | 10 |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `operationName` | 自定义 Span 操作名称 | "" |
+| `serviceName` | 追踪的服务名称 | "" |
+| `includeParameters` | 在 Span 中包含方法参数 | true |
+| `maxParameterSize` | 参数记录的最大长度 | 100 |
+| `includeReturnValue` | 在 Span 中包含返回值 | false |
+| `forceNewSpan` | 强制创建新 Span | false |
+| `samplingRate` | 采样率（0.0-1.0，-1 = 使用默认） | -1.0 |
+| `alwaysTrace` | 始终追踪（覆盖采样） | false |
+| `tags` | Span 的附加标签 | {} |
+| `includeStackTraces` | 错误时包含堆栈跟踪 | true |
+| `maxNestingDepth` | 最大嵌套深度 | 10 |
 
 ```java
 public interface TracedService {
@@ -799,16 +796,16 @@ public interface TracedService {
 
 ### LoggingAspect
 
-Formats structured entry/exit logs with argument/result inclusion.
+格式化结构化入口/出口日志，支持参数/结果输出。
 
-#### Logged Configuration Options
+#### 日志配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `level` | Log level (TRACE, DEBUG, INFO, WARN, ERROR) | DEBUG |
-| `includeArgs` | Include method arguments in log | false |
-| `includeResult` | Include return value in log | false |
-| `format` | Custom log format template | "" |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `level` | 日志级别（TRACE, DEBUG, INFO, WARN, ERROR） | DEBUG |
+| `includeArgs` | 在日志中包含方法参数 | false |
+| `includeResult` | 在日志中包含返回值 | false |
+| `format` | 自定义日志格式模板（支持 {method}, {args}, {result}, {duration}） | "" |
 
 ```java
 public interface LoggedService {
@@ -824,11 +821,11 @@ public interface LoggedService {
 }
 ```
 
-## Security & Validation
+## 安全与校验
 
 ### SecurityAspect
 
-Integrates with `SecurityProvider` implementations for authentication, RBAC, and audit trails:
+集成 `SecurityProvider` 实现认证、RBAC 和审计追踪：
 
 ```java
 public interface SecuredService {
@@ -853,40 +850,40 @@ public interface SecuredService {
 }
 ```
 
-### Security Configuration Options
+### 安全配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `authenticated` | Whether authentication is required | true |
-| `roles` | Roles required to access this method | {} |
-| `permissions` | Permissions required to access this method | {} |
-| `provider` | Security provider name | "default" |
-| `audit` | Whether to enable audit logging | false |
-| `rateLimited` | Whether to enable rate limiting | false |
-| `maxRequests` | Maximum requests per time window | 100 |
-| `timeWindow` | Time window in seconds for rate limiting | 60 |
-| `csrfProtected` | Whether to enable CSRF protection | false |
-| `validateInput` | Whether to validate input parameters | true |
-| `policy` | Custom security policy class | SecurityPolicy.class |
-| `onAuthorizationFailure` | Exception to throw on authorization failure | SecurityException.class |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `authenticated` | 是否需要认证 | true |
+| `roles` | 访问此方法所需的角色 | {} |
+| `permissions` | 访问此方法所需的权限 | {} |
+| `provider` | 安全提供者名称 | "default" |
+| `audit` | 是否启用审计日志 | false |
+| `rateLimited` | 是否启用速率限制 | false |
+| `maxRequests` | 时间窗口内的最大请求数 | 100 |
+| `timeWindow` | 速率限制的时间窗口（秒） | 60 |
+| `csrfProtected` | 是否启用 CSRF 保护 | false |
+| `validateInput` | 是否验证输入参数 | true |
+| `policy` | 自定义安全策略类 | SecurityPolicy.class |
+| `onAuthorizationFailure` | 授权失败时抛出的异常 | SecurityException.class |
 
 ### ValidationAspect
 
-Enforces input validation with custom validators. The `@ValidInput` annotation is placed on method parameters.
+使用自定义验证器强制输入校验。`@ValidInput` 注解放置在方法参数上。
 
-#### ValidInput Configuration Options
+#### 输入校验配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `required` | Whether the value is required (non-null) | false |
-| `minLength` | Minimum string length | 0 |
-| `maxLength` | Maximum string length | Integer.MAX_VALUE |
-| `pattern` | Regex pattern for string validation | "" |
-| `min` | Minimum numeric value | Double.MIN_VALUE |
-| `max` | Maximum numeric value | Double.MAX_VALUE |
-| `validator` | Custom validator class | InputValidator.class |
-| `message` | Error message on validation failure | "Invalid input value" |
-| `onValidationFailure` | Exception to throw on failure | IllegalArgumentException.class |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `required` | 参数是否必填（非 null） | false |
+| `minLength` | 字符串最小长度 | 0 |
+| `maxLength` | 字符串最大长度 | Integer.MAX_VALUE |
+| `min` | 数值最小值 | Double.MIN_VALUE |
+| `max` | 数值最大值 | Double.MAX_VALUE |
+| `pattern` | 验证用的正则表达式模式 | "" |
+| `validator` | 自定义验证器类 | InputValidator.class |
+| `message` | 验证失败消息 | "Invalid input value" |
+| `onValidationFailure` | 验证失败时抛出的异常类型 | IllegalArgumentException.class |
 
 ```java
 public interface ValidatedService {
@@ -903,21 +900,21 @@ public interface ValidatedService {
 }
 ```
 
-## Async Execution Strategy
+## 异步执行策略
 
-The `@AsyncSafe` aspect orchestrates sync/async dispatch.
+`@AsyncSafe` 切面协调同步/异步调度。
 
-### AsyncSafe Configuration Options
+### 异步配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `target` | Thread type (SYNC, ASYNC, VIRTUAL, CUSTOM) | SYNC |
-| `timeout` | Timeout in milliseconds | 30000 |
-| `allowReentrant` | Allow reentrant calls | false |
-| `customExecutor` | Custom executor name (for CUSTOM type) | "" |
-| `customLockStrategy` | Custom lock strategy name | "" |
-| `customTimeoutHandler` | Custom timeout handler name | "" |
-| `customProperties` | Additional properties for custom strategies | {} |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `target` | 目标线程类型（SYNC, ASYNC, VIRTUAL, CUSTOM） | SYNC |
+| `timeout` | 执行超时时间（毫秒） | 30000 |
+| `allowReentrant` | 允许同一线程重入 | false |
+| `customExecutor` | 自定义执行器名称（用于 CUSTOM 类型） | "" |
+| `customLockStrategy` | 自定义锁策略名称 | "" |
+| `customTimeoutHandler` | 自定义超时处理器名称 | "" |
+| `customProperties` | 自定义策略的附加属性 | {} |
 
 ```java
 public interface AsyncService {
@@ -935,9 +932,9 @@ public interface AsyncService {
 }
 ```
 
-### Custom Execution Strategies
+### 自定义执行策略
 
-The `@AsyncSafe` annotation supports custom execution strategies through the `ThreadType.CUSTOM` mode:
+`@AsyncSafe` 注解通过 `ThreadType.CUSTOM` 模式支持自定义执行策略：
 
 ```java
 public class CustomAsyncService {
@@ -957,14 +954,14 @@ public class CustomAsyncService {
 }
 ```
 
-Register custom components with `CustomExecutorRegistry`:
+通过 `CustomExecutorRegistry` 注册自定义组件：
 
 ```java
 public class CustomComponentSetup {
     public void registerComponents() {
         CustomExecutorRegistry registry = CustomExecutorRegistry.getInstance();
 
-        // Register custom executor
+        // 注册自定义执行器
         registry.registerExecutor(new CustomExecutor() {
             @Override
             public String getName() { return "my-executor"; }
@@ -982,7 +979,7 @@ public class CustomComponentSetup {
             }
         });
 
-        // Register custom lock strategy
+        // 注册自定义锁策略
         registry.registerLockStrategy(new CustomLockStrategy() {
             @Override
             public String getName() { return "my-lock"; }
@@ -990,7 +987,7 @@ public class CustomComponentSetup {
             @Override
             public <T> T executeWithLock(AspectContext context, Callable<T> operation,
                                          Properties properties) throws Exception {
-                // Custom locking logic
+                // 自定义锁逻辑
                 return operation.call();
             }
 
@@ -998,7 +995,7 @@ public class CustomComponentSetup {
             public boolean isReentrant(AspectContext context) { return false; }
         });
 
-        // Register custom timeout handler
+        // 注册自定义超时处理器
         registry.registerTimeoutHandler(new CustomTimeoutHandler() {
             @Override
             public String getName() { return "my-timeout-handler"; }
@@ -1016,9 +1013,9 @@ public class CustomComponentSetup {
 }
 ```
 
-## Distributed Transaction
+## 分布式事务
 
-The `@DistributedTransaction` annotation provides two-phase commit coordination for enterprise environments:
+`@DistributedTransaction` 注解为企业环境提供两阶段提交协调：
 
 ```java
 public interface TransactionalService {
@@ -1046,38 +1043,38 @@ public interface TransactionalService {
 }
 ```
 
-### Transaction Configuration Options
+### 事务配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `propagation` | Transaction propagation behavior (REQUIRED, REQUIRES_NEW, NESTED, etc.) | REQUIRED |
-| `isolation` | Isolation level (DEFAULT, READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE) | DEFAULT |
-| `timeout` | Transaction timeout in seconds | 30 |
-| `readOnly` | Whether the transaction is read-only | false |
-| `rollbackFor` | Exception types that trigger rollback | {} |
-| `noRollbackFor` | Exception types that should not trigger rollback | {} |
-| `name` | Transaction name for monitoring | "" |
-| `enableTracing` | Enable distributed tracing | true |
+| 属性 | 描述 | 默认值 |
+|-----|------|-------|
+| `propagation` | 事务传播行为（REQUIRED、REQUIRES_NEW、NESTED 等） | REQUIRED |
+| `isolation` | 隔离级别（DEFAULT、READ_UNCOMMITTED、READ_COMMITTED、REPEATABLE_READ、SERIALIZABLE） | DEFAULT |
+| `timeout` | 事务超时时间（秒） | 30 |
+| `readOnly` | 是否为只读事务 | false |
+| `rollbackFor` | 触发回滚的异常类型 | {} |
+| `noRollbackFor` | 不触发回滚的异常类型 | {} |
+| `name` | 用于监控的事务名称 | "" |
+| `enableTracing` | 启用分布式追踪 | true |
 
-## Pointcut Expressions
+## Pointcut 表达式
 
-The AOP module supports AspectJ-style pointcut expressions for flexible method matching:
+AOP 模块支持 AspectJ 风格的切点表达式，实现灵活的方法匹配：
 
 ```java
 public class PointcutExample {
     public void configurePointcuts() {
         PointcutExpressionParser parser = new PointcutExpressionParser();
 
-        // Match all methods in *Service classes
+        // 匹配 *Service 类中的所有方法
         Pointcut servicePointcut = parser.parse("execution(* net.legacy.library..*Service.*(..))");
 
-        // Match methods within a specific package
+        // 匹配特定包内的方法
         Pointcut withinPointcut = parser.parse("within(net.legacy.library.cache..*)");
 
-        // Match methods with specific annotation
+        // 匹配带有特定注解的方法
         Pointcut annotationPointcut = parser.parse("@annotation(net.legacy.library.aop.annotation.Logged)");
 
-        // Composite pointcuts with AND/OR
+        // 组合切点（AND/OR）
         Pointcut composite = parser.parse(
                 "execution(* *Service.*(..)) && @annotation(net.legacy.library.aop.annotation.Monitored)"
         );
@@ -1085,7 +1082,7 @@ public class PointcutExample {
 }
 ```
 
-### Custom Pointcut Interceptor
+### 自定义切点拦截器
 
 ```java
 public class LoggingPointcutInterceptor extends PointcutMethodInterceptor {
@@ -1105,18 +1102,18 @@ public class LoggingPointcutInterceptor extends PointcutMethodInterceptor {
 }
 ```
 
-## Exception Handling
+## 异常处理
 
-The `@ExceptionWrapper` aspect normalizes exception types.
+`@ExceptionWrapper` 切面规范化异常类型。
 
-### ExceptionWrapper Configuration Options
+### 异常包装配置选项
 
-| Attribute | Description | Default |
-|-----------|-------------|---------|
-| `wrapWith` | Exception type to wrap with (required) | - |
-| `message` | Error message (supports {method}, {args}, {original} placeholders) | "Method execution failed" |
-| `logOriginal` | Log original exception | true |
-| `exclude` | Exception types to exclude from wrapping | {} |
+| 属性 | 描述 | 默认值 |
+|------|------|--------|
+| `wrapWith` | 用于包装的目标异常类（必需） | - |
+| `message` | 错误消息（支持 {method}, {args}, {original} 占位符） | "Method execution failed" |
+| `logOriginal` | 在包装前记录原始异常 | true |
+| `exclude` | 不进行包装的异常类型 | {} |
 
 ```java
 public interface WrappedService {
@@ -1131,26 +1128,26 @@ public interface WrappedService {
 }
 ```
 
-## Configuration Management
+## 配置管理
 
 ### AOPModuleConfiguration
 
-Toggle individual aspects at runtime:
+运行时切换各切面开关：
 
 ```java
 public class ConfigurationExample {
     public void configureAOP(AOPService aopService) {
-        // Enable all aspects
+        // 启用所有切面
         aopService.setModuleConfiguration(AOPModuleConfiguration.enableAll());
 
-        // Or configure individually
+        // 或单独配置
         AOPModuleConfiguration config = AOPModuleConfiguration.builder()
                 .retryEnabled(true)
-                .faultToleranceEnabled(true)  // Enables CircuitBreaker
+                .faultToleranceEnabled(true)  // 启用 CircuitBreaker
                 .rateLimiterEnabled(true)
                 .dynamicConfigEnabled(true)
-                .monitoringEnabled(false)  // Disable monitoring
-                .tracingEnabled(false)     // Disable tracing
+                .monitoringEnabled(false)  // 禁用监控
+                .tracingEnabled(false)     // 禁用追踪
                 .debugMode(true)
                 .build();
 
@@ -1160,48 +1157,44 @@ public class ConfigurationExample {
 }
 ```
 
-## ClassLoader Isolation & Lifecycle
+## ClassLoader 隔离与生命周期
 
-Each plugin maintains its own aspect metadata. Proper cleanup during shutdown is essential:
+每个插件维护独立的切面元数据。关闭时正确清理至关重要：
 
 ```java
 public class LifecycleExample {
     public void onPluginDisable(AOPService aopService) {
-        // Option 1: Clean up ClassLoader-specific resources only
+        // 方式 1：仅清理 ClassLoader 相关资源
         aopService.cleanupClassLoader(getClassLoader());
 
-        // Option 2: Full shutdown (use when the AOPService instance is no longer needed)
-        // This shuts down all executors, clears all caches, and releases all resources
+        // 方式 2：完全关闭（当 AOPService 实例不再需要时使用）
+        // 这会关闭所有执行器、清空所有缓存并释放所有资源
         aopService.shutdown();
     }
 }
 ```
 
-### Shutdown Behavior
+### 关闭行为
 
-The `shutdown()` method performs complete cleanup:
-- Shuts down AsyncSafeAspect thread pools
-- Shuts down RetryAspect schedulers
-- Clears all RateLimiter states
-- Clears all CircuitBreaker states
-- Clears DynamicConfig caches
-- Clears monitoring metrics
-- Removes all registered interceptors
+`shutdown()` 方法执行完整清理：
+- 关闭 AsyncSafeAspect 线程池
+- 关闭 RetryAspect 调度器
+- 清空所有 RateLimiter 状态
+- 清空所有 CircuitBreaker 状态
+- 清空 DynamicConfig 缓存
+- 清空监控指标
+- 移除所有已注册的拦截器
 
-## Best Practices
+## 最佳实践
 
-1. **Order Matters**: Aspects execute in order. DynamicConfig (10) runs first to ensure configuration is available
-   for other aspects.
+1. **顺序很重要**：切面按顺序执行。DynamicConfig (10) 最先执行，确保配置对其他切面可用。
 
-2. **Fallback Methods**: Always provide fallback methods for critical operations with `@Retry`, `@CircuitBreaker`,
-   and `@RateLimiter`.
+2. **提供 Fallback 方法**：为关键操作的 `@Retry`、`@CircuitBreaker` 和 `@RateLimiter` 提供 fallback 方法。
 
-3. **Rate Limiting Keys**: Use `{#arg0}`, `{#arg1}` for parameter-based rate limiting keys to avoid reliance on
-   parameter names.
+3. **限流键表达式**：使用 `{#arg0}`、`{#arg1}` 进行基于参数的限流键，避免依赖参数名。
 
-4. **Circuit Breaker Tuning**: Set `minimumNumberOfCalls` appropriately to avoid premature circuit opening.
+4. **断路器调优**：合理设置 `minimumNumberOfCalls` 避免断路器过早开启。
 
-5. **Cleanup on Shutdown**: Always call `cleanupClassLoader()` during plugin shutdown to prevent memory leaks.
+5. **关闭时清理**：插件关闭时调用 `cleanupClassLoader()` 防止内存泄漏。
 
-6. **Metrics Monitoring**: Use `getMonitoringMetrics()`, `getRateLimiterMetrics()`, and `getCircuitBreakerMetrics()`
-   for observability.
+6. **指标监控**：使用 `getMonitoringMetrics()`、`getRateLimiterMetrics()` 和 `getCircuitBreakerMetrics()` 进行可观测性。

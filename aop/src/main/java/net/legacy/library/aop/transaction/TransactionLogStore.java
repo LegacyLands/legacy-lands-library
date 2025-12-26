@@ -47,7 +47,7 @@ public interface TransactionLogStore {
     /**
      * Logs participant registration.
      *
-     * @param context the transaction context
+     * @param context     the transaction context
      * @param participant the registered participant
      */
     void logParticipantRegistration(TransactionContext context, TransactionParticipant participant);
@@ -55,9 +55,9 @@ public interface TransactionLogStore {
     /**
      * Logs participant status changes.
      *
-     * @param context the transaction context
+     * @param context       the transaction context
      * @param participantId the participant ID
-     * @param status the new participant status
+     * @param status        the new participant status
      */
     void logParticipantStatusChange(TransactionContext context, String participantId,
                                     TransactionParticipant.ParticipantStatus status);

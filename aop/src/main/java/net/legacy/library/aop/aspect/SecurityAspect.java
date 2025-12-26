@@ -104,9 +104,9 @@ public class SecurityAspect implements MethodInterceptor {
     /**
      * Creates a security context for the method invocation.
      *
-     * @param context the aspect context
+     * @param context    the aspect context
      * @param invocation the method invocation
-     * @param provider the security provider
+     * @param provider   the security provider
      * @return security context
      */
     private SecurityContext createSecurityContext(AspectContext context, MethodInvocation invocation,
@@ -223,11 +223,11 @@ public class SecurityAspect implements MethodInterceptor {
     /**
      * Logs an audit event for the method invocation.
      *
-     * @param context the aspect context
+     * @param context         the aspect context
      * @param securityContext the security context
-     * @param success whether the invocation was successful
-     * @param duration the duration of the invocation
-     * @param throwable the exception if failed, or null if successful
+     * @param success         whether the invocation was successful
+     * @param duration        the duration of the invocation
+     * @param throwable       the exception if failed, or null if successful
      */
     private void logAuditEvent(AspectContext context, SecurityContext securityContext,
                                boolean success, long duration, Throwable throwable) {
@@ -250,7 +250,7 @@ public class SecurityAspect implements MethodInterceptor {
      * Creates an authorization failure exception.
      *
      * @param secured the security annotation
-     * @param cause the original exception
+     * @param cause   the original exception
      * @return the authorization failure exception
      */
     private Throwable createAuthorizationFailure(Secured secured, Throwable cause) {

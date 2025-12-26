@@ -37,9 +37,9 @@ public class TransactionContext {
      * Creates a new transaction context.
      *
      * @param transactionId the unique transaction identifier
-     * @param name the transaction name
-     * @param timeout the transaction timeout in seconds
-     * @param readOnly whether the transaction is read-only
+     * @param name          the transaction name
+     * @param timeout       the transaction timeout in seconds
+     * @param readOnly      whether the transaction is read-only
      */
     public TransactionContext(String transactionId,
                               String name,
@@ -61,11 +61,11 @@ public class TransactionContext {
     /**
      * Creates a new transaction context with a parent transaction.
      *
-     * @param transactionId the unique transaction identifier
+     * @param transactionId       the unique transaction identifier
      * @param parentTransactionId the parent transaction identifier
-     * @param name the transaction name
-     * @param timeout the transaction timeout in seconds
-     * @param readOnly whether the transaction is read-only
+     * @param name                the transaction name
+     * @param timeout             the transaction timeout in seconds
+     * @param readOnly            whether the transaction is read-only
      */
     public TransactionContext(String transactionId,
                               String parentTransactionId,
@@ -88,8 +88,8 @@ public class TransactionContext {
     /**
      * Creates a new transaction context with a generated transaction ID.
      *
-     * @param name the transaction name
-     * @param timeout the transaction timeout in seconds
+     * @param name     the transaction name
+     * @param timeout  the transaction timeout in seconds
      * @param readOnly whether the transaction is read-only
      * @return a new transaction context
      */
@@ -105,9 +105,9 @@ public class TransactionContext {
      * Creates a new transaction context with a generated transaction ID and parent.
      *
      * @param parentTransactionId the parent transaction ID
-     * @param name the transaction name
-     * @param timeout the transaction timeout in seconds
-     * @param readOnly whether the transaction is read-only
+     * @param name                the transaction name
+     * @param timeout             the transaction timeout in seconds
+     * @param readOnly            whether the transaction is read-only
      * @return a new transaction context
      */
     public static TransactionContext createChild(String parentTransactionId,
@@ -215,7 +215,7 @@ public class TransactionContext {
     /**
      * Sets an attribute in the transaction context.
      *
-     * @param key the attribute key
+     * @param key   the attribute key
      * @param value the attribute value
      */
     public void setAttribute(String key, Object value) {

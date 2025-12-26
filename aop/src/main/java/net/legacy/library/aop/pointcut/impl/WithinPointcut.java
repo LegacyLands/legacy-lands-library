@@ -37,7 +37,7 @@ public class WithinPointcut implements Pointcut {
      * <p>Within pointcuts match all methods in the specified types, so this
      * implementation simply delegates to {@link #matchesClass(Class)}.
      *
-     * @param method {@inheritDoc}
+     * @param method      {@inheritDoc}
      * @param targetClass {@inheritDoc}
      * @return {@inheritDoc}
      */

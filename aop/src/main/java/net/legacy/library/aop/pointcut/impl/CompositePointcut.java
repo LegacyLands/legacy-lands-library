@@ -35,7 +35,7 @@ public class CompositePointcut implements Pointcut {
      * Adds a pointcut to the composite with the specified operation.
      *
      * @param pointcut the pointcut to add
-     * @param isAnd true for AND operation, false for OR operation
+     * @param isAnd    true for AND operation, false for OR operation
      */
     public void addPointcut(Pointcut pointcut, boolean isAnd) {
         pointcuts.add(new PointcutEntry(pointcut, isAnd));
@@ -47,7 +47,7 @@ public class CompositePointcut implements Pointcut {
      * <p>This implementation evaluates all contained pointcuts with their
      * respective AND/OR operations in the order they were added.
      *
-     * @param method {@inheritDoc}
+     * @param method      {@inheritDoc}
      * @param targetClass {@inheritDoc}
      * @return {@inheritDoc}
      */

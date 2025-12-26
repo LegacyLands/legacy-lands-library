@@ -123,8 +123,15 @@ public @interface Retry {
     long timeout() default 0;
 
     /**
-     * Enumeration of backoff strategies.
+     * The name of a method that supplies the maximum number of retry attempts dynamically.
+     *
+     * <p>The method must be accessible from the target class, take no arguments,
+     * and return an {@code int}. When specified, this takes precedence over {@link #maxAttempts()}.
+     *
+     * @return the supplier method name for dynamic max attempts configuration
      */
+    String maxAttemptsSupplier() default "";
+
     enum BackoffStrategy {
         /**
          * Fixed delay between retries.
@@ -135,6 +142,14 @@ public @interface Retry {
          * Exponential backoff with optional multiplier.
          */
         EXPONENTIAL,
+
+        /**
+         * Exponential backoff with jitter for better distribution.
+         *
+         * <p>Combines exponential delay growth with random jitter to prevent
+         * thundering herd problems in distributed systems.
+         */
+        EXPONENTIAL_JITTER,
 
         /**
          * Linear backoff with constant increment.

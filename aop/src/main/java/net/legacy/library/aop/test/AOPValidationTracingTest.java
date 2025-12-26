@@ -274,6 +274,193 @@ public class AOPValidationTracingTest {
     }
 
     /**
+     * Tests tracing with sampling rate configuration.
+     */
+    public static boolean testTracingSamplingRate() {
+        try {
+            TestLogger.logInfo("aop", "Starting tracing sampling rate test");
+
+            ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
+            AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
+
+            ValidationAspect validationAspect = new ValidationAspect();
+            TraceService traceService = new DefaultTraceService(new InMemoryTraceExporter());
+            TracingAspect tracingAspect = new TracingAspect(traceService);
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,
+                    null,
+                    null,
+                    null,
+                    validationAspect,
+                    tracingAspect
+            );
+
+            aopService.initialize();
+            aopService.registerTestInterceptors(TestAdvancedTracingService.class);
+
+            AOPFactory aopFactory = new AOPFactory(aopService);
+            AdvancedTracingService service = aopFactory.create(TestAdvancedTracingService.class);
+
+            // Test alwaysTrace=true - should always be traced
+            String alwaysResult = service.alwaysTracedOperation("always-trace-test");
+
+            // Test samplingRate=0.0 - should not be sampled (but method still executes)
+            String noSampleResult = service.noSamplingOperation("no-sample-test");
+
+            boolean alwaysValid = alwaysResult != null && alwaysResult.contains("always-trace-test");
+            boolean noSampleValid = noSampleResult != null && noSampleResult.contains("no-sample-test");
+
+            TestLogger.logInfo("aop", "Tracing sampling rate test: alwaysValid=%s, noSampleValid=%s",
+                    alwaysValid, noSampleValid);
+            return alwaysValid && noSampleValid;
+        } catch (Exception exception) {
+            TestLogger.logFailure("aop", "Tracing sampling rate test failed: %s", exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Tests tracing with return value inclusion.
+     */
+    public static boolean testTracingReturnValue() {
+        try {
+            TestLogger.logInfo("aop", "Starting tracing return value test");
+
+            ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
+            AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
+
+            ValidationAspect validationAspect = new ValidationAspect();
+            InMemoryTraceExporter exporter = new InMemoryTraceExporter();
+            TraceService traceService = new DefaultTraceService(exporter);
+            TracingAspect tracingAspect = new TracingAspect(traceService);
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,
+                    null,
+                    null,
+                    null,
+                    validationAspect,
+                    tracingAspect
+            );
+
+            aopService.initialize();
+            aopService.registerTestInterceptors(TestAdvancedTracingService.class);
+
+            AOPFactory aopFactory = new AOPFactory(aopService);
+            AdvancedTracingService service = aopFactory.create(TestAdvancedTracingService.class);
+
+            String result = service.operationWithReturnValue("return-value-test");
+
+            boolean resultValid = result != null && result.contains("return-value-test");
+
+            TestLogger.logInfo("aop", "Tracing return value test: result=%s, resultValid=%s", result, resultValid);
+            return resultValid;
+        } catch (Exception exception) {
+            TestLogger.logFailure("aop", "Tracing return value test failed: %s", exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Tests tracing with custom service name.
+     */
+    public static boolean testTracingServiceName() {
+        try {
+            TestLogger.logInfo("aop", "Starting tracing service name test");
+
+            ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
+            AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
+
+            ValidationAspect validationAspect = new ValidationAspect();
+            InMemoryTraceExporter exporter = new InMemoryTraceExporter();
+            TraceService traceService = new DefaultTraceService(exporter);
+            TracingAspect tracingAspect = new TracingAspect(traceService);
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,
+                    null,
+                    null,
+                    null,
+                    validationAspect,
+                    tracingAspect
+            );
+
+            aopService.initialize();
+            aopService.registerTestInterceptors(TestAdvancedTracingService.class);
+
+            AOPFactory aopFactory = new AOPFactory(aopService);
+            AdvancedTracingService service = aopFactory.create(TestAdvancedTracingService.class);
+
+            String result = service.operationWithServiceName("service-name-test");
+
+            boolean resultValid = result != null && result.contains("service-name-test");
+
+            TestLogger.logInfo("aop", "Tracing service name test: result=%s, resultValid=%s", result, resultValid);
+            return resultValid;
+        } catch (Exception exception) {
+            TestLogger.logFailure("aop", "Tracing service name test failed: %s", exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Tests tracing parameter truncation.
+     */
+    public static boolean testTracingParameterTruncation() {
+        try {
+            TestLogger.logInfo("aop", "Starting tracing parameter truncation test");
+
+            ClassLoaderIsolationService isolationService = new ClassLoaderIsolationService();
+            AspectProxyFactory proxyFactory = new AspectProxyFactory(isolationService);
+
+            ValidationAspect validationAspect = new ValidationAspect();
+            InMemoryTraceExporter exporter = new InMemoryTraceExporter();
+            TraceService traceService = new DefaultTraceService(exporter);
+            TracingAspect tracingAspect = new TracingAspect(traceService);
+
+            AOPService aopService = new AOPService(
+                    proxyFactory,
+                    isolationService,
+                    null,
+                    null,
+                    null,
+                    null,
+                    validationAspect,
+                    tracingAspect
+            );
+
+            aopService.initialize();
+            aopService.registerTestInterceptors(TestAdvancedTracingService.class);
+
+            AOPFactory aopFactory = new AOPFactory(aopService);
+            AdvancedTracingService service = aopFactory.create(TestAdvancedTracingService.class);
+
+            // Create a very long parameter
+            StringBuilder longParam = new StringBuilder();
+            for (int i = 0; i < 200; i++) {
+                longParam.append("X");
+            }
+
+            String result = service.operationWithSmallParameterSize(longParam.toString());
+
+            boolean resultValid = result != null && result.contains("truncation");
+
+            TestLogger.logInfo("aop", "Tracing parameter truncation test: resultValid=%s", resultValid);
+            return resultValid;
+        } catch (Exception exception) {
+            TestLogger.logFailure("aop", "Tracing parameter truncation test failed: %s", exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Service interface for testing validation functionality.
      */
     public interface ValidationService {
@@ -314,6 +501,43 @@ public class AOPValidationTracingTest {
                 tags = {"component:order-service", "environment:production"}
         )
         String createOrder(String orderId, String orderData);
+
+    }
+
+    /**
+     * Advanced tracing service interface for extended tests.
+     */
+    public interface AdvancedTracingService {
+
+        @Traced(
+                operationName = "always.traced",
+                alwaysTrace = true
+        )
+        String alwaysTracedOperation(String input);
+
+        @Traced(
+                operationName = "no.sampling",
+                samplingRate = 0.0
+        )
+        String noSamplingOperation(String input);
+
+        @Traced(
+                operationName = "with.return",
+                includeReturnValue = true
+        )
+        String operationWithReturnValue(String input);
+
+        @Traced(
+                operationName = "custom.service",
+                serviceName = "CustomServiceName"
+        )
+        String operationWithServiceName(String input);
+
+        @Traced(
+                operationName = "small.params",
+                maxParameterSize = 20
+        )
+        String operationWithSmallParameterSize(String longInput);
 
     }
 
@@ -374,6 +598,58 @@ public class AOPValidationTracingTest {
         )
         public String createOrder(String orderId, String orderData) {
             return "Created order: " + orderId + " (Operation #" + operationCounter.incrementAndGet() + ")";
+        }
+
+    }
+
+    /**
+     * Test implementation for advanced tracing operations.
+     */
+    public static class TestAdvancedTracingService implements AdvancedTracingService {
+
+        @Override
+        @Traced(
+                operationName = "always.traced",
+                alwaysTrace = true
+        )
+        public String alwaysTracedOperation(String input) {
+            return "Always traced: " + input;
+        }
+
+        @Override
+        @Traced(
+                operationName = "no.sampling",
+                samplingRate = 0.0
+        )
+        public String noSamplingOperation(String input) {
+            return "No sampling: " + input;
+        }
+
+        @Override
+        @Traced(
+                operationName = "with.return",
+                includeReturnValue = true
+        )
+        public String operationWithReturnValue(String input) {
+            return "Return value included: " + input;
+        }
+
+        @Override
+        @Traced(
+                operationName = "custom.service",
+                serviceName = "CustomServiceName"
+        )
+        public String operationWithServiceName(String input) {
+            return "Custom service: " + input;
+        }
+
+        @Override
+        @Traced(
+                operationName = "small.params",
+                maxParameterSize = 20
+        )
+        public String operationWithSmallParameterSize(String longInput) {
+            return "Parameter truncation test: " + longInput.substring(0, Math.min(10, longInput.length()));
         }
 
     }

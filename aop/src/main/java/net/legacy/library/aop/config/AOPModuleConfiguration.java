@@ -7,7 +7,7 @@ import lombok.Getter;
 
 /**
  * Aggregates configuration flags for the AOP module, allowing feature toggles at runtime.
- * 
+ *
  * @author qwq-dev
  * @version 1.0
  * @since 2025-06-19 17:41
@@ -25,6 +25,8 @@ public class AOPModuleConfiguration {
     private final boolean monitoringEnabled;
     private final boolean loggingEnabled;
     private final boolean faultToleranceEnabled;
+    private final boolean rateLimiterEnabled;
+    private final boolean dynamicConfigEnabled;
     private final boolean debugMode;
     private final boolean relaxedClassLoaderEnabled;
 
@@ -38,6 +40,8 @@ public class AOPModuleConfiguration {
                 .monitoringEnabled(true)
                 .loggingEnabled(true)
                 .faultToleranceEnabled(true)
+                .rateLimiterEnabled(true)
+                .dynamicConfigEnabled(true)
                 .debugMode(false)
                 .relaxedClassLoaderEnabled(false)
                 .build();

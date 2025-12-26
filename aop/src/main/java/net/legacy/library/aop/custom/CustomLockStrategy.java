@@ -20,10 +20,10 @@ public interface CustomLockStrategy {
     /**
      * Executes the given operation with appropriate locking mechanism
      *
-     * @param context the aspect context
-     * @param operation the operation to execute under lock
+     * @param context    the aspect context
+     * @param operation  the operation to execute under lock
      * @param properties configuration properties
-     * @param <T> the return type of the operation
+     * @param <T>        the return type of the operation
      * @return the result of the operation
      * @throws Exception if execution fails
      */

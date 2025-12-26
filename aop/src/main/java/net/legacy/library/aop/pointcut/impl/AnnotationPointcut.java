@@ -50,7 +50,7 @@ public class AnnotationPointcut implements Pointcut {
      * If the annotation class hasn't been loaded yet, it attempts lazy loading
      * using the method's class loader.
      *
-     * @param method {@inheritDoc}
+     * @param method      {@inheritDoc}
      * @param targetClass {@inheritDoc}
      * @return {@inheritDoc}
      */

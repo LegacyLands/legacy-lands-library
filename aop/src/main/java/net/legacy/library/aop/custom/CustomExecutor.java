@@ -20,7 +20,7 @@ public interface CustomExecutor {
     /**
      * Executes the method invocation with custom logic
      *
-     * @param context the aspect context containing method and target information
+     * @param context    the aspect context containing method and target information
      * @param invocation the method invocation to execute
      * @param properties additional configuration properties
      * @return the result of method execution

@@ -19,7 +19,7 @@ public interface TraceService {
      * Starts a new trace.
      *
      * @param operationName the operation name
-     * @param serviceName the service name
+     * @param serviceName   the service name
      * @return the trace context
      */
     TraceContext startTrace(String operationName, String serviceName);
@@ -27,9 +27,9 @@ public interface TraceService {
     /**
      * Starts a new trace with a custom trace ID.
      *
-     * @param traceId the trace ID
+     * @param traceId       the trace ID
      * @param operationName the operation name
-     * @param serviceName the service name
+     * @param serviceName   the service name
      * @return the trace context
      */
     TraceContext startTrace(String traceId, String operationName, String serviceName);
@@ -73,7 +73,7 @@ public interface TraceService {
     /**
      * Adds an attribute to the current trace.
      *
-     * @param key the attribute key
+     * @param key   the attribute key
      * @param value the attribute value
      */
     void addAttribute(String key, String value);
@@ -81,7 +81,7 @@ public interface TraceService {
     /**
      * Adds a metric to the current trace.
      *
-     * @param key the metric key
+     * @param key   the metric key
      * @param value the metric value
      */
     void addMetric(String key, double value);
@@ -105,7 +105,7 @@ public interface TraceService {
      * Determines if a trace should be sampled based on the sampling rate.
      *
      * @param samplingRate the sampling rate (0.0 to 1.0)
-     * @param alwaysTrace whether to always trace regardless of sampling
+     * @param alwaysTrace  whether to always trace regardless of sampling
      * @return true if the trace should be sampled
      */
     boolean shouldSample(double samplingRate, boolean alwaysTrace);

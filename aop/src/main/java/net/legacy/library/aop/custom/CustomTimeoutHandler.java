@@ -20,9 +20,9 @@ public interface CustomTimeoutHandler {
     /**
      * Handles timeout scenarios for async method execution
      *
-     * @param context the aspect context
-     * @param future the future that timed out
-     * @param timeout the timeout value that was exceeded
+     * @param context    the aspect context
+     * @param future     the future that timed out
+     * @param timeout    the timeout value that was exceeded
      * @param properties configuration properties
      * @return the result to return (maybe a fallback value)
      * @throws Throwable if timeout should result in an exception
@@ -50,8 +50,8 @@ public interface CustomTimeoutHandler {
     /**
      * Called before a method execution to prepare for potential timeout
      *
-     * @param context the aspect context
-     * @param timeout the configured timeout
+     * @param context    the aspect context
+     * @param timeout    the configured timeout
      * @param properties configuration properties
      */
     @SuppressWarnings("unused")
@@ -62,10 +62,10 @@ public interface CustomTimeoutHandler {
     /**
      * Called after successful method execution
      *
-     * @param context the aspect context
-     * @param result the execution result
+     * @param context       the aspect context
+     * @param result        the execution result
      * @param executionTime the actual execution time
-     * @param properties configuration properties
+     * @param properties    configuration properties
      */
     @SuppressWarnings("unused")
     default void afterExecution(AspectContext context, Object result,

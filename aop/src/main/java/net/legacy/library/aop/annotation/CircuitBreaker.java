@@ -64,6 +64,17 @@ public @interface CircuitBreaker {
     long waitDurationInOpenState() default 30000; // 30 seconds
 
     /**
+     * The name of a method that supplies the wait duration in open state dynamically.
+     *
+     * <p>The method must be accessible from the target class, take no arguments,
+     * and return a {@code long} representing milliseconds. When specified,
+     * this takes precedence over {@link #waitDurationInOpenState()}.
+     *
+     * @return the supplier method name for dynamic open duration configuration
+     */
+    String openDurationSupplier() default "";
+
+    /**
      * The permitted number of calls in half-open state for testing.
      *
      * @return the permitted calls in half-open state

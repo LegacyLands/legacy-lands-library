@@ -16,7 +16,7 @@ public interface CompensationRegistry {
     /**
      * Registers a compensation strategy for a participant type.
      *
-     * @param participantType the participant type
+     * @param participantType      the participant type
      * @param compensationStrategy the compensation strategy
      */
     void registerCompensationStrategy(TransactionParticipant.ParticipantType participantType,
@@ -25,7 +25,7 @@ public interface CompensationRegistry {
     /**
      * Registers a compensation strategy for a specific participant.
      *
-     * @param participantId the participant ID
+     * @param participantId        the participant ID
      * @param compensationStrategy the compensation strategy
      */
     void registerCompensationStrategy(String participantId,
@@ -35,7 +35,7 @@ public interface CompensationRegistry {
      * Executes compensation for a failed participant.
      *
      * @param participant the failed participant
-     * @param context the transaction context
+     * @param context     the transaction context
      * @throws CompensationException if compensation fails
      */
     void executeCompensation(TransactionParticipant participant, TransactionContext context);
@@ -58,7 +58,7 @@ public interface CompensationRegistry {
          * Executes the compensation logic.
          *
          * @param participant the participant to compensate
-         * @param context the transaction context
+         * @param context     the transaction context
          * @throws CompensationException if compensation fails
          */
         void compensate(TransactionParticipant participant, TransactionContext context);
