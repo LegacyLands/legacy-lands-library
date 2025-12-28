@@ -73,6 +73,11 @@ jobs:
             player/build/libs/*.jar
       - uses: actions/upload-artifact@v4.5.0
         with:
+          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -aop
+          path: |
+            aop/build/libs/*.jar
+      - uses: actions/upload-artifact@v4.5.0
+        with:
           name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }} -script
           path: |
             script/build/libs/*.jar
