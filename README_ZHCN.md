@@ -91,9 +91,9 @@ dependencies {
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
-[PromptX](https://github.com/Deepractice/PromptX) 是 [Deepractice](https://github.com/Deepractice) 开发的 AI 应用原生的专业能力增强系统，在该项目中发挥关键作用。
+本项目由 YourKit 提供的 [Java](https://www.yourkit.com/java/profiler/) 与 [.NET](https://www.yourkit.com/dotnet-profiler/) 性能分析工具驱动。
 
-![promptx-logo.png](./promptx-logo.png)
+<img src="./yklogo.png" width="300">
 
 ## 贡献
 
