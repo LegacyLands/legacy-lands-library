@@ -99,7 +99,7 @@ channel!
 
 ## Sponsors
 
-Fully sponsored and maintained by [LegacyLands](https://github.com/LegacyLands).
+**Fully sponsored and maintained** by [LegacyLands](https://github.com/LegacyLands).
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
@@ -108,10 +108,9 @@ is a Folia fork with many useful optimizations, configurable vanilla features, a
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
-[PromptX](https://github.com/Deepractice/PromptX) is an AI application-native professional capability enhancement system
-developed by [Deepractice](https://github.com/Deepractice), playing a key role in this project.
+We are using YourKit to optimize our performance. They support open-source with innovative [Java](https://www.yourkit.com/java/profiler/) and [.NET](https://www.yourkit.com/dotnet-profiler/) profiling tools.
 
-![promptx-logo.png](./promptx-logo.png)
+<img src="./yklogo.png" width="300">
 
 ## Contributing
 
