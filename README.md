@@ -103,8 +103,12 @@ channel!
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-[Luminol](https://github.com/LuminolMC/Luminol)
+[Luminol](https://github.com/LuminolMC/AboutCanvas)
 is a Folia fork with many useful optimizations, configurable vanilla features, and more API supports.
+
+We are deeply heartbroken and outraged to see an outstanding open-source project—built on countless sleepless nights and community love—forced into hiatus because Canvas blatantly plagiarized and washed its code, erased author credits and contributions, and trampled upon the GPL-3.0 license. Open source is never a safe haven for plagiarists to plunder the fruits of others' hard labor. Canvas’s disgraceful behavior of stealing achievements while wiping out all recognition is a direct insult to the Luminol team and all contributors, as well as a destructive blow to the entire Minecraft open-source ecosystem. 
+
+**We stand resolutely with Luminol, expressing our strongest condemnation and total boycott against Canvas—a foundation built on theft can never stand tall, and plagiarists who betray the open-source spirit will inevitably be rejected by the community!**
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
