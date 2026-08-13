@@ -86,8 +86,13 @@ dependencies {
 
 ![legacy-lands-logo.png](./legacy-lands-logo.png)
 
-[Luminol](https://github.com/LuminolMC/Luminol) 是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API
-支持。
+[Luminol](https://github.com/LuminolMC/AboutCanvas)
+
+是一个基于 Folia 的分支，具有许多有用的优化、可配置的原版特性和更多的 API支持。
+
+看到一个凝聚了无数不眠之夜与社区热爱的优秀开源项目被迫暂停，我们深感痛心与愤慨。这一切的始作俑者 Canvas，公然剽窃并洗稿代码，抹杀原作者的署名与贡献，肆意践踏 GPL-3.0 许可证。开源绝非剽窃者掠夺他人辛勤劳动成果的避风港。Canvas 这种窃取成果却抹去所有贡献者印记的卑劣行径，不仅是对 Luminol 团队及所有贡献者的公然侮辱，更是对整个 Minecraft 开源生态系统的毁灭性打击。
+
+**我们坚定地与 Luminol 站在一起，对 Canvas 表示最强烈的谴责并予以彻底抵制——建立在窃取之上的基石注定无法长久，背弃开源精神的剽窃者终将被社区所唾弃！**
 
 ![luminol-mc-logo.png](./luminol-mc-logo.png)
 
