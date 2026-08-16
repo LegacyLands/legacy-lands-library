@@ -113,6 +113,6 @@ Scala 3，利用其优越的类型系统、并发模型和函数式编程能力�
 
 ## Star 历史
 
-[![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.dera.page/#LegacyLands/legacy-lands-library&Date)
 
 ---
