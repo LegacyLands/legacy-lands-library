@@ -133,6 +133,6 @@ performance and maintainability.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.com/#LegacyLands/legacy-lands-library&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.dera.page/#LegacyLands/legacy-lands-library&Date)
 
 ---
