@@ -35,7 +35,7 @@ protobuf {
     }
     plugins {
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.72.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.76.0"
         }
     }
     generateProtoTasks {
@@ -91,9 +91,9 @@ dependencies {
     compileOnly(project(":commons"))
 
     // gRPC
-    implementation("io.grpc:grpc-netty-shaded:1.72.0")
-    implementation("io.grpc:grpc-protobuf:1.72.0")
-    implementation("io.grpc:grpc-stub:1.72.0")
+    implementation("io.grpc:grpc-netty-shaded:1.76.0")
+    implementation("io.grpc:grpc-protobuf:1.76.0")
+    implementation("io.grpc:grpc-stub:1.76.0")
 
     // Google Protobuf
     implementation("com.google.protobuf:protobuf-java:4.31.0")
