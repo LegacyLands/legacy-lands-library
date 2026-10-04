@@ -5,16 +5,25 @@ import "google/protobuf/any.proto";
 package taskscheduler;
 
 service TaskScheduler {
-  // Submit task (supports async/blocking mode)
+  // Submit task (blocking by default, or detached when TaskRequest.detached is set)
   rpc SubmitTask(TaskRequest) returns (TaskResponse);
 
-  // Query task result
+  // Query the current state of a task without waiting
   rpc GetResult(ResultRequest) returns (ResultResponse);
+
+  // Wait until the task reaches a terminal state or the wait times out (long polling)
+  rpc WaitResult(WaitResultRequest) returns (ResultResponse);
+
+  // Cancel a task that has not reached a terminal state yet
+  rpc CancelTask(CancelRequest) returns (CancelResponse);
+
+  // Describe this node (identity, available methods, load and known peers)
+  rpc GetNodeInfo(NodeInfoRequest) returns (NodeInfo);
 }
 
 // Task request
 message TaskRequest {
-  // Task id
+  // Task id, must be unique across the whole cluster
   string task_id = 1;
 
   // Method name
@@ -23,11 +32,29 @@ message TaskRequest {
   // Parameters
   repeated google.protobuf.Any args = 3;
 
-  // Dependent task IDs
+  // Dependent task IDs, may live on any node of the cluster
   repeated string deps = 4;
 
-  // Whether to execute asynchronously
+  // Deprecated: the server resolves sync and async methods automatically, kept for wire compatibility
   bool is_async = 5;
+
+  // Return immediately with PENDING instead of waiting for the task to finish
+  bool detached = 6;
+
+  // Maximum time to wait for all dependencies, 0 uses the server default
+  uint64 dependency_timeout_ms = 7;
+
+  // Prepend the results of all dependencies (as strings, in deps order) to the arguments
+  bool inject_dependency_results = 8;
+
+  // Maximum execution time of the task itself, 0 means unlimited
+  uint64 execution_timeout_ms = 9;
+
+  // Disallow forwarding the task to another node when the method is not available locally
+  bool disable_forwarding = 10;
+
+  // Internal: id of the node that forwarded this request, empty for client requests
+  string origin_node_id = 11;
 }
 
 // Task response
@@ -37,9 +64,15 @@ message TaskResponse {
     PENDING = 0;
     SUCCESS = 1;
     FAILED = 2;
+    RUNNING = 3;
+    CANCELLED = 4;
+    NOT_FOUND = 5;
   }
   Status status = 2;
   string result = 3;
+
+  // Id of the node that owns (executes) the task
+  string node_id = 4;
 }
 
 // Result query request
@@ -51,6 +84,52 @@ message ResultRequest {
 message ResultResponse {
   TaskResponse.Status status = 1;
   string result = 2;
+
+  // Id of the node that owns (executes) the task
+  string node_id = 3;
+}
+
+// Wait result request
+message WaitResultRequest {
+  string task_id = 1;
+
+  // Maximum time to wait, 0 uses the server default, capped by the server
+  uint64 timeout_ms = 2;
+}
+
+// Cancel request
+message CancelRequest {
+  string task_id = 1;
+}
+
+// Cancel response
+message CancelResponse {
+  // Whether this call moved the task into the CANCELLED state
+  bool cancelled = 1;
+
+  // Status of the task after the call
+  TaskResponse.Status status = 2;
+}
+
+// Node info request
+message NodeInfoRequest {
+}
+
+// Peer info
+message PeerInfo {
+  // Peer node id, empty if the peer has never been reached
+  string node_id = 1;
+  string address = 2;
+  bool alive = 3;
+}
+
+// Node info
+message NodeInfo {
+  string node_id = 1;
+  repeated string methods = 2;
+  uint32 pending_tasks = 3;
+  uint32 running_tasks = 4;
+  repeated PeerInfo peers = 5;
 }
 
 // Custom message to represent a list of values
@@ -61,4 +140,4 @@ message ListValue {
 // Custom message to represent a map (string keys, any values)
 message MapValue {
   map<string, google.protobuf.Any> fields = 1;
-} 
+}

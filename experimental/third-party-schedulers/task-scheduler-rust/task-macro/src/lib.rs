@@ -15,8 +15,8 @@ pub fn async_task(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #input
 
         fn #internal_register_fn_name() {
-            let task_closure = |args| -> std::pin::Pin<Box<dyn std::future::Future<Output = String> + Send>> {
-                Box::pin(#fn_name(args))
+            let task_closure = |args| -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<String>> + Send>> {
+                Box::pin(async move { crate::error::IntoTaskOutput::into_task_output(#fn_name(args).await) })
             };
             crate::tasks::REGISTRY.register_async_task(#task_name, task_closure);
         }

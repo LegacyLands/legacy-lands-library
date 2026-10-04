@@ -1,13 +1,12 @@
 ### Bukkit gRPC Client Module
 
-This module provides a gRPC client. It allows Minecraft server plugins to communicate with a remote gRPC task scheduler
-service,
-enabling the offloading of potentially long-running or resource-intensive tasks from the main server thread and
-facilitating communication with external systems.
+This module provides a gRPC client that allows Minecraft server plugins to communicate with remote
+[task scheduler](../task-scheduler-rust/README.md) nodes, offloading long-running or resource-intensive tasks from the
+server and facilitating communication with external systems.
 
-The client handles connection management (including optional TLS), task submission (synchronous and asynchronous),
-serialization of parameters into the Protobuf `Any` format, basic retry logic for network issues, and triggering
-Bukkit events upon task completion.
+The client handles connection management (including optional TLS), blocking, asynchronous and detached task
+submission, cross-node task dependencies, cluster-aware routing, cancellation, serialization of parameters into the
+Protobuf `Any` format, retries for transient network issues, and Bukkit events upon task completion.
 
 ### Usage
 
@@ -17,245 +16,181 @@ dependencies {
     compileOnly(project(":commons"))
 
     // bukkit-grpc-client module
-    compileOnly(project(":experimental:third-party-schedulers:bukkit-grpc-client"))
+    compileOnly(project(":bukkit-grpc-client"))
 }
 ```
+
+At runtime the plugin depends on `fairy-lib-plugin`, `commons` and `foundation`.
 
 ### Core Concepts
 
-The module operates based on the following key concepts:
+1. **Scheduler Nodes and Clusters:**
+    * Each `GRPCTaskSchedulerClient` talks to one scheduler node.
+    * Nodes can form a cluster. A task submitted to one node may depend on tasks executed on other nodes, the nodes
+      resolve such dependencies on their own. Tasks for methods that a node does not provide are forwarded to a peer
+      that does.
+    * `ClusterTaskSchedulerClient` manages several node clients and adds addressing by node id and load-based routing.
 
-1. **gRPC Client-Server Architecture:**
-    * This module acts as the **gRPC client**.
-    * It requires a separate **gRPC server** to be running. This server must implement the `TaskScheduler` service.
+2. **Task Submission (`TaskSubmission`):**
+    * Describes a task: `taskId`, `method`, `args`, `dependencies`, `dependencyTimeoutMs`, `injectDependencyResults`,
+      `executionTimeoutMs` and `disableForwarding`.
+    * Task ids must be unique across the cluster. Submitting a known id again is idempotent: the existing task is
+      returned instead of executing it again, which makes retries safe.
+    * With `injectDependencyResults`, the results of all dependencies are prepended to the arguments as strings, in
+      dependency order.
 
-2. **TaskScheduler Service (`task_scheduler.proto`):**
-    * The communication contract is defined in the Protocol Buffers file located at
-      `experimental/third-party-schedulers/proto/task_scheduler.proto`.
-    * The service exposes two main RPC methods:
-        * `rpc SubmitTask(TaskRequest) returns (TaskResponse)`: Used by the client to send tasks to the server.
-          `TaskRequest` contains a unique
-          `task_id`, the `method` name to execute on the server, `args` (as `Any`), and an `is_async` flag.
-          `TaskResponse`
-          indicates the initial status (PENDING, SUCCESS, FAILED) and a possible immediate result.
-        * `rpc GetResult(ResultRequest) returns (ResultResponse)`: Used internally by the client (primarily for async
-          tasks not completed immediately) to poll for the final status and result using the task's `task_id`.
-    * **`TaskRequest` Details:**
-        * `task_id` (string): A unique identifier for the task.
-        * `method` (string): The name of the registered task function to execute on the server.
-        * `args` (repeated google.protobuf.Any): A list of arguments to pass to the task function, each serialized and
-          packed into an `Any` message.
-        * `deps` (repeated string): An optional list of strings containing the `task_id`s of other tasks that this task
-          depends on.
-          Before executing this task, the server checks if all dependent tasks have completed successfully and their
-          results are cached.
-          **If any dependency has not completed successfully (i.e., its success record is not found in the result
-          cache), the current task will fail immediately.**
-        * `is_async` (bool): Indicates whether the task should be executed asynchronously.
+3. **Task Results (`TaskResult`, `TaskStatus`):**
+    * `TaskResult` contains the `taskId`, the `status`, the `result` (output on success, error message on failure) and
+      the `nodeId` of the node that executed the task.
+    * `TaskStatus` is one of `PENDING`, `RUNNING`, `SUCCESS`, `FAILED`, `CANCELLED` and `NOT_FOUND`.
 
-3. **`GRPCTaskSchedulerClient` Class:**
-    * The main Java class used to interact with the remote task scheduler service.
-    * Manages the underlying gRPC `ManagedChannel`.
-    * Provides task submission methods (`submitTaskBlocking`, `submitTaskAsync`).
-    * Handles channel shutdown (`shutdown()` method).
+4. **Submission Modes:**
+    * **Blocking (`submit`):** blocks until the task is finished, including the time spent waiting for dependencies.
+      The call deadline is `timeoutMs` plus the dependency timeout (the server default of 30 seconds if unspecified and
+      dependencies exist) plus the execution timeout.
+    * **Asynchronous (`submitAsync`):** returns a `CompletableFuture<TaskResult>`. The task is submitted detached and
+      followed with `WaitResult` long polls on the client's executor, so slow dependencies never hit a single call
+      deadline.
+    * **Detached (`submitDetached`):** returns right after the server accepted the task, usually with `PENDING`. Follow
+      the task with `getResult` or `waitResult`.
 
-4. **Parameter Conversion (`ProtoConversionUtil`):**
-    * Java parameters passed to submission methods are automatically converted to `google.protobuf.Any` messages before
-      being sent via gRPC.
-    * **Supported Types:**
-        * Primitive wrapper classes: `Integer`, `Long`, `Boolean`, `Float`, `Double`.
-        * `String`.
-        * `byte[]`.
-        * `java.util.List<?>`: Recursively converted to a custom `taskscheduler.ListValue` message, then packed into
-          `Any`.
-        * `java.util.Map<String, ?>`: Recursively converted to a custom `taskscheduler.MapValue` message (keys *must* be
-          `String`), then packed into `Any`.
-    * **Unsupported Types:** Logs a warning and attempts conversion using `toString()`, packed as `StringValue`. This is
-      unlikely to work unless specifically handled by the server-side.
+5. **Failures (`TaskSchedulerException`):**
+    * Blocking submissions and queries throw `TaskSchedulerException`. `getStatusCode()` exposes the gRPC status code:
+      `FAILED_PRECONDITION` for failed dependencies, `DEADLINE_EXCEEDED` for dependency or execution timeouts,
+      `NOT_FOUND` for methods available on no node, `INVALID_ARGUMENT` for rejected arguments.
+    * Asynchronous submissions complete exceptionally with a `TaskSchedulerException` (wrapped in
+      `CompletionException`) whose `getTaskStatus()` is the final task status.
 
-5. **Task Submission Modes:**
-    * **Synchronous (`submitTaskBlocking`):** Blocks the calling thread until the `SubmitTask` RPC completes *and* the
-      server indicates a final result (SUCCESS or FAILED). Throws a `TaskSchedulerException` on failure or timeout.
-    * **Asynchronous (`submitTaskAsync`):** Submits the task via `SubmitTask` and returns immediately with a
-      `CompletableFuture<String>`. The gRPC
-      call and potential result polling occur on the `ExecutorService` configured for the client. The future completes
-      with the final result or fails with an exception (often wrapped in `CompletionException`).
+6. **Parameter Conversion:**
+    * Supported types: `Integer`, `Long`, `Boolean`, `Float`, `Double`, `String`, `byte[]`, `java.util.List<?>` and
+      `java.util.Map<String, ?>` (converted recursively).
+    * Other types are converted with `toString()` and a warning is logged, which is unlikely to work unless the task
+      expects a string.
 
-6. **Asynchronous Result Handling (`TaskResultEvent`):**
-    * Regardless of whether a task is submitted synchronously or asynchronously, a Bukkit `Event` (
-      `net.legacy.library.grpcclient.event.TaskResultEvent`) is triggered whenever a task reaches a terminal state (
-      SUCCESS or FAILED).
-    * **Important:** This event is triggered on the gRPC client's `ExecutorService` thread, **not** on the main Bukkit
-      server thread. Any interaction with the Bukkit API within the event handler (e.g., modifying player state, sending
-      messages) *must* be scheduled back to the main thread using `BukkitRunnable().runTask(plugin)`.
+7. **Result Events (`TaskResultEvent`):**
+    * `submit` and `submitAsync` (and the legacy `submitTaskBlocking` / `submitTaskAsync`) fire a `TaskResultEvent` when
+      the task succeeds or fails. `submitDetached` does not fire events.
+    * The event is usually fired from the client's executor and is then marked asynchronous. Listeners must switch back
+      to the primary thread before using the Bukkit API, e.g. with `TaskInterface` from the `commons` module.
 
-7. **Retry Mechanism:**
-    * The client automatically retries gRPC calls that fail due to potentially transient network errors (`UNAVAILABLE`
-      or `RESOURCE_EXHAUSTED` status codes).
-    * Retries occur up to the configured `maxRetries` limit with an exponential backoff strategy.
-    * Other gRPC errors are considered non-retryable and fail immediately.
+8. **Retry Mechanism:**
+    * Calls failing with `UNAVAILABLE` or `RESOURCE_EXHAUSTED` are retried up to `maxRetries` times with exponential
+      backoff. Other errors fail immediately.
 
-8. **TLS Support:**
-    * The client can be configured to use TLS encryption for the connection to the gRPC server for secure communication.
-    * If TLS is enabled, a path to the trusted CA certificate file (`ca.crt`) needs to be provided during
-      initialization.
+9. **TLS Support:**
+    * The client can use TLS. A trusted CA certificate file (`ca.crt`) has to be provided when TLS is enabled.
+
+10. **Packaging:**
+    * Paper ships older Protobuf and Guava versions, so both are relocated inside the plugin jar. The public API only
+      exposes the module's own types, never generated Protobuf classes.
 
 ### Client Instance Creation
 
-You need to create an instance of `GRPCTaskSchedulerClient` when your plugin starts (e.g., in `onEnable`) and call its
-`shutdown()` method when the plugin is disabled (`onDisable`). The `ExecutorService` is automatically shut down during
-`shutdown()`.
+Create the client when your plugin starts and call `shutdown()` when it is disabled. `shutdown()` also shuts down the
+client's `ExecutorService`.
 
 ```java
-public class SimpleClientInitExample {
-    private GRPCTaskSchedulerClient grpcClient;
+// Uses a dedicated virtual thread per task executor
+GRPCTaskSchedulerClient client = new GRPCTaskSchedulerClient("localhost", 50051, 10000, 3);
 
-    public void initialize() throws TaskSchedulerException {
-        String serverHost = "localhost";
-        int serverPort = 50051;
-        long callTimeoutMs = 10000; // 10 seconds
-        int maxRetries = 3;
+// Uses your own executor
+GRPCTaskSchedulerClient clientWithExecutor = new GRPCTaskSchedulerClient("localhost", 50051, 10000, 3, executor);
 
-        // Uses an internal CachedThreadPool
-        grpcClient = new GRPCTaskSchedulerClient(
-                serverHost, serverPort, callTimeoutMs, maxRetries
-        );
-    }
-}
+// Uses TLS, trusting the given CA certificate
+GRPCTaskSchedulerClient tlsClient = new GRPCTaskSchedulerClient(
+        "scheduler.example.com", 50051, 15000, 2, executor, true, "plugins/MyPlugin/ca.crt"
+);
 ```
+
+### Submitting Tasks
 
 ```java
-public class ExternalExecutorClientInitExample {
-    private GRPCTaskSchedulerClient grpcClient;
-    private ExecutorService myExecutor;
+// Blocking, avoid calling it on the primary thread
+TaskResult sum = client.submit(TaskSubmission.of("sum-" + UUID.randomUUID(), "add", 1, 2, 3));
 
-    public void initialize() throws TaskSchedulerException {
-        String serverHost = "localhost";
-        int serverPort = 50051;
-        long callTimeoutMs = 10000;
-        int maxRetries = 3;
+// Asynchronous
+client.submitAsync(TaskSubmission.of("fib-" + UUID.randomUUID(), "fibonacci", 30))
+        .whenComplete((result, throwable) -> {
+            // Runs on the client's executor, not on the primary thread
+        });
 
-        // Create and manage your own ExecutorService
-        myExecutor = Executors.newFixedThreadPool(4);
-
-        grpcClient = new GRPCTaskSchedulerClient(
-                serverHost, serverPort, callTimeoutMs, maxRetries,
-                myExecutor // Pass the external ExecutorService
-        );
-    }
-}
+// Legacy shortcuts returning the raw result string
+String value = client.submitTaskBlocking("ping-" + UUID.randomUUID(), "ping", "hello");
+CompletableFuture<String> future = client.submitTaskAsync("ping-" + UUID.randomUUID(), "ping", "hello");
 ```
+
+### Cross-Node Dependencies
+
+Task A on `node-1` consumes the result of task B on `node-2`. The dependency may be submitted before or after the
+dependent task, as long as it finishes within the dependency timeout.
 
 ```java
-public class TlsClientInitExample {
-    private GRPCTaskSchedulerClient grpcClient;
-    private ExecutorService myTlsExecutor;
+ClusterTaskSchedulerClient cluster = new ClusterTaskSchedulerClient(List.of(node1Client, node2Client));
 
-    public void initialize() throws TaskSchedulerException {
-        String serverHost = "your.grpc.server.com";
-        int serverPort = 50051;
-        long callTimeoutMs = 15000;
-        int maxRetries = 2;
-        String caCertPath = "plugins/MyPlugin/ca.crt"; // Path to CA certificate
+cluster.submitDetached("node-2", TaskSubmission.of("task-b", "load_statistics", playerId));
 
-        myTlsExecutor = Executors.newCachedThreadPool();
-
-        grpcClient = new GRPCTaskSchedulerClient(
-                serverHost, serverPort, callTimeoutMs, maxRetries,
-                myTlsExecutor, // Pass the Executor
-                true,          // Enable TLS
-                caCertPath     // Path to CA certificate
-        );
-    }
-}
+TaskResult taskA = cluster.submit("node-1", TaskSubmission.builder()
+        .taskId("task-a")
+        .method("analyze")
+        .dependency("task-b")
+        .injectDependencyResults(true)
+        .dependencyTimeoutMs(10000)
+        .build());
 ```
 
-### Submitting Synchronous Tasks
+### Cluster Client
 
-Blocks the current thread until completion or failure. Avoid using this on the main thread for long-running tasks.
+`ClusterTaskSchedulerClient` learns the topology (node ids, methods and load) through `GetNodeInfo`:
+
+* `submit(nodeId, submission)`, `submitAsync(nodeId, submission)`, `submitDetached(nodeId, submission)` address a
+  specific node.
+* `submit(submission)` and `submitAsync(submission)` route to the least loaded node providing the method, falling back
+  to any reachable node, which then forwards the task.
+* `getResult(taskId)` finds a task on any node, `cancelTask(taskId)` cancels it wherever it runs.
+* `refreshTopology()` reloads node information, load figures are only as fresh as the last refresh.
+* `getNodeIds()`, `getNodeInfo(nodeId)` and `getClient(nodeId)` expose the known nodes.
+
+Node ids must be unique, a warning is logged if two nodes report the same id.
+
+### Querying, Waiting and Cancelling
 
 ```java
-public class SyncTaskExample {
-    public void submitSync(GRPCTaskSchedulerClient client) {
-        String taskId = "sync-task-" + UUID.randomUUID();
-
-        try {
-            // Assume server has a "calculate" method
-            String result = client.submitTaskBlocking(taskId, "calculate", 100, 200);
-            System.out.println("Sync task result: " + result);
-        } catch (TaskSchedulerException exception) {
-            System.err.println("Sync task failed: " + exception.getMessage());
-        }
-    }
-
-    public void submitComplexSync(GRPCTaskSchedulerClient client) {
-        String taskId = "sync-complex-" + UUID.randomUUID();
-
-        try {
-            Map<String, Object> dataMap = Map.of("user", "Player789", "level", 10);
-
-            // Assume server has a "process" method
-            String result = client.submitTaskBlocking(taskId, "process", dataMap, "item1", "item2");
-            System.out.println("Complex sync task result: " + result);
-        } catch (TaskSchedulerException exception) {
-            System.err.println("Complex sync task failed: " + exception.getMessage());
-        }
-    }
-}
+TaskResult state = client.getResult(taskId);           // NOT_FOUND if the node does not know the task
+TaskResult finished = client.waitResult(taskId, 5000); // Not terminal if the wait timed out
+boolean cancelled = client.cancelTask(taskId);         // The task may run on any node
+SchedulerNodeInfo info = client.getNodeInfo();         // Node id, methods, load and peers
 ```
 
-### Submitting Asynchronous Tasks
-
-Returns a `CompletableFuture` immediately, does not block the current thread.
-
-```java
-public class AsyncTaskExample {
-    public void submitAsync(GRPCTaskSchedulerClient client) {
-        String taskId = "async-task-" + UUID.randomUUID();
-        try {
-            // Assume server has a "long_operation" method
-            CompletableFuture<String> future = client.submitTaskAsync(taskId, "long_operation", 5000);
-
-            // Handle the result using CompletableFuture (on the ExecutorService, not Bukkit thread)
-            future.whenComplete((result, exception) -> {
-                if (exception != null) {
-                    System.err.println("[WorkerThread] Async task failed: " + exception.getMessage());
-                } else {
-                    System.out.println("[WorkerThread] Async task successful: " + result);
-                }
-            });
-
-            System.out.println("Async task submitted, continuing execution...");
-        } catch (Exception exception) {
-            System.err.println("Error submitting async task: " + exception.getMessage());
-        }
-    }
-}
-```
+Tasks waiting for dependencies and async tasks stop immediately when cancelled. Running sync tasks finish in the
+background, but their result is discarded.
 
 ### Handling Results via Events
 
-Register a Bukkit `Listener` to respond to `TaskResultEvent`.
-
-Note that this event is triggered on the gRPC worker thread, not the Bukkit thread.
-If you need to use the Bukkit API, it is recommended to use `TaskInterface` from the `commons` module for task
-scheduling, or directly use the Bukkit scheduler.
-
 ```java
 public class ResultEventListener implements Listener {
+
     @EventHandler
     public void onTaskResult(TaskResultEvent event) {
-        // --- Runs on gRPC worker thread ---
-        String taskId = event.getTaskId();
-        String method = event.getMethod();
-
+        // Usually runs on the client's executor, switch to the primary thread before using the Bukkit API
         if (event.isSuccess()) {
             String result = event.getResult();
-            System.out.printf("[WorkerThread-Event] Task successful: ID=%s, Method=%s, Result=%s%n", taskId, method, result);
         } else {
             Throwable exception = event.getException();
-            System.err.printf("[WorkerThread-Event] Task failed: ID=%s, Method=%s, Error: %s%n", taskId, method, exception.getMessage());
         }
     }
+
 }
 ```
+
+### Testing
+
+`GRPCClientLauncher.DEBUG` enables the integration tests in `net.legacy.library.grpcclient.test`. They require two
+scheduler nodes configured as peers of each other:
+
+```bash
+task-scheduler --addr 127.0.0.1:50051 --node-id node-a --peers http://127.0.0.1:50052
+task-scheduler --addr 127.0.0.1:50052 --node-id node-b --peers http://127.0.0.1:50051
+```
+
+The addresses can be overridden with the system properties `grpcclient.test.node-a` and `grpcclient.test.node-b`
+(`host:port`).

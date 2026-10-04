@@ -1,10 +1,10 @@
 ### Bukkit gRPC 客户端模块
 
-该模块提供了一个 gRPC 客户端。它允许 Minecraft 服务器插件与远程 gRPC 任务调度器服务进行通信，
-从而能够将可能长时间运行或资源密集型的任务从主服务器线程中卸载，促进与外部系统的通信。
+该模块提供了一个 gRPC 客户端，允许 Minecraft 服务器插件与远程 [任务调度器](../task-scheduler-rust/README_ZHCN.md)
+节点通信，从而将长时间运行或资源密集型的任务从服务器中卸载，并促进与外部系统的通信。
 
-该客户端处理连接管理（包括可选的 TLS）、任务提交（同步和异步）、将参数序列化为 Protobuf `Any` 格式、针对网络问题的基本重试逻辑，以及在任务完成时触发
-Bukkit 事件。
+该客户端负责连接管理（包括可选的 TLS）、阻塞式、异步和分离式任务提交、跨节点任务依赖、集群感知路由、任务取消、将参数序列化为
+Protobuf `Any` 格式、针对临时网络问题的重试，以及在任务完成时触发 Bukkit 事件。
 
 ### 用法
 
@@ -14,228 +14,162 @@ dependencies {
     compileOnly(project(":commons"))
 
     // bukkit-grpc-client module
-    compileOnly(project(":experimental:third-party-schedulers:bukkit-grpc-client"))
+    compileOnly(project(":bukkit-grpc-client"))
 }
 ```
+
+运行时该插件依赖 `fairy-lib-plugin`、`commons` 和 `foundation`。
 
 ### 核心概念
 
-该模块基于以下关键概念运行：
+1. **调度节点与集群:**
+    * 每个 `GRPCTaskSchedulerClient` 连接一个调度节点。
+    * 多个节点可以组成集群。提交到某个节点的任务可以依赖在其他节点上执行的任务，节点会自行解析这些依赖。节点不提供的方法会被转发给提供该方法的
+      peer。
+    * `ClusterTaskSchedulerClient` 管理多个节点客户端，并提供按节点 id 寻址和基于负载的路由。
 
-1. **gRPC 客户端-服务器架构:**
-    * 本模块扮演 **gRPC 客户端** 的角色。
-    * 它需要一个独立的 **gRPC 服务器** 正在运行。该服务器必须实现 `TaskScheduler` 服务。
+2. **任务提交 (`TaskSubmission`):**
+    * 描述一个任务：`taskId`、`method`、`args`、`dependencies`、`dependencyTimeoutMs`、`injectDependencyResults`、
+      `executionTimeoutMs` 和 `disableForwarding`。
+    * 任务 id 在集群内必须唯一。重复提交已知 id 是幂等的：会返回已有任务而不会再次执行，因此重试是安全的。
+    * 启用 `injectDependencyResults` 时，所有依赖的结果会以字符串形式按依赖顺序插入到参数前面。
 
-2. **TaskScheduler 服务 (`task_scheduler.proto`):**
-    * 通信契约在位于 `experimental/third-party-schedulers/proto/task_scheduler.proto` 的 Protocol Buffers 文件中定义。
-    * 该服务公开了两个主要的 RPC 方法：
-        * `rpc SubmitTask(TaskRequest) returns (TaskResponse)`: 客户端用于向服务器发送任务。`TaskRequest` 包含唯一的
-          `task_id`、要在服务器上执行的 `method` 名称、`args` (作为 `Any`) 以及一个 `is_async` 标志。`TaskResponse`
-          指示初始状态 (PENDING, SUCCESS, FAILED) 和可能的即时结果。
-        * `rpc GetResult(ResultRequest) returns (ResultResponse)`: 客户端内部使用（主要用于未立即完成的异步任务），通过任务的
-          `task_id` 轮询最终状态和结果。
-    * **`TaskRequest` 详解:**
-        * `task_id` (string): 任务的唯一标识符。
-        * `method` (string): 需要在服务端执行的已注册任务的名称。
-        * `args` (repeated google.protobuf.Any): 传递给任务函数的参数列表，每个参数都被序列化并包装在 `Any` 消息中。
-        * `deps` (repeated string): 一个可选的字符串列表，包含此任务所依赖的其他任务的 `task_id`
-          。服务器在执行此任务前，会检查所有依赖任务是否已成功完成并缓存了结果。
-          **如果任何依赖项未成功完成（即在结果缓存中找不到其成功记录），则当前任务将立即失败。**
-        * `is_async` (bool): 指示任务是否应异步执行。
+3. **任务结果 (`TaskResult`, `TaskStatus`):**
+    * `TaskResult` 包含 `taskId`、`status`、`result`（成功时为输出，失败时为错误信息）以及执行该任务的节点 `nodeId`。
+    * `TaskStatus` 取值为 `PENDING`、`RUNNING`、`SUCCESS`、`FAILED`、`CANCELLED` 和 `NOT_FOUND`。
 
-3. **`GRPCTaskSchedulerClient` 类:**
-    * 用于与远程任务调度器服务交互的主要 Java 类。
-    * 管理底层的 gRPC `ManagedChannel`。
-    * 提供任务提交方法 (`submitTaskBlocking`, `submitTaskAsync`)。
-    * 处理通道关闭 (`shutdown()` 方法)。
+4. **提交方式:**
+    * **阻塞式 (`submit`):** 阻塞直到任务结束，包括等待依赖的时间。调用截止时间为 `timeoutMs` 加上依赖超时（存在依赖且未指定时使用服务器默认的
+      30 秒）再加上执行超时。
+    * **异步 (`submitAsync`):** 返回 `CompletableFuture<TaskResult>`。任务以分离方式提交，然后在客户端的执行器上通过 `WaitResult`
+      长轮询跟踪，因此耗时较长的依赖不会触发单次调用的截止时间。
+    * **分离式 (`submitDetached`):** 服务器接受任务后立即返回，通常为 `PENDING`。之后可以通过 `getResult` 或 `waitResult` 跟踪任务。
 
-4. **参数转换 (`ProtoConversionUtil`):**
-    * 传递给提交方法的 Java 参数在通过 gRPC 发送之前会自动转换为 `google.protobuf.Any` 消息。
-    * **支持的类型:**
-        * 原始类型包装类: `Integer`, `Long`, `Boolean`, `Float`, `Double`.
-        * `String`.
-        * `byte[]`.
-        * `java.util.List<?>`: 递归转换为自定义的 `taskscheduler.ListValue` 消息，然后打包到 `Any` 中。
-        * `java.util.Map<String, ?>`: 递归转换为自定义的 `taskscheduler.MapValue` 消息（键 *必须* 是 `String`），然后打包到
-          `Any` 中。
-    * **不支持的类型:** 记录警告并尝试使用 `toString()` 进行转换，打包为 `StringValue`。除非服务器端特别处理，否则这很可能无法正常工作。
+5. **失败处理 (`TaskSchedulerException`):**
+    * 阻塞式提交和查询会抛出 `TaskSchedulerException`。`getStatusCode()` 返回 gRPC 状态码：依赖失败为 `FAILED_PRECONDITION`，
+      依赖或执行超时为 `DEADLINE_EXCEEDED`，没有任何节点提供该方法为 `NOT_FOUND`，参数被拒绝为 `INVALID_ARGUMENT`。
+    * 异步提交会以 `TaskSchedulerException`（包装在 `CompletionException` 中）异常完成，其 `getTaskStatus()` 为任务的最终状态。
 
-5. **任务提交模式:**
-    * **同步 (`submitTaskBlocking`):** 阻塞调用线程，直到 `SubmitTask` RPC 完成 *并且* 服务器指示最终结果（SUCCESS 或
-      FAILED）。在失败或超时时抛出 `TaskSchedulerException`。
-    * **异步 (`submitTaskAsync`):** 通过 `SubmitTask` 提交任务并立即返回 `CompletableFuture<String>`。gRPC
-      调用和可能的结果轮询在为客户端配置的 `ExecutorService` 上进行。该 future 以最终结果完成，或以异常失败（通常包装在
-      `CompletionException` 中）。
+6. **参数转换:**
+    * 支持的类型：`Integer`、`Long`、`Boolean`、`Float`、`Double`、`String`、`byte[]`、`java.util.List<?>` 和
+      `java.util.Map<String, ?>`（递归转换）。
+    * 其他类型会通过 `toString()` 转换并输出警告日志，除非任务期望字符串，否则通常无法正常工作。
 
-6. **异步结果处理 (`TaskResultEvent`):**
-    * 无论任务是同步还是异步提交的，只要任务达到确定状态（SUCCESS 或 FAILED），就会触发一个 Bukkit `Event` (
-      `net.legacy.library.grpcclient.event.TaskResultEvent`)。
-    * **重要:** 此事件在 gRPC 客户端的 `ExecutorService` 线程上触发，**不是** 在主 Bukkit 服务器线程上。事件处理程序中与
-      Bukkit API 的任何交互（例如，修改玩家状态、发送消息）*必须* 使用 `BukkitRunnable().runTask(plugin)` 调度回主线程。
+7. **结果事件 (`TaskResultEvent`):**
+    * `submit` 和 `submitAsync`（以及旧版的 `submitTaskBlocking` / `submitTaskAsync`）在任务成功或失败时触发 `TaskResultEvent`。
+      `submitDetached` 不会触发事件。
+    * 该事件通常从客户端的执行器触发，此时会被标记为异步事件。监听器在使用 Bukkit API 之前必须切换回主线程，例如使用 `commons` 模块中的
+      `TaskInterface`。
 
-7. **重试机制:**
-    * 客户端会自动重试因潜在的瞬时网络错误（`UNAVAILABLE` 或 `RESOURCE_EXHAUSTED` 状态码）而失败的 gRPC 调用。
-    * 重试会在配置的 `maxRetries` 限制内进行，并采用指数退避策略。
-    * 其他 gRPC 错误被视为不可重试并立即失败。
+8. **重试机制:**
+    * 以 `UNAVAILABLE` 或 `RESOURCE_EXHAUSTED` 失败的调用会以指数退避方式重试，最多 `maxRetries` 次。其他错误会立即失败。
 
-8. **TLS 支持:**
-    * 可以将客户端配置为使用 TLS 加密连接到 gRPC 服务器，以实现安全通信。
-    * 如果启用 TLS，则需要在初始化期间提供指向受信任的 CA 证书文件 (`ca.crt`) 的路径。
+9. **TLS 支持:**
+    * 客户端可以使用 TLS。启用 TLS 时需要提供受信任的 CA 证书文件（`ca.crt`）。
+
+10. **打包:**
+    * Paper 自带较旧版本的 Protobuf 和 Guava，因此两者都在插件 jar 中被重定位。公开 API 只暴露本模块自己的类型，不会暴露生成的 Protobuf 类。
 
 ### 客户端实例创建
 
-您需要在插件启动时（例如 `onEnable` 中）创建 `GRPCTaskSchedulerClient` 的实例，并在插件禁用时（`onDisable` 中）调用其
-`shutdown()` 方法。`ExecutorService` 会自动在 `shutdown()` 时自动关闭。
+在插件启动时创建客户端，并在插件禁用时调用 `shutdown()`。`shutdown()` 也会关闭客户端的 `ExecutorService`。
 
 ```java
-public class SimpleClientInitExample {
-    private GRPCTaskSchedulerClient grpcClient;
+// 使用独立的虚拟线程执行器
+GRPCTaskSchedulerClient client = new GRPCTaskSchedulerClient("localhost", 50051, 10000, 3);
 
-    public void initialize() throws TaskSchedulerException {
-        String serverHost = "localhost";
-        int serverPort = 50051;
-        long callTimeoutMs = 10000; // 10 秒
-        int maxRetries = 3;
+// 使用自定义执行器
+GRPCTaskSchedulerClient clientWithExecutor = new GRPCTaskSchedulerClient("localhost", 50051, 10000, 3, executor);
 
-        // 使用内部 CachedThreadPool
-        grpcClient = new GRPCTaskSchedulerClient(
-                serverHost, serverPort, callTimeoutMs, maxRetries
-        );
-    }
-}
+// 使用 TLS，信任指定的 CA 证书
+GRPCTaskSchedulerClient tlsClient = new GRPCTaskSchedulerClient(
+        "scheduler.example.com", 50051, 15000, 2, executor, true, "plugins/MyPlugin/ca.crt"
+);
 ```
+
+### 提交任务
 
 ```java
-public class ExternalExecutorClientInitExample {
-    private GRPCTaskSchedulerClient grpcClient;
-    private ExecutorService myExecutor;
+// 阻塞式，避免在主线程调用
+TaskResult sum = client.submit(TaskSubmission.of("sum-" + UUID.randomUUID(), "add", 1, 2, 3));
 
-    public void initialize() throws TaskSchedulerException {
-        String serverHost = "localhost";
-        int serverPort = 50051;
-        long callTimeoutMs = 10000;
-        int maxRetries = 3;
+// 异步
+client.submitAsync(TaskSubmission.of("fib-" + UUID.randomUUID(), "fibonacci", 30))
+        .whenComplete((result, throwable) -> {
+            // 运行在客户端的执行器上，而不是主线程
+        });
 
-        // 创建并管理您自己的 ExecutorService
-        myExecutor = Executors.newFixedThreadPool(4);
-
-        grpcClient = new GRPCTaskSchedulerClient(
-                serverHost, serverPort, callTimeoutMs, maxRetries,
-                myExecutor // 传入外部 ExecutorService
-        );
-    }
-}
+// 旧版快捷方法，直接返回结果字符串
+String value = client.submitTaskBlocking("ping-" + UUID.randomUUID(), "ping", "hello");
+CompletableFuture<String> future = client.submitTaskAsync("ping-" + UUID.randomUUID(), "ping", "hello");
 ```
+
+### 跨节点依赖
+
+`node-1` 上的任务 A 使用 `node-2` 上任务 B 的结果。只要依赖在依赖超时时间内完成，它可以在被依赖任务之前或之后提交。
 
 ```java
-public class TlsClientInitExample {
-    private GRPCTaskSchedulerClient grpcClient;
-    private ExecutorService myTlsExecutor;
+ClusterTaskSchedulerClient cluster = new ClusterTaskSchedulerClient(List.of(node1Client, node2Client));
 
-    public void initialize() throws TaskSchedulerException {
-        String serverHost = "your.grpc.server.com";
-        int serverPort = 50051;
-        long callTimeoutMs = 15000;
-        int maxRetries = 2;
-        String caCertPath = "plugins/MyPlugin/ca.crt"; // CA 证书路径
+cluster.submitDetached("node-2", TaskSubmission.of("task-b", "load_statistics", playerId));
 
-        myTlsExecutor = Executors.newCachedThreadPool();
-
-        grpcClient = new GRPCTaskSchedulerClient(
-                serverHost, serverPort, callTimeoutMs, maxRetries,
-                myTlsExecutor, // 传入 Executor
-                true,          // 启用 TLS
-                caCertPath     // CA 证书路径
-        );
-    }
-}
+TaskResult taskA = cluster.submit("node-1", TaskSubmission.builder()
+        .taskId("task-a")
+        .method("analyze")
+        .dependency("task-b")
+        .injectDependencyResults(true)
+        .dependencyTimeoutMs(10000)
+        .build());
 ```
 
-### 提交同步任务
+### 集群客户端
 
-阻塞当前线程直到完成或失败。请一定避免在主线程上用于耗时任务。
+`ClusterTaskSchedulerClient` 通过 `GetNodeInfo` 获取拓扑信息（节点 id、方法和负载）：
+
+* `submit(nodeId, submission)`、`submitAsync(nodeId, submission)`、`submitDetached(nodeId, submission)` 向指定节点提交。
+* `submit(submission)` 和 `submitAsync(submission)` 路由到提供该方法且负载最低的节点；若没有，则交给任意可达节点，由其转发任务。
+* `getResult(taskId)` 在任意节点上查找任务，`cancelTask(taskId)` 无论任务在哪里运行都可以取消。
+* `refreshTopology()` 重新加载节点信息，负载数据只与最近一次刷新一样新。
+* `getNodeIds()`、`getNodeInfo(nodeId)` 和 `getClient(nodeId)` 提供已知节点的信息。
+
+节点 id 必须唯一，如果两个节点上报相同的 id 会输出警告日志。
+
+### 查询、等待与取消
 
 ```java
-public class SyncTaskExample {
-    public void submitSync(GRPCTaskSchedulerClient client) {
-        String taskId = "sync-task-" + UUID.randomUUID();
-
-        try {
-            // 假设服务器有 "calculate" 方法
-            String result = client.submitTaskBlocking(taskId, "calculate", 100, 200);
-            System.out.println("同步任务结果: " + result);
-        } catch (TaskSchedulerException exception) {
-            System.err.println("同步任务失败: " + exception.getMessage());
-        }
-    }
-
-    public void submitComplexSync(GRPCTaskSchedulerClient client) {
-        String taskId = "sync-complex-" + UUID.randomUUID();
-
-        try {
-            Map<String, Object> dataMap = Map.of("user", "Player789", "level", 10);
-
-            // 假设服务器有 "process" 方法
-            String result = client.submitTaskBlocking(taskId, "process", dataMap, "item1", "item2");
-            System.out.println("复杂同步任务结果: " + result);
-        } catch (TaskSchedulerException exception) {
-            System.err.println("复杂同步任务失败: " + exception.getMessage());
-        }
-    }
-}
+TaskResult state = client.getResult(taskId);           // 节点不知道该任务时为 NOT_FOUND
+TaskResult finished = client.waitResult(taskId, 5000); // 等待超时时状态不是终态
+boolean cancelled = client.cancelTask(taskId);         // 任务可以位于任意节点
+SchedulerNodeInfo info = client.getNodeInfo();         // 节点 id、方法、负载和 peer
 ```
 
-### 提交异步任务
-
-立即返回 `CompletableFuture`，不阻塞当前线程。
-
-```java
-public class AsyncTaskExample {
-    public void submitAsync(GRPCTaskSchedulerClient client) {
-        String taskId = "async-task-" + UUID.randomUUID();
-        try {
-            // 假设服务器有 "long_operation" 方法
-            CompletableFuture<String> future = client.submitTaskAsync(taskId, "long_operation", 5000);
-
-            // 使用 CompletableFuture 处理结果（使用 ExecutorService，而不是 Bukkit 线程）
-            future.whenComplete((result, exception) -> {
-                if (exception != null) {
-                    System.err.println("[WorkerThread] 异步任务失败: " + exception.getMessage());
-                } else {
-                    System.out.println("[WorkerThread] 异步任务成功: " + result);
-                }
-            });
-
-            System.out.println("异步任务已提交，继续执行...");
-        } catch (Exception exception) {
-            System.err.println("提交异步任务时出错: " + exception.getMessage());
-        }
-    }
-}
-```
+等待依赖的任务和异步任务在被取消时会立即停止。正在运行的同步任务会在后台运行完毕，但其结果会被丢弃。
 
 ### 通过事件处理结果
 
-注册 Bukkit `Listener` 以响应 `TaskResultEvent`。
-
-需要注意的是，该事件被触发的线程是 gRPC 工作线程，不是 Bukkit 线程。
-如果需要使用 Bukkit API，则推荐使用 `commons` 模块内的 `TaskInterface` 进行任务调度，或直接使用 Bukkit 线程池
-
 ```java
 public class ResultEventListener implements Listener {
+
     @EventHandler
     public void onTaskResult(TaskResultEvent event) {
-        // --- 在 gRPC 工作线程上运行 ---
-        String taskId = event.getTaskId();
-        String method = event.getMethod();
-
+        // 通常运行在客户端的执行器上，使用 Bukkit API 前需切换到主线程
         if (event.isSuccess()) {
             String result = event.getResult();
-            System.out.printf("[WorkerThread-Event] 任务成功: ID=%s, Method=%s, Result=%s%n", taskId, method, result);
         } else {
             Throwable exception = event.getException();
-            System.err.printf("[WorkerThread-Event] 任务失败: ID=%s, Method=%s, Error: %s%n", taskId, method, exception.getMessage());
         }
     }
+
 }
 ```
+
+### 测试
+
+`GRPCClientLauncher.DEBUG` 会启用 `net.legacy.library.grpcclient.test` 中的集成测试。测试需要两个互为 peer 的调度节点：
+
+```bash
+task-scheduler --addr 127.0.0.1:50051 --node-id node-a --peers http://127.0.0.1:50052
+task-scheduler --addr 127.0.0.1:50052 --node-id node-b --peers http://127.0.0.1:50051
+```
+
+可以通过系统属性 `grpcclient.test.node-a` 和 `grpcclient.test.node-b`（`host:port`）覆盖地址。

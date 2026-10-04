@@ -4,121 +4,91 @@ use crate::models::wrappers::{
     UInt32Value, UInt64Value,
 };
 use crate::models::ArgValue;
-use crate::models::TaskResult;
-use crate::tasks::taskscheduler::{self, ListValue, MapValue};
+use crate::tasks::taskscheduler::{ListValue, MapValue};
 use crate::warn_log;
 use dashmap::DashMap;
-use lru::LruCache;
-use once_cell::sync::Lazy;
-use parking_lot::Mutex;
 use prost::Message;
 use std::collections::HashMap;
 use std::future::Future;
-use std::num::NonZeroUsize;
 use std::pin::Pin;
-use std::sync::Arc;
 
-type TaskFn = fn(Vec<ArgValue>) -> TaskResultType<String>;
-type AsyncTaskFn = fn(Vec<ArgValue>) -> Pin<Box<dyn std::future::Future<Output = String> + Send>>;
+pub type TaskFn = fn(Vec<ArgValue>) -> TaskResultType<String>;
+pub type AsyncTaskFn =
+    fn(Vec<ArgValue>) -> Pin<Box<dyn Future<Output = TaskResultType<String>> + Send>>;
 
 pub type DynamicSyncTaskFn = unsafe fn(Vec<ArgValue>) -> TaskResultType<String>;
 pub type DynamicAsyncTaskFn =
     unsafe fn(Vec<ArgValue>) -> Pin<Box<dyn Future<Output = String> + Send>>;
 
-const CACHE_SIZE: usize = 1000;
+/// Callable entry of a registered task, resolved by method name.
+#[derive(Clone, Copy)]
+pub enum TaskHandler {
+    Sync(TaskFn),
+    Async(AsyncTaskFn),
+    DynamicSync(DynamicSyncTaskFn),
+    DynamicAsync(DynamicAsyncTaskFn),
+}
 
-lazy_static::lazy_static! {
-    static ref DYNAMIC_SYNC_FUNCTIONS: DashMap<String, DynamicSyncTaskFn> = DashMap::new();
-    static ref DYNAMIC_ASYNC_FUNCTIONS: DashMap<String, DynamicAsyncTaskFn> = DashMap::new();
-    static ref FUNCTION_REGISTER_TIMES: DashMap<String, u64> = DashMap::new();
+impl TaskHandler {
+    pub fn is_async(&self) -> bool {
+        matches!(self, TaskHandler::Async(_) | TaskHandler::DynamicAsync(_))
+    }
+
+    pub fn is_dynamic(&self) -> bool {
+        matches!(
+            self,
+            TaskHandler::DynamicSync(_) | TaskHandler::DynamicAsync(_)
+        )
+    }
+
+    /// Invokes the task. Sync tasks run on the blocking thread pool so they never stall the runtime.
+    pub async fn invoke(self, args: Vec<ArgValue>) -> TaskResultType<String> {
+        match self {
+            TaskHandler::Sync(func) => run_blocking(move || func(args)).await,
+            TaskHandler::DynamicSync(func) => run_blocking(move || unsafe { func(args) }).await,
+            TaskHandler::Async(func) => func(args).await,
+            TaskHandler::DynamicAsync(func) => Ok(unsafe { func(args) }.await),
+        }
+    }
+}
+
+async fn run_blocking<F>(func: F) -> TaskResultType<String>
+where
+    F: FnOnce() -> TaskResultType<String> + Send + 'static,
+{
+    tokio::task::spawn_blocking(func)
+        .await
+        .map_err(|e| TaskError::ExecutionError(format!("Sync task panicked: {}", e)))?
 }
 
 #[derive(Clone, Copy)]
-struct SyncTaskInfo {
-    func: TaskFn,
+struct TaskEntry {
+    handler: TaskHandler,
     register_time: u64,
-    dynamic_lib: bool,
-}
-
-#[derive(Clone, Copy)]
-struct AsyncTaskInfo {
-    func: AsyncTaskFn,
-    register_time: u64,
-    dynamic_lib: bool,
 }
 
 pub struct TaskRegistry {
-    sync_tasks: DashMap<String, SyncTaskInfo, ahash::RandomState>,
-    async_tasks: DashMap<String, AsyncTaskInfo, ahash::RandomState>,
-    results_cache: Arc<[Mutex<LruCache<String, TaskResult>>; 32]>,
-    cache_hasher: ahash::RandomState,
+    tasks: DashMap<String, TaskEntry, ahash::RandomState>,
 }
 
 impl Default for TaskRegistry {
     fn default() -> Self {
-        let caches = std::array::from_fn(|_| {
-            Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_SIZE / 32).unwrap()))
-        });
-
         Self {
-            sync_tasks: DashMap::with_hasher(ahash::RandomState::new()),
-            async_tasks: DashMap::with_hasher(ahash::RandomState::new()),
-            results_cache: Arc::new(caches),
-            cache_hasher: ahash::RandomState::new(),
+            tasks: DashMap::with_hasher(ahash::RandomState::new()),
         }
     }
 }
 
 impl TaskRegistry {
     pub fn register_sync_task(&self, name: &str, func: TaskFn) {
-        let current_time = Self::get_current_timestamp();
-        if self.sync_tasks.contains_key(name) {
-            let old_reg_time = self
-                .sync_tasks
-                .get(name)
-                .map(|e| e.register_time)
-                .unwrap_or(0);
-            warn_log!(
-                "Task name conflict: Sync task '{}' already exists (registered at: {} ms), will be overwritten (new time: {} ms)",
-                name,
-                old_reg_time,
-                current_time
-            );
-        }
-
-        self.sync_tasks.insert(
-            name.to_string(),
-            SyncTaskInfo {
-                func,
-                register_time: current_time,
-                dynamic_lib: false,
-            },
-        );
+        self.register(name, TaskHandler::Sync(func), Self::get_current_timestamp());
     }
 
     pub fn register_async_task(&self, name: &str, func: AsyncTaskFn) {
-        let current_time = Self::get_current_timestamp();
-        if self.async_tasks.contains_key(name) {
-            let old_reg_time = self
-                .async_tasks
-                .get(name)
-                .map(|e| e.register_time)
-                .unwrap_or(0);
-            warn_log!(
-                "Task name conflict: Async task '{}' already exists (registered at: {} ms), will be overwritten (new time: {} ms)",
-                name,
-                old_reg_time,
-                current_time
-            );
-        }
-
-        self.async_tasks.insert(
-            name.to_string(),
-            AsyncTaskInfo {
-                func,
-                register_time: current_time,
-                dynamic_lib: false,
-            },
+        self.register(
+            name,
+            TaskHandler::Async(func),
+            Self::get_current_timestamp(),
         );
     }
 
@@ -128,39 +98,7 @@ impl TaskRegistry {
         func: DynamicSyncTaskFn,
         register_time: u64,
     ) -> bool {
-        if self.sync_tasks.contains_key(name) {
-            let old_reg_time = self
-                .sync_tasks
-                .get(name)
-                .map(|e| e.register_time)
-                .unwrap_or(0);
-            if register_time <= old_reg_time {
-                warn_log!(
-                    "Task registration conflict: Dynamic sync task '{}' already exists with earlier registration time (existing: {} ms, attempted: {} ms), not overwriting",
-                    name, old_reg_time, register_time
-                );
-                return false;
-            }
-
-            warn_log!(
-                "Task name conflict: Sync task '{}' already exists (registered at: {} ms), will be overwritten by dynamic task (registration time: {} ms)",
-                name, old_reg_time, register_time
-            );
-        }
-
-        DYNAMIC_SYNC_FUNCTIONS.insert(name.to_string(), func);
-        FUNCTION_REGISTER_TIMES.insert(name.to_string(), register_time);
-
-        self.sync_tasks.insert(
-            name.to_string(),
-            SyncTaskInfo {
-                func: dynamic_sync_wrapper,
-                register_time,
-                dynamic_lib: true,
-            },
-        );
-
-        true
+        self.register_dynamic(name, TaskHandler::DynamicSync(func), register_time)
     }
 
     pub fn register_dynamic_async_task(
@@ -169,57 +107,67 @@ impl TaskRegistry {
         func: DynamicAsyncTaskFn,
         register_time: u64,
     ) -> bool {
-        if self.async_tasks.contains_key(name) {
-            let old_reg_time = self
-                .async_tasks
-                .get(name)
-                .map(|e| e.register_time)
-                .unwrap_or(0);
-            if register_time <= old_reg_time {
-                warn_log!(
-                    "Task registration conflict: Dynamic async task '{}' already exists with earlier registration time (existing: {} ms, attempted: {} ms), not overwriting",
-                    name, old_reg_time, register_time
-                );
-                return false;
-            }
+        self.register_dynamic(name, TaskHandler::DynamicAsync(func), register_time)
+    }
 
+    fn register(&self, name: &str, handler: TaskHandler, register_time: u64) {
+        if let Some(old) = self.tasks.get(name).map(|entry| entry.register_time) {
             warn_log!(
-                "Task name conflict: Async task '{}' already exists (registered at: {} ms), will be overwritten by dynamic task (registration time: {} ms)",
-                name, old_reg_time, register_time
+                "Task name conflict: Task '{}' already exists (registered at: {} ms), will be overwritten (new time: {} ms)",
+                name,
+                old,
+                register_time
             );
         }
 
-        DYNAMIC_ASYNC_FUNCTIONS.insert(name.to_string(), func);
-        FUNCTION_REGISTER_TIMES.insert(name.to_string(), register_time);
-
-        self.async_tasks.insert(
+        self.tasks.insert(
             name.to_string(),
-            AsyncTaskInfo {
-                func: dynamic_async_wrapper,
+            TaskEntry {
+                handler,
                 register_time,
-                dynamic_lib: true,
             },
         );
+    }
 
+    fn register_dynamic(&self, name: &str, handler: TaskHandler, register_time: u64) -> bool {
+        if let Some(old) = self.tasks.get(name).map(|entry| entry.register_time) {
+            if register_time <= old {
+                warn_log!(
+                    "Task registration conflict: Dynamic task '{}' already exists with earlier registration time (existing: {} ms, attempted: {} ms), not overwriting",
+                    name, old, register_time
+                );
+                return false;
+            }
+        }
+
+        self.register(name, handler, register_time);
         true
     }
 
     pub fn unregister_task(&self, name: &str) {
-        let removed_sync = self.sync_tasks.remove(name);
-        let removed_async = self.async_tasks.remove(name);
-
-        DYNAMIC_SYNC_FUNCTIONS.remove(name);
-        DYNAMIC_ASYNC_FUNCTIONS.remove(name);
-        FUNCTION_REGISTER_TIMES.remove(name);
-
-        if removed_sync.is_some() || removed_async.is_some() {
-            let task_type = if removed_sync.is_some() {
-                "sync"
-            } else {
+        if let Some((_, entry)) = self.tasks.remove(name) {
+            let task_type = if entry.handler.is_async() {
                 "async"
+            } else {
+                "sync"
             };
             warn_log!("Unregistered {} task: {}", task_type, name);
         }
+    }
+
+    /// Returns the handler registered under the given method name, if any.
+    pub fn resolve(&self, name: &str) -> Option<TaskHandler> {
+        self.tasks.get(name).map(|entry| entry.handler)
+    }
+
+    pub fn contains(&self, name: &str) -> bool {
+        self.tasks.contains_key(name)
+    }
+
+    pub fn method_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.tasks.iter().map(|entry| entry.key().clone()).collect();
+        names.sort();
+        names
     }
 
     fn get_current_timestamp() -> u64 {
@@ -230,33 +178,24 @@ impl TaskRegistry {
             .as_millis() as u64
     }
 
+    /// Lists all tasks as `name -> (is_sync, is_dynamic, register_time)`.
     pub fn list_all_tasks(&self) -> HashMap<String, (bool, bool, u64)> {
-        let mut tasks = HashMap::new();
-
-        for entry in self.sync_tasks.iter() {
-            tasks.insert(
-                entry.key().clone(),
-                (true, entry.dynamic_lib, entry.register_time),
-            );
-        }
-
-        for entry in self.async_tasks.iter() {
-            tasks.insert(
-                entry.key().clone(),
-                (false, entry.dynamic_lib, entry.register_time),
-            );
-        }
-
-        tasks
+        self.tasks
+            .iter()
+            .map(|entry| {
+                (
+                    entry.key().clone(),
+                    (
+                        !entry.handler.is_async(),
+                        entry.handler.is_dynamic(),
+                        entry.register_time,
+                    ),
+                )
+            })
+            .collect()
     }
 
-    #[inline]
-    fn get_cache_shard(&self, task_id: &str) -> &Mutex<LruCache<String, TaskResult>> {
-        let idx = self.cache_hasher.hash_one(task_id) as usize % 32;
-        &self.results_cache[idx]
-    }
-
-    fn convert_args(args: &[prost_types::Any]) -> Result<Vec<ArgValue>, TaskError> {
+    pub fn convert_args(args: &[prost_types::Any]) -> Result<Vec<ArgValue>, TaskError> {
         args.iter()
             .map(|any| match any.type_url.as_str() {
                 "type.googleapis.com/google.protobuf.Int32Value" => {
@@ -355,113 +294,4 @@ impl TaskRegistry {
             })
             .collect()
     }
-
-    pub async fn execute_task(&self, task: &taskscheduler::TaskRequest) -> TaskResultType<String> {
-        let args_converted = Self::convert_args(&task.args)?;
-
-        if !task.deps.is_empty() {
-            for dep in &task.deps {
-                let shard = self.get_cache_shard(dep);
-                let cache = shard.lock();
-                if !cache.contains(dep.as_str()) {
-                    return Err(TaskError::MissingDependency(format!(
-                        "Dependency '{}' not found or not completed",
-                        dep
-                    )));
-                }
-            }
-        }
-
-        let task_fn_result = if task.is_async {
-            let async_func = self
-                .async_tasks
-                .get(&task.method)
-                .map(|entry| entry.func)
-                .ok_or_else(|| TaskError::MethodNotFound(task.method.clone()))?;
-            async_func(args_converted).await
-        } else {
-            let sync_func = self
-                .sync_tasks
-                .get(&task.method)
-                .map(|entry| entry.func)
-                .ok_or_else(|| TaskError::MethodNotFound(task.method.clone()))?;
-            sync_func(args_converted)?
-        };
-
-        let task_result_for_cache = TaskResult {
-            status: 1,
-            value: task_fn_result.clone(),
-        };
-        self.cache_task_result(task.task_id.clone(), task_result_for_cache)
-            .await;
-
-        Ok(task_fn_result)
-    }
-
-    pub async fn execute_tasks(
-        &self,
-        _tasks: Vec<taskscheduler::TaskRequest>,
-    ) -> Vec<crate::models::TaskResult> {
-        vec![]
-    }
-
-    pub async fn get_task_result(&self, task_id: &str) -> Option<TaskResult> {
-        let mut cache = self.get_cache_shard(task_id).lock();
-        cache.get(task_id).cloned()
-    }
-
-    pub async fn cache_task_result(&self, task_id: String, result: TaskResult) {
-        let mut cache = self.get_cache_shard(&task_id).lock();
-        cache.put(task_id, result);
-    }
-}
-
-pub static REGISTRY: Lazy<TaskRegistry> = Lazy::new(TaskRegistry::default);
-
-pub async fn process_task(req: &taskscheduler::TaskRequest) -> TaskResult {
-    match REGISTRY.execute_task(req).await {
-        Ok(value) => TaskResult { status: 1, value },
-        Err(err) => {
-            let (status, value) = match err {
-                TaskError::MethodNotFound(m) => (2, format!("Method not found: {}", m)),
-                TaskError::InvalidArguments(a) => (2, format!("Invalid arguments: {}", a)),
-                TaskError::MissingDependency(d) => (2, format!("Missing dependency: {}", d)),
-                TaskError::ExecutionError(e) => (2, format!("Task execution failed: {}", e)),
-            };
-            TaskResult { status, value }
-        }
-    }
-}
-
-fn dynamic_sync_wrapper(args: Vec<ArgValue>) -> TaskResultType<String> {
-    for entry in DYNAMIC_SYNC_FUNCTIONS.iter() {
-        let dynamic_fn = entry.value();
-        match unsafe { dynamic_fn(args.clone()) } {
-            Ok(result) => return Ok(result),
-            Err(_) => continue,
-        }
-    }
-
-    Err(TaskError::MethodNotFound(
-        "Dynamic sync function not found or all functions failed".to_string(),
-    ))
-}
-
-fn dynamic_async_wrapper(args: Vec<ArgValue>) -> Pin<Box<dyn Future<Output = String> + Send>> {
-    let args_clone = args.clone();
-
-    let mut function_list = Vec::new();
-    for entry in DYNAMIC_ASYNC_FUNCTIONS.iter() {
-        function_list.push((entry.key().clone(), *entry.value()));
-    }
-
-    Box::pin(async move {
-        if !function_list.is_empty() {
-            let (_, dynamic_fn) = &function_list[0];
-            let future = unsafe { dynamic_fn(args_clone) };
-            return future.await;
-        }
-
-        "Error: No dynamic async functions registered".to_string()
-    })
 }

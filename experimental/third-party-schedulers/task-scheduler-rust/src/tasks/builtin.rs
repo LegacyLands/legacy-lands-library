@@ -279,21 +279,27 @@ pub fn sum_list(args: Vec<ArgValue>) -> Result<String> {
 }
 
 #[async_task]
-pub async fn fibonacci(args: Vec<ArgValue>) -> String {
-    if let Some(ArgValue::Int32(n)) = args.first() {
-        if *n < 0 {
-            return "Error: Input must be non-negative".to_string();
+pub async fn fibonacci(args: Vec<ArgValue>) -> Result<String> {
+    let n = match args.first() {
+        Some(ArgValue::Int32(n)) if *n >= 0 => *n,
+        Some(ArgValue::Int32(_)) => {
+            return Err(TaskError::InvalidArguments(
+                "Input must be non-negative".to_string(),
+            ))
         }
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        fn fib(n: i32) -> u64 {
-            if n <= 1 {
-                n as u64
-            } else {
-                fib(n - 1) + fib(n - 2)
-            }
+        _ => {
+            return Err(TaskError::InvalidArguments(
+                "Expected an integer argument".to_string(),
+            ))
         }
-        fib(*n).to_string()
-    } else {
-        "Error: Expected an integer argument".to_string()
+    };
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+    fn fib(n: i32) -> u64 {
+        if n <= 1 {
+            n as u64
+        } else {
+            fib(n - 1) + fib(n - 2)
+        }
     }
+    Ok(fib(n).to_string())
 }

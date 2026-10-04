@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::OnceLock;
 use task_scheduler::error::{Result, TaskError};
 use task_scheduler::models::ArgValue;
 
@@ -16,10 +17,25 @@ pub unsafe fn multiply(args: Vec<ArgValue>) -> Result<String> {
     Ok(product?.to_string())
 }
 
+/// Runtime owned by this plugin.
+///
+/// A plugin links its own copy of tokio, which cannot see the host runtime, so timers and I/O
+/// must run on a plugin-owned runtime. The host only awaits the returned join handle.
+fn plugin_runtime() -> &'static tokio::runtime::Runtime {
+    static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_time()
+            .build()
+            .expect("Failed to build plugin runtime")
+    })
+}
+
 /// Example asynchronous task: Return result with delay
 #[no_mangle]
 pub unsafe fn delayed_echo(args: Vec<ArgValue>) -> Pin<Box<dyn Future<Output = String> + Send>> {
-    Box::pin(async move {
+    let handle = plugin_runtime().spawn(async move {
         // Convert parameters
         let msg = args
             .into_iter()
@@ -37,6 +53,12 @@ pub unsafe fn delayed_echo(args: Vec<ArgValue>) -> Pin<Box<dyn Future<Output = S
             "Echo after delay: {}",
             if msg.is_empty() { "no message" } else { &msg }
         )
+    });
+
+    Box::pin(async move {
+        handle
+            .await
+            .unwrap_or_else(|e| format!("Error: delayed_echo failed: {}", e))
     })
 }
 

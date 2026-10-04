@@ -8,6 +8,7 @@ use task_scheduler::tasks::taskscheduler::{
 use tonic::transport::Channel;
 
 /// Connect to the server
+#[allow(dead_code)]
 pub async fn connect_to_server(server_address: &str) -> TaskSchedulerClient<Channel> {
     let channel = tonic::transport::Channel::from_shared(server_address.to_string())
         .expect("Failed to create shared endpoint")
@@ -97,5 +98,6 @@ pub fn create_task_request(
         args,
         deps,
         is_async,
+        ..Default::default()
     }
 }

@@ -25,6 +25,17 @@ impl TestServer {
     pub fn address(&self) -> String {
         format!("http://127.0.0.1:{}", self.port)
     }
+
+    #[allow(dead_code)]
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    /// Wraps an already spawned server process so it is killed on drop
+    #[allow(dead_code)]
+    pub fn from_process(process: Child, port: u16) -> Self {
+        Self { process, port }
+    }
 }
 
 impl Drop for TestServer {
@@ -62,6 +73,7 @@ impl Drop for TestServer {
 
 /// Set up test server with automatically assigned port
 #[allow(clippy::zombie_processes)]
+#[allow(dead_code)]
 pub async fn setup() -> TestServer {
     // Ensure binary is built only once
     INIT.call_once(|| {
@@ -138,6 +150,38 @@ pub async fn setup_with_options(port: Option<u16>, library_dir: Option<&str>) ->
 
     // Wait for server to start
     tokio::time::sleep(Duration::from_millis(700)).await;
+
+    TestServer { process, port }
+}
+
+/// Set up test server on the given port with arbitrary extra command line arguments
+#[allow(clippy::zombie_processes)]
+#[allow(dead_code)]
+pub fn spawn_with_args(port: u16, extra_args: &[String]) -> TestServer {
+    INIT.call_once(|| {
+        println!("Ensuring test server binary is built...");
+        assert!(
+            Command::new("cargo")
+                .args(["build", "--bin", "task-scheduler"])
+                .status()
+                .expect("Failed to build server binary")
+                .success(),
+            "Failed to build the server binary"
+        );
+    });
+
+    println!(
+        "Starting test server process on port {} with args {:?}...",
+        port, extra_args
+    );
+    let process = Command::new("target/debug/task-scheduler")
+        .arg("--addr")
+        .arg(format!("127.0.0.1:{}", port))
+        .args(extra_args)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("Failed to start server process");
 
     TestServer { process, port }
 }
