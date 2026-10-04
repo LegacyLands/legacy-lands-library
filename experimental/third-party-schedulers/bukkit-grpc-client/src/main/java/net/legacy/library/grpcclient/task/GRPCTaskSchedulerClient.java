@@ -9,44 +9,58 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import lombok.Getter;
+import net.legacy.library.commons.task.VirtualThreadExecutors;
 import net.legacy.library.grpcclient.event.TaskResultEvent;
 import org.apache.commons.lang3.Validate;
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.PluginManager;
 import taskscheduler.TaskSchedulerGrpc;
+import taskscheduler.TaskSchedulerOuterClass.CancelRequest;
+import taskscheduler.TaskSchedulerOuterClass.CancelResponse;
+import taskscheduler.TaskSchedulerOuterClass.NodeInfoRequest;
 import taskscheduler.TaskSchedulerOuterClass.ResultRequest;
-import taskscheduler.TaskSchedulerOuterClass.ResultResponse;
 import taskscheduler.TaskSchedulerOuterClass.TaskRequest;
 import taskscheduler.TaskSchedulerOuterClass.TaskResponse;
+import taskscheduler.TaskSchedulerOuterClass.WaitResultRequest;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A client for interacting with the Task Scheduler via gRPC.
+ * A client for interacting with a single Task Scheduler node via gRPC.
  *
- * <p>This client provides methods for submitting tasks synchronously (blocking) and
- * asynchronously (returning a {@link CompletableFuture}). It handles connection management,
- * argument serialization to Protobuf {@link Any} format (including Lists and Maps via custom messages),
- * and basic retry logic for gRPC calls. It also supports optional TLS encryption.
+ * <p>This client submits tasks either blocking ({@link #submit(TaskSubmission)}) or asynchronously
+ * ({@link #submitAsync(TaskSubmission)}), queries and cancels tasks, and describes the node.
+ * Scheduler nodes form a cluster: a task submitted here may depend on tasks executed on other nodes,
+ * and tasks whose method is not available on this node are forwarded to a capable peer automatically.
+ * Use {@link ClusterTaskSchedulerClient} to address several nodes at once.
  *
- * <p>Usage typically involves creating an instance using one of the constructors (specifying TLS options if needed)
- * and then calling {@link #submitTaskBlocking(String, String, Object...)} or {@link #submitTaskAsync(String, String, Object...)}.
- * Remember to call {@link #shutdown()} when the client is no longer needed to release resources.
+ * <p>Transient gRPC failures ({@code UNAVAILABLE}, {@code RESOURCE_EXHAUSTED}) are retried with exponential
+ * backoff. Retrying submissions is safe because the scheduler treats task ids idempotently.
+ * Every finished submission fires a {@link TaskResultEvent}.
+ *
+ * <p>This class is thread-safe. Remember to call {@link #shutdown()} when the client is no longer needed.
  *
  * @author qwq-dev
  * @since 2025-4-4 16:20
  */
 @Getter
 public class GRPCTaskSchedulerClient {
+
+    /**
+     * Default dependency timeout of the scheduler, used to size deadlines when a submission does not specify one.
+     */
+    public static final long DEFAULT_SERVER_DEPENDENCY_TIMEOUT_MS = 30000;
+
+    /**
+     * Maximum duration of a single {@code WaitResult} long-poll issued by {@link #submitAsync(TaskSubmission)}.
+     */
+    private static final long WAIT_WINDOW_MS = 10000;
 
     private final String host;
     private final int port;
@@ -60,13 +74,14 @@ public class GRPCTaskSchedulerClient {
     private final TaskSchedulerGrpc.TaskSchedulerBlockingStub blockingStub;
 
     /**
-     * Constructs a new {@code GrpcTaskSchedulerClient} with explicit TLS configuration.
+     * Constructs a new {@code GRPCTaskSchedulerClient} with explicit TLS configuration.
      *
      * @param host         the hostname or IP address of the remote task scheduler server
      * @param port         the port number of the remote task scheduler server
-     * @param timeoutMs    timeout in milliseconds for individual gRPC calls
+     * @param timeoutMs    timeout in milliseconds for individual gRPC calls, blocking submissions additionally
+     *                     receive the dependency and execution timeouts of the submission
      * @param maxRetries   maximum number of retries for potentially transient gRPC errors
-     * @param grpcExecutor the {@link ExecutorService} to use for asynchronous operations
+     * @param grpcExecutor the {@link ExecutorService} to use for asynchronous operations, shut down by {@link #shutdown()}
      * @param useTls       whether to use TLS for the connection
      * @param caCertPath   the path to the CA certificate file (e.g., ca.crt). Required if {@code useTls} is true
      * @throws TaskSchedulerException if TLS is enabled but configuring the SSL context fails
@@ -106,7 +121,7 @@ public class GRPCTaskSchedulerClient {
                 throw new TaskSchedulerException("Failed to configure TLS for gRPC channel", exception);
             }
         } else {
-            Log.warn("gRPC channel is configured to use plaintext (no TLS).");
+            Log.warn("gRPC channel to %s:%d is configured to use plaintext (no TLS).", host, port);
             channelBuilder.usePlaintext();
         }
 
@@ -115,32 +130,31 @@ public class GRPCTaskSchedulerClient {
     }
 
     /**
-     * Constructs a new {@code GrpcTaskSchedulerClient} without TLS (insecure).
-     * Uses the provided ExecutorService.
+     * Constructs a new {@code GRPCTaskSchedulerClient} without TLS (insecure).
      *
      * @param host         the hostname or IP address of the remote task scheduler server
      * @param port         the port number of the remote task scheduler server
      * @param timeoutMs    timeout in milliseconds for individual gRPC calls
      * @param maxRetries   maximum number of retries for potentially transient gRPC errors
      * @param grpcExecutor the {@link ExecutorService} to use for asynchronous operations
-     * @throws TaskSchedulerException if TLS is enabled but configuring the SSL context fails
+     * @throws TaskSchedulerException never thrown without TLS, declared for constructor compatibility
      */
     public GRPCTaskSchedulerClient(String host, int port, long timeoutMs, int maxRetries, ExecutorService grpcExecutor) throws TaskSchedulerException {
         this(host, port, timeoutMs, maxRetries, grpcExecutor, false, null);
     }
 
     /**
-     * Constructs a new {@code GrpcTaskSchedulerClient} without TLS (insecure).
-     * Uses a default cached thread pool executor.
+     * Constructs a new {@code GRPCTaskSchedulerClient} without TLS (insecure),
+     * using a dedicated virtual thread per task executor.
      *
      * @param host       the hostname or IP address of the remote task scheduler server
      * @param port       the port number of the remote task scheduler server
      * @param timeoutMs  timeout in milliseconds for individual gRPC calls
      * @param maxRetries maximum number of retries for potentially transient gRPC errors
-     * @throws TaskSchedulerException if TLS is enabled but configuring the SSL context fails
+     * @throws TaskSchedulerException never thrown without TLS, declared for constructor compatibility
      */
     public GRPCTaskSchedulerClient(String host, int port, long timeoutMs, int maxRetries) throws TaskSchedulerException {
-        this(host, port, timeoutMs, maxRetries, Executors.newCachedThreadPool());
+        this(host, port, timeoutMs, maxRetries, VirtualThreadExecutors.createEphemeralExecutor());
     }
 
     /**
@@ -151,15 +165,12 @@ public class GRPCTaskSchedulerClient {
      * before forcing termination.
      */
     public void shutdown() {
-        if (grpcExecutor != null && !grpcExecutor.isShutdown()) {
+        if (!grpcExecutor.isShutdown()) {
             grpcExecutor.shutdown();
             try {
                 if (!grpcExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
                     Log.warn("ExecutorService did not terminate within 5 seconds, forcing shutdown...");
                     grpcExecutor.shutdownNow();
-                    if (!grpcExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                        Log.error("ExecutorService did not terminate even after forcing shutdown.");
-                    }
                 }
             } catch (InterruptedException exception) {
                 Log.warn("Interrupted while waiting for executor shutdown, forcing now.", exception);
@@ -168,7 +179,7 @@ public class GRPCTaskSchedulerClient {
             }
         }
 
-        if (channel != null && !channel.isShutdown()) {
+        if (!channel.isShutdown()) {
             try {
                 channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException exception) {
@@ -180,269 +191,285 @@ public class GRPCTaskSchedulerClient {
     }
 
     /**
-     * Submits a task to the scheduler synchronously (blocking).
+     * Submits a task without dependencies and blocks until it finishes.
      *
-     * @param taskId a unique identifier for this task submission. Must not be {@code null} or empty
+     * @param taskId a cluster-wide unique identifier for this task. Must not be {@code null} or empty
      * @param method the name of the task function to execute on the server side
      * @param args   variable arguments to pass to the remote task function
-     * @return the result returned by the remote task function as a String
-     * @throws TaskSchedulerException   if the task submission fails after retries, if the task execution fails on the server,
-     *                                  or if the provided {@code taskId} is invalid
-     * @throws NullPointerException     if {@code taskId} or {@code method} is null
-     * @throws IllegalArgumentException if {@code taskId} is empty
+     * @return the result returned by the remote task function
+     * @throws TaskSchedulerException if the submission fails after retries or the task fails on the server
+     * @see #submit(TaskSubmission)
      */
     public String submitTaskBlocking(String taskId, String method, Object... args) throws TaskSchedulerException {
-        Validate.notEmpty(taskId, "Task ID cannot be null or empty.");
-        Validate.notNull(method, "Method name cannot be null.");
-        return submitTaskInternal(taskId, method, false, args);
+        return submit(TaskSubmission.of(taskId, method, args)).getResult();
     }
 
     /**
-     * Submits a task to the scheduler asynchronously.
+     * Submits a task without dependencies asynchronously.
      *
-     * <p>This method returns immediately with a {@link CompletableFuture} which will be completed
-     * with the task result when the remote server responds. The actual gRPC call is made using the configured {@code grpcExecutor}.
-     *
-     * @param taskId a unique identifier for this task submission. Must not be {@code null} or empty
+     * @param taskId a cluster-wide unique identifier for this task. Must not be {@code null} or empty
      * @param method the name of the task function to execute on the server side
      * @param args   variable arguments to pass to the remote task function
-     * @return a {@link CompletableFuture<String>} that will eventually contain the task result or an exception
-     * @throws NullPointerException     if {@code taskId} or {@code method} is null
-     * @throws IllegalArgumentException if {@code taskId} is empty
+     * @return a {@link CompletableFuture} completed with the task result, or exceptionally with a
+     * {@link TaskSchedulerException} if the task fails
+     * @see #submitAsync(TaskSubmission)
      */
     public CompletableFuture<String> submitTaskAsync(String taskId, String method, Object... args) {
+        return submitAsync(TaskSubmission.of(taskId, method, args)).thenApply(TaskResult::getResult);
+    }
+
+    /**
+     * Submits a task and blocks until it finishes, including the time spent waiting for its dependencies.
+     *
+     * <p>The call deadline is {@link #getTimeoutMs()} plus the dependency timeout (the server default
+     * {@value #DEFAULT_SERVER_DEPENDENCY_TIMEOUT_MS}ms if unspecified and dependencies exist) plus the execution timeout.
+     * Fires a {@link TaskResultEvent} once the outcome is known.
+     *
+     * @param submission the task to submit
+     * @return the successful result of the task
+     * @throws TaskSchedulerException   if the submission fails after retries or the task fails, is cancelled or times out;
+     *                                  {@link TaskSchedulerException#getStatusCode()} carries the server status code
+     * @throws NullPointerException     if {@code submission}, its task id or method is {@code null}
+     * @throws IllegalArgumentException if the task id or method is empty
+     */
+    public TaskResult submit(TaskSubmission submission) throws TaskSchedulerException {
+        TaskRequest request = buildRequest(submission, false);
+        long deadlineMs = timeoutMs + resolveDependencyTimeout(submission) + submission.getExecutionTimeoutMs();
+
         try {
-            Validate.notEmpty(taskId, "Task ID cannot be null or empty.");
-            Validate.notNull(method, "Method name cannot be null.");
-            Validate.notNull(blockingStub, "gRPC client not initialized.");
+            TaskResponse response = executeWithRetry(() -> blockingStub
+                    .withDeadlineAfter(deadlineMs, TimeUnit.MILLISECONDS)
+                    .submitTask(request), "SubmitTask(taskId=" + submission.getTaskId() + ")");
+            TaskResult result = TaskResult.from(response);
+            fireResultEvent(submission, result.getResult(), null);
+            return result;
+        } catch (TaskSchedulerException exception) {
+            fireResultEvent(submission, null, exception);
+            throw exception;
+        }
+    }
+
+    /**
+     * Submits a task without waiting for it, returning the state accepted by the server (usually {@code PENDING}).
+     *
+     * <p>Use {@link #getResult(String)} or {@link #waitResult(String, long)} to follow the task afterward.
+     * No {@link TaskResultEvent} is fired by this method.
+     *
+     * @param submission the task to submit
+     * @return the state of the task right after submission
+     * @throws TaskSchedulerException if the submission is rejected, e.g. the method exists on no node
+     */
+    public TaskResult submitDetached(TaskSubmission submission) throws TaskSchedulerException {
+        TaskRequest request = buildRequest(submission, true);
+        TaskResponse response = executeWithRetry(() -> blockingStub
+                .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
+                .submitTask(request), "SubmitTask(detached, taskId=" + submission.getTaskId() + ")");
+        return TaskResult.from(response);
+    }
+
+    /**
+     * Submits a task asynchronously on the configured executor.
+     *
+     * <p>The task is submitted detached and then followed with {@code WaitResult} long-polls, so no single
+     * gRPC call has to outlive slow dependencies or executions. Fires a {@link TaskResultEvent} on completion.
+     *
+     * @param submission the task to submit
+     * @return a {@link CompletableFuture} completed with the successful result, or exceptionally with a
+     * {@link TaskSchedulerException} (wrapped in {@link CompletionException}) if the task does not succeed
+     */
+    public CompletableFuture<TaskResult> submitAsync(TaskSubmission submission) {
+        try {
+            buildRequest(submission, true);
         } catch (Exception exception) {
             return CompletableFuture.failedFuture(exception);
         }
 
-        final List<Any> protoArgs;
-        try {
-            protoArgs = new ArrayList<>(args.length);
-            for (Object arg : args) {
-                protoArgs.add(ProtoConversionUtil.convertToProtoAny(arg));
-            }
-        } catch (Exception exception) {
-            Log.error("Failed to convert arguments for async task [TaskID: %s, Method: %s]", exception, taskId, method);
-            return CompletableFuture.failedFuture(
-                    new TaskSchedulerException("Failed to convert arguments for async task: " + taskId, exception)
-            );
-        }
-
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return executeSubmitTaskRpc(taskId, method, true, protoArgs);
-            } catch (Exception exception) {
-                Log.error("Exception during async task execution [TaskID: %s, Method: %s]", exception, taskId, method);
-                if (exception instanceof CompletionException) {
-                    throw (CompletionException) exception;
-                } else if (exception instanceof TaskSchedulerException) {
-                    throw new CompletionException("Async task execution failed for [TaskID: " + taskId + ", Method: " + method + "]", exception);
-                } else {
-                    throw new CompletionException("Unexpected exception during async task execution for [TaskID: " + taskId + ", Method: " + method + "]", exception);
-                }
+                TaskResult accepted = submitDetached(submission);
+                return accepted.isTerminal() ? requireSuccess(accepted) : awaitTerminal(submission.getTaskId());
+            } catch (TaskSchedulerException exception) {
+                throw new CompletionException(exception);
             }
         }, grpcExecutor).whenComplete((result, throwable) -> {
-            final boolean success = throwable == null;
-
-            Throwable finalThrowable = (throwable instanceof CompletionException && throwable.getCause() != null)
+            Throwable cause = throwable instanceof CompletionException && throwable.getCause() != null
                     ? throwable.getCause() : throwable;
-
-            TaskResultEvent event = success
-                    ? new TaskResultEvent(taskId, method, result)
-                    : new TaskResultEvent(taskId, method, finalThrowable);
-
-            Bukkit.getServer().getPluginManager().callEvent(event);
+            fireResultEvent(submission, result == null ? null : result.getResult(), cause);
         });
     }
 
     /**
-     * Internal method to prepare and execute the gRPC {@code SubmitTask} call with retry logic.
+     * Queries the current state of a task known by this node without waiting.
      *
-     * @param taskId  the task identifier
-     * @param method  the method name
-     * @param isAsync whether the call originated from an async request (for logging/error context)
-     * @param args    the arguments for the task
-     * @return the final result string after potential polling
-     * @throws TaskSchedulerException if the operation fails definitively
+     * @param taskId the id of the task
+     * @return the task state, with status {@code NOT_FOUND} if this node does not know the task
+     * @throws TaskSchedulerException if the query fails after retries
      */
-    private String submitTaskInternal(String taskId, String method, boolean isAsync, Object... args) throws TaskSchedulerException {
-        Validate.notNull(blockingStub, "gRPC client stub is null, cannot submit task.");
-
-        List<Any> protoArgs = new ArrayList<>();
-        try {
-            for (Object arg : args) {
-                protoArgs.add(ProtoConversionUtil.convertToProtoAny(arg));
-            }
-        } catch (Exception exception) {
-            Log.error("Failed to convert arguments for task [TaskID: %s, Method: %s]", exception, taskId, method);
-            throw new TaskSchedulerException("Failed to convert arguments for task: " + taskId, exception);
-        }
-
-        return executeSubmitTaskRpc(taskId, method, isAsync, protoArgs);
-    }
-
-    /**
-     * Internal method to perform the actual gRPC {@code SubmitTask} call.
-     *
-     * @param taskId    the task identifier
-     * @param method    the method name
-     * @param isAsync   whether the call originated from an async request
-     * @param protoArgs the pre-converted Protobuf arguments
-     * @return the result string, potentially after polling via {@link #getResultWhenReady(String)}
-     * @throws TaskSchedulerException if the gRPC call fails or the server reports an error
-     */
-    private String executeSubmitTaskRpc(String taskId, String method, boolean isAsync, List<Any> protoArgs) throws TaskSchedulerException {
-        TaskRequest request = TaskRequest.newBuilder()
-                .setTaskId(taskId)
-                .setMethod(method)
-                .addAllArgs(protoArgs)
-                .setIsAsync(isAsync)
-                .build();
-
-        TaskResponse response = executeWithRetry(() -> blockingStub
-                .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
-                .submitTask(request));
-
-        String result = response.getResult();
-        PluginManager pluginManager = Bukkit.getServer().getPluginManager();
-
-        final boolean success = response.getStatus() == TaskResponse.Status.SUCCESS;
-
-        if (response.getStatus() == TaskResponse.Status.FAILED) {
-            Log.error("Task execution failed on server: id=%s, method=%s, error=%s", taskId, method, result);
-
-            TaskSchedulerException taskSchedulerException =
-                    new TaskSchedulerException("Task execution failed on server: " + result);
-
-            if (!isAsync) {
-                pluginManager.callEvent(new TaskResultEvent(taskId, method, taskSchedulerException));
-            }
-
-            throw taskSchedulerException;
-        } else if (success && !isAsync) {
-            pluginManager.callEvent(new TaskResultEvent(taskId, method, result));
-        }
-
-        return result;
-    }
-
-    /**
-     * Polls the gRPC {@code GetResult} endpoint until the task result is ready or an error occurs.
-     *
-     * @param taskId the identifier of the task whose result is needed
-     * @return the result string once available
-     * @throws TaskSchedulerException if polling fails (e.g., timeout, definitive server error)
-     */
-    private String getResultWhenReady(String taskId) throws TaskSchedulerException {
-        Validate.notEmpty(taskId, "Task ID cannot be null or empty for getResult.");
-        Validate.notNull(blockingStub, "gRPC client stub is null, cannot get result.");
-
+    public TaskResult getResult(String taskId) throws TaskSchedulerException {
+        Validate.notEmpty(taskId, "Task ID cannot be null or empty.");
         ResultRequest request = ResultRequest.newBuilder().setTaskId(taskId).build();
-        long backoffMillis = 100;
-        int pollingAttempts = 0;
+        return TaskResult.from(taskId, executeWithRetry(() -> blockingStub
+                .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
+                .getResult(request), "GetResult(taskId=" + taskId + ")"));
+    }
 
-        while (pollingAttempts <= maxRetries) {
-            try {
-                ResultResponse response = executeGrpcCallWithRetryInternal(() -> blockingStub
-                        .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
-                        .getResult(request), "GetResult(taskId=" + taskId + ")");
+    /**
+     * Waits until a task known by this node finishes or the wait times out.
+     *
+     * @param taskId     the id of the task
+     * @param waitTimeMs the maximum time to wait in milliseconds, capped by the server
+     * @return the task state, which is not terminal if the wait timed out, or {@code NOT_FOUND} if unknown
+     * @throws TaskSchedulerException if the query fails after retries
+     */
+    public TaskResult waitResult(String taskId, long waitTimeMs) throws TaskSchedulerException {
+        Validate.notEmpty(taskId, "Task ID cannot be null or empty.");
+        Validate.isTrue(waitTimeMs > 0, "Wait time must be positive: %d.", waitTimeMs);
+        WaitResultRequest request = WaitResultRequest.newBuilder()
+                .setTaskId(taskId)
+                .setTimeoutMs(waitTimeMs)
+                .build();
+        return TaskResult.from(taskId, executeWithRetry(() -> blockingStub
+                .withDeadlineAfter(waitTimeMs + timeoutMs, TimeUnit.MILLISECONDS)
+                .waitResult(request), "WaitResult(taskId=" + taskId + ")"));
+    }
 
-                TaskResponse.Status status = response.getStatus();
+    /**
+     * Cancels a task that has not finished yet. The task may live on any node of the cluster.
+     *
+     * <p>Tasks waiting for dependencies or async tasks stop immediately; running sync tasks
+     * finish in the background but their result is discarded.
+     *
+     * @param taskId the id of the task
+     * @return {@code true} if this call cancelled the task, {@code false} if it was unknown or already finished
+     * @throws TaskSchedulerException if the request fails after retries
+     */
+    public boolean cancelTask(String taskId) throws TaskSchedulerException {
+        Validate.notEmpty(taskId, "Task ID cannot be null or empty.");
+        CancelRequest request = CancelRequest.newBuilder().setTaskId(taskId).build();
+        CancelResponse response = executeWithRetry(() -> blockingStub
+                .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
+                .cancelTask(request), "CancelTask(taskId=" + taskId + ")");
+        return response.getCancelled();
+    }
 
-                switch (status) {
-                    case SUCCESS:
-                        return response.getResult();
-                    case PENDING:
-                        pollingAttempts++;
-                        if (pollingAttempts > maxRetries) {
-                            Log.warn("Task %s still PENDING after %s polling attempts, stopping polling.", taskId, maxRetries);
-                            throw new TaskSchedulerException("Task still PENDING after max retries: " + taskId);
-                        }
-                        try {
-                            TimeUnit.MILLISECONDS.sleep(backoffMillis);
-                        } catch (InterruptedException exception) {
-                            Thread.currentThread().interrupt();
-                            throw new TaskSchedulerException("Interrupted while waiting for task result: " + taskId, exception);
-                        }
-                        backoffMillis = Math.min(backoffMillis * 2, timeoutMs);
-                        break;
-                    case FAILED:
-                        Log.error("Task %s failed on server according to GetResult: %s", taskId, response.getResult());
-                        throw new TaskSchedulerException("Task failed on server (reported by GetResult): " + response.getResult());
-                    case UNRECOGNIZED:
-                    default:
-                        Log.error("GetResult received unrecognized status for task %s: %s", taskId, status);
-                        throw new TaskSchedulerException("GetResult received unrecognized status from server: " + status);
-                }
-            } catch (Exception exception) {
-                if (exception instanceof TaskSchedulerException) {
-                    throw (TaskSchedulerException) exception;
-                } else {
-                    Log.error("Unexpected exception during GetResult polling for task %s.", taskId, exception);
-                    throw new TaskSchedulerException("Unexpected error during GetResult polling for task " + taskId, exception);
-                }
-            }
+    /**
+     * Describes the connected node: its id, registered methods, load and peers.
+     *
+     * @return the node information
+     * @throws TaskSchedulerException if the request fails after retries
+     */
+    public SchedulerNodeInfo getNodeInfo() throws TaskSchedulerException {
+        return SchedulerNodeInfo.fromProto(executeWithRetry(() -> blockingStub
+                .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
+                .getNodeInfo(NodeInfoRequest.getDefaultInstance()), "GetNodeInfo"));
+    }
+
+    private TaskRequest buildRequest(TaskSubmission submission, boolean detached) throws TaskSchedulerException {
+        Validate.notNull(submission, "Submission cannot be null.");
+        Validate.notEmpty(submission.getTaskId(), "Task ID cannot be null or empty.");
+        Validate.notEmpty(submission.getMethod(), "Method name cannot be null or empty.");
+        Validate.isTrue(submission.getDependencyTimeoutMs() >= 0, "Dependency timeout must be non-negative.");
+        Validate.isTrue(submission.getExecutionTimeoutMs() >= 0, "Execution timeout must be non-negative.");
+
+        List<Any> protoArgs;
+        try {
+            protoArgs = submission.getArgs().stream()
+                    .map(ProtoConversionUtil::convertToProtoAny)
+                    .toList();
+        } catch (Exception exception) {
+            throw new TaskSchedulerException("Failed to convert arguments for task: " + submission.getTaskId(), exception);
         }
 
-        throw new TaskSchedulerException("Failed to get final task result for " + taskId + " within retry limits.");
+        return TaskRequest.newBuilder()
+                .setTaskId(submission.getTaskId())
+                .setMethod(submission.getMethod())
+                .addAllArgs(protoArgs)
+                .addAllDeps(submission.getDependencies())
+                .setDetached(detached)
+                .setDependencyTimeoutMs(submission.getDependencyTimeoutMs())
+                .setInjectDependencyResults(submission.isInjectDependencyResults())
+                .setExecutionTimeoutMs(submission.getExecutionTimeoutMs())
+                .setDisableForwarding(submission.isDisableForwarding())
+                .build();
+    }
+
+    private long resolveDependencyTimeout(TaskSubmission submission) {
+        if (submission.getDependencies().isEmpty()) {
+            return 0;
+        }
+        return submission.getDependencyTimeoutMs() > 0
+                ? submission.getDependencyTimeoutMs()
+                : DEFAULT_SERVER_DEPENDENCY_TIMEOUT_MS;
+    }
+
+    private TaskResult awaitTerminal(String taskId) throws TaskSchedulerException {
+        while (true) {
+            TaskResult result = waitResult(taskId, WAIT_WINDOW_MS);
+            if (result.isNotFound()) {
+                throw new TaskSchedulerException("Task disappeared from the scheduler: " + taskId,
+                        null, TaskStatus.NOT_FOUND, null);
+            }
+            if (result.isTerminal()) {
+                return requireSuccess(result);
+            }
+        }
+    }
+
+    private TaskResult requireSuccess(TaskResult result) throws TaskSchedulerException {
+        if (result.isSuccess()) {
+            return result;
+        }
+        throw new TaskSchedulerException(
+                "Task " + result.getTaskId() + " ended with " + result.getStatus() + " on node " + result.getNodeId() + ": " + result.getResult(),
+                null, result.getStatus(), null);
+    }
+
+    private void fireResultEvent(TaskSubmission submission, String result, Throwable throwable) {
+        TaskResultEvent event = throwable == null
+                ? new TaskResultEvent(submission.getTaskId(), submission.getMethod(), result == null ? "" : result)
+                : new TaskResultEvent(submission.getTaskId(), submission.getMethod(), throwable);
+        Bukkit.getServer().getPluginManager().callEvent(event);
     }
 
     /**
-     * Executes a gRPC call that returns a {@link TaskResponse} with retry logic for transient errors.
-     * <p>This is a specific wrapper around {@link #executeGrpcCallWithRetryInternal(Callable, String)}.
-     *
-     * @param grpcCall a {@link Callable} representing the gRPC call to execute
-     * @return the {@link TaskResponse} from the successful gRPC call
-     * @throws TaskSchedulerException if the call fails after retries or encounters a non-retryable error
-     */
-    private TaskResponse executeWithRetry(Callable<TaskResponse> grpcCall) throws TaskSchedulerException {
-        return executeGrpcCallWithRetryInternal(grpcCall, "executeWithRetry");
-    }
-
-    /**
-     * Executes a generic gRPC call with retry logic for transient errors.
+     * Executes a gRPC call with retry logic for transient errors.
      *
      * @param <T>             the return type of the gRPC call
      * @param grpcCall        a {@link Callable} representing the gRPC call to execute
      * @param callDescription a description of the call for logging purposes
      * @return the result of the successful gRPC call
-     * @throws TaskSchedulerException if the call fails after retries or encounters a non-retryable error
+     * @throws TaskSchedulerException if the call fails after retries or encounters a non-retryable error,
+     *                                carrying the gRPC status code of the last failure
      */
-    private <T> T executeGrpcCallWithRetryInternal(Callable<T> grpcCall, String callDescription) throws TaskSchedulerException {
-        int attempts = 0;
+    private <T> T executeWithRetry(Callable<T> grpcCall, String callDescription) throws TaskSchedulerException {
         long backoffMillis = 50;
 
-        while (attempts <= maxRetries) {
+        for (int attempt = 0; ; attempt++) {
             try {
                 return grpcCall.call();
             } catch (StatusRuntimeException exception) {
                 Status status = exception.getStatus();
-                if (isRetryable(status) && attempts < maxRetries) {
-                    attempts++;
-                    Log.warn("%s gRPC call failed with retryable status: %s (Attempt %s/%s). Retrying in %sms...",
-                            callDescription, status, attempts, maxRetries + 1, backoffMillis, exception);
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(backoffMillis);
-                    } catch (InterruptedException interruptedException) {
-                        Thread.currentThread().interrupt();
-                        throw new TaskSchedulerException("Interrupted during retry backoff for " + callDescription, interruptedException);
-                    }
-                    backoffMillis = Math.min(backoffMillis * 2, 2000);
-                } else {
-                    Log.error("%s gRPC call failed with non-retryable status: %s or max retries (%s) reached.", callDescription, status, maxRetries + 1, exception);
-                    throw new TaskSchedulerException(callDescription + " gRPC call failed: " + status, exception);
+                if (!isRetryable(status) || attempt >= maxRetries) {
+                    Log.warn("%s failed with status %s after %d attempt(s): %s",
+                            callDescription, status.getCode(), attempt + 1, status.getDescription());
+                    throw new TaskSchedulerException(callDescription + " failed: " + status.getDescription(),
+                            status.getCode(), null, exception);
                 }
+
+                Log.warn("%s failed with retryable status %s (attempt %d/%d), retrying in %dms",
+                        callDescription, status.getCode(), attempt + 1, maxRetries + 1, backoffMillis);
+                try {
+                    TimeUnit.MILLISECONDS.sleep(backoffMillis);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    throw new TaskSchedulerException("Interrupted during retry backoff for " + callDescription, interruptedException);
+                }
+                backoffMillis = Math.min(backoffMillis * 2, 2000);
             } catch (Exception exception) {
-                Log.error("Unexpected exception during %s gRPC call execution.", callDescription, exception);
-                throw new TaskSchedulerException("Unexpected error during " + callDescription + " gRPC call", exception);
+                Log.error("Unexpected exception during %s", callDescription, exception);
+                throw new TaskSchedulerException("Unexpected error during " + callDescription, exception);
             }
         }
-
-        throw new TaskSchedulerException(callDescription + " gRPC call failed after " + (maxRetries + 1) + " attempts.");
     }
 
     /**

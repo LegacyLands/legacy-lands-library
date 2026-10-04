@@ -23,6 +23,7 @@ fairy {
 
     bukkitProperties().depends.add("fairy-lib-plugin")
     bukkitProperties().depends.add("commons")
+    bukkitProperties().depends.add("foundation")
 
     bukkitProperties().foliaSupported = true
     bukkitProperties().bukkitApi = rootProperties("spigot.version")
@@ -80,6 +81,21 @@ tasks.named<ScalaCompile>("compileScala") {
     )
 }
 
+// Keep duplicated service files so mergeServiceFiles() can merge them,
+// otherwise the global EXCLUDE strategy drops gRPC providers such as DnsNameResolverProvider
+tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+
+    // Paper ships older protobuf-java and guava on the server classpath, which take precedence
+    // over bundled classes and break the generated protobuf code and gRPC
+    val libsPackage = "${properties("package")}.libs"
+    relocate("com.google.protobuf", "$libsPackage.com.google.protobuf")
+    relocate("com.google.common", "$libsPackage.com.google.common")
+    relocate("com.google.thirdparty", "$libsPackage.com.google.thirdparty")
+}
+
 // Disable delombok for this module as it conflicts with protobuf
 tasks.matching { it.name == "delombok" }.configureEach {
     enabled = false
@@ -89,6 +105,9 @@ tasks.matching { it.name == "delombok" }.configureEach {
 dependencies {
     // Commons module
     compileOnly(project(":commons"))
+
+    // Foundation module
+    compileOnly(project(":foundation"))
 
     // gRPC
     implementation("io.grpc:grpc-netty-shaded:1.72.0")

@@ -11,4 +11,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 task-scheduler = { path = "../.." }
-tokio = { version = "1.0", features = ["time"] }
+tokio = { version = "1.0", features = ["time", "rt-multi-thread"] }

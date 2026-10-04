@@ -3,6 +3,7 @@ package net.legacy.library.grpcclient.event;
 import lombok.Getter;
 import net.legacy.library.grpcclient.task.GRPCTaskSchedulerClient;
 import org.apache.commons.lang3.Validate;
+import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -14,8 +15,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>This event is fired for both synchronous and asynchronous tasks upon completion or definitive failure.
  * Use {@link #isSuccess()} to check the outcome.
  *
- * <p>The triggering of this event does not happen on the {@code Bukkit} thread,
- * but rather on the thread specified by {@link GRPCTaskSchedulerClient}. Please be aware of thread safety.
+ * <p>This event is usually fired from the executor of {@link GRPCTaskSchedulerClient} rather than the
+ * {@code Bukkit} primary thread. It is marked asynchronous whenever it is not fired on the primary thread,
+ * so listeners must not access the Bukkit API without switching back to the primary thread.
  *
  * @author qwq-dev
  * @since 2025-4-4 20:42
@@ -38,9 +40,10 @@ public class TaskResultEvent extends Event {
      * @param method    the method name called on the server
      * @param success   true if the task completed successfully, false otherwise
      * @param result    the result string from the server (potentially null on failure)
-     * @param exception the exception that occurred if the task failed (successfully null on failure)
+     * @param exception the exception that occurred if the task failed, {@code null} on success
      */
     public TaskResultEvent(@NotNull String taskId, @NotNull String method, boolean success, @Nullable String result, @Nullable Throwable exception) {
+        super(!Bukkit.isPrimaryThread());
         Validate.notEmpty(taskId, "Task ID cannot be empty.");
         Validate.notEmpty(method, "Method name cannot be empty.");
         Validate.isTrue(!success == (exception != null), "Exception must be present if and only if success is false.");

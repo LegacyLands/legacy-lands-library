@@ -1,15 +1,19 @@
 # Task Scheduler (Rust)
 
-Task Scheduler is a high-performance task execution backend written in Rust. It allows clients to submit tasks,
-potentially with dependencies, via a gRPC interface defined using Protocol Buffers. Leveraging Rust's asynchronous
-capabilities (`tokio`), concurrency features, and efficient data structures, the system aims for fast, robust, and
-scalable task execution.
+Task Scheduler is a high-performance task execution backend written in Rust. Clients submit tasks via a gRPC interface
+defined using Protocol Buffers. Several scheduler nodes can form a peer-to-peer cluster in which tasks may depend on
+tasks executed on other nodes. Leveraging Rust's asynchronous capabilities (`tokio`), concurrency features, and
+efficient data structures, the system aims for fast, robust, and scalable task execution.
 
 ## Overview
 
 Task Scheduler provides a gRPC service for executing registered tasks. It supports both synchronous and asynchronous
 task functions. Task arguments are passed as Protobuf `Any` messages, which are then decoded into typed Rust values
-within the scheduler before execution. Results of completed tasks are cached temporarily.
+within the scheduler before execution.
+
+Every submitted task gets a lifecycle (`PENDING → RUNNING → SUCCESS / FAILED / CANCELLED`) that can be queried, awaited
+and cancelled from any node of the cluster. Finished results are kept for a configurable time to serve queries and
+dependent tasks.
 
 ## Architecture & Design
 
@@ -17,260 +21,281 @@ within the scheduler before execution. Results of completed tasks are cached tem
 
 * **`task-macro`:** A procedural macro crate defining `#[sync_task]` and `#[async_task]` attributes. These macros
   automatically register the annotated functions into a global registry upon application startup using the `ctor` crate.
-* **`src/bin/task-scheduler.rs`:** The main binary entry point. Parses command-line arguments (including server address
-  and TLS options), initializes logging (`src/logger.rs`), starts the `tonic` gRPC server (`src/server/service.rs`),
-  configures TLS if requested, and ensures built-in tasks (`src/tasks/builtin.rs`) are linked.
-* **`src/logger.rs`:** Configures application logging using `tracing` to output to both console and timestamped files in
-  the `logs/` directory. Provides convenient logging macros.
-* **`src/models/mod.rs` & `src/models/wrappers.rs`:** Defines internal data structures, including the crucial `ArgValue`
-  enum which represents decoded task arguments, and helper structs for Protobuf message decoding.
-* **`src/tasks/mod.rs`, `src/tasks/registry.rs`, `src/tasks/builtin.rs`:** Manages task registration, storage, and
-  execution logic. Contains the global `TaskRegistry` and example task implementations.
-* **`src/tasks/dynamic.rs`:** Implements the logic for loading, unloading, and managing dynamic library plugins (.so,
-  .dll, .dylib). Includes the `DynamicTaskLoader`.
-* **`src/server/mod.rs` & `src/server/service.rs`:** Implements the `TaskScheduler` gRPC service using `tonic`. Handles
-  incoming requests, interacts with the `TaskRegistry`, and manages the result cache.
-* **`src/error.rs`:** Defines custom error types for the application using `thiserror`.
+* **`src/bin/task-scheduler.rs`:** The main binary entry point. Parses command-line arguments, initializes logging,
+  builds the cluster and the scheduler, starts the `tonic` gRPC server (optionally with TLS) and shuts it down
+  gracefully on `Ctrl+C`.
+* **`src/scheduler/`:** The cluster-aware scheduler of a node. Resolves dependencies across the cluster, executes or
+  forwards tasks, handles cancellation, timeouts and the concurrency limit. `store.rs` holds the task records and their
+  lifecycle states.
+* **`src/cluster/`:** The peer-to-peer layer. Keeps lazily connected gRPC channels to the configured peers, runs the
+  heartbeat (liveness, methods, load), locates tasks on peers and forwards requests.
+* **`src/server/service.rs`:** A thin `tonic` adapter that maps the gRPC `TaskScheduler` service to the scheduler and
+  converts errors into gRPC status codes.
+* **`src/tasks/`:** Task registration (`registry.rs`), built-in example tasks (`builtin.rs`) and dynamic library
+  plugins (`dynamic.rs`).
+* **`src/models/`:** Internal data structures, including the `ArgValue` enum which represents decoded task arguments.
+* **`src/error/mod.rs`:** The `TaskError` type defined with `thiserror`.
+* **`src/logger.rs`:** Logging via `tracing` to the console and timestamped files in the `logs/` directory.
 * **`build.rs`:** Uses `tonic_build` to compile the `.proto` definitions into Rust code during the build process.
 
-### Task Registration and Execution
+### Task Registration
 
 - **Registration with Macros:**
-  Built-in tasks (regular functions) are registered using the `#[sync_task]` attribute for synchronous tasks or
-  `#[async_task]` for asynchronous tasks (functions returning a `Future`). These macros leverage the [
-  `ctor`](https://crates.io/crates/ctor) crate to run registration code automatically when the program starts, adding
-  the function pointer and its name (derived from the function identifier) to the global `TaskRegistry`.
+  Built-in tasks are registered using `#[sync_task]` for synchronous tasks or `#[async_task]` for asynchronous tasks.
+  These macros leverage the [`ctor`](https://crates.io/crates/ctor) crate to run registration code automatically when
+  the program starts. A synchronous task has the signature `fn(Vec<ArgValue>) -> Result<String>`. An asynchronous task
+  may return either `String` or `Result<String>`, returning an `Err` marks the task as failed.
 
 - **Dynamic Library Plugins:**
-  External tasks can be provided via dynamic libraries (e.g., `.so` on Linux, `.dll` on Windows, `.dylib` on macOS).
-  These libraries must expose an `init_plugin` function with the signature
-  `unsafe fn() -> &'static [(&'static str, bool, usize)]`. This function returns a static slice where each tuple
-  represents a task: `(task_name, is_async, function_pointer_address)`. The `DynamicTaskLoader` scans a configured
-  directory (default: `./libraries`, configurable via `--library-dir`), loads these libraries, calls `init_plugin`, and
-  registers the discovered tasks in the `TaskRegistry`. Task names from plugins are automatically prefixed with the
-  plugin name (derived from the library filename, e.g., `plugin_name::task_name`).
+  External tasks can be provided via dynamic libraries (`.so` on Linux, `.dll` on Windows, `.dylib` on macOS). These
+  libraries must expose an `init_plugin` function with the signature
+  `unsafe fn() -> &'static [(&'static str, bool, usize)]`. Each tuple represents a task:
+  `(task_name, is_async, function_pointer_address)`. The `DynamicTaskLoader` scans a configured directory (default:
+  `./libraries`, configurable via `--library-dir`), loads these libraries, calls `init_plugin`, and registers the
+  discovered tasks. Task names from plugins are prefixed with the plugin name (e.g., `plugin_name::task_name`).
 
 - **Global Task Registry (`src/tasks/registry.rs`):**
-  The `TaskRegistry` uses `DashMap` (a concurrent hash map) to store registered synchronous and asynchronous tasks
-  separately. It differentiates between built-in tasks and dynamically loaded tasks. It provides the core `execute_task`
-  method used by the gRPC service.
+  The `TaskRegistry` stores all tasks in a single `DashMap` keyed by method name, so sync and async tasks are resolved
+  automatically. Each entry keeps its own handler, which guarantees that dynamic plugin functions are always dispatched
+  by name. Synchronous tasks are executed on `tokio`'s blocking thread pool, so they never stall the async runtime.
 
-- **Execution Flow (gRPC `SubmitTask`):**
-    1. The gRPC service (`src/server/service.rs`) receives a `TaskRequest`.
-    2. It calls `TaskRegistry::convert_args` to decode the `prost_types::Any` arguments into a `Vec<ArgValue>`.
-    3. It checks if all task dependencies listed in the request are present in the results cache (
-       `TaskRegistry::get_task_result`). If not, it returns an error.
-    4. It looks up the task function (sync or async) in the registry based on the `method` name.
-    5. It executes the task function with the converted arguments. Asynchronous tasks are awaited.
-    6. The result (`TaskResult` containing status and a string value) is stored in the results cache (
-       `TaskRegistry::cache_task_result`).
-    7. A `TaskResponse` (containing task ID, status, and result string) is sent back to the client.
+### Execution Flow (gRPC `SubmitTask`)
 
-### gRPC Interface and Proto Integration
+1. The request is validated (non-empty id and method, no self dependency).
+2. If the task id is already known, the existing task is returned instead of executing it again (idempotency).
+3. If the method is not registered locally, the task is forwarded to the least loaded alive peer providing it
+   (see [Cluster](#cluster)).
+4. Arguments are decoded into `Vec<ArgValue>` and a `PENDING` record is created.
+5. All dependencies are awaited concurrently, locally or on peers, until the dependency timeout. Optionally, their
+   results are prepended to the arguments (`inject_dependency_results`).
+6. A slot of the concurrency limit is acquired, the record moves to `RUNNING` and the task is executed, optionally
+   bounded by the execution timeout.
+7. The record moves to `SUCCESS`, `FAILED` or `CANCELLED`. Panicking tasks are recorded as `FAILED`.
+8. Blocking submissions return once the task is finished, detached submissions (`detached = true`) return right after
+   step 4 with `PENDING`.
 
-- **Protobuf Definition (`task_scheduler.proto`):**
-  The service interface is defined using Protocol Buffers. Key elements include:
-    - **Service (`TaskScheduler`):**
-        - `SubmitTask`: Submits a task for execution, supporting sync/async modes and dependency definition.
-        - `GetResult`: Queries the execution result and status of a specified task.
-    - **Main Messages:**
-        - `TaskRequest`: The request body used when submitting a task, containing task ID, method name, arguments,
-          dependencies, and execution mode.
-        - `TaskResponse`: The response body for `SubmitTask`, containing task ID, status, and initial result.
-        - `ResultRequest`: The request body used when querying a result, containing the task ID.
-        - `ResultResponse`: The response body for `GetResult`, containing task status and the final result.
-    - Utilizes `google.protobuf.Any` to flexibly handle different types of arguments and results.
+### Cluster
 
-- **Communication Flow:**
-  Clients encode task arguments into appropriate Protobuf messages (e.g., `google.protobuf.Int32Value`, `StringValue`,
-  custom `ListValue`, `MapValue`) and wrap them in `google.protobuf.Any`. The server decodes these `Any` messages back
-  into the internal `ArgValue` enum before executing the task.
+Nodes are connected through the static `--peers` list. There is no central coordinator and no external middleware.
 
-### Argument Conversion and Dependency Management
+- **Heartbeat:** every node periodically calls `GetNodeInfo` on its peers to learn their id, liveness, registered
+  methods and load. A peer that went down is marked as not alive and picked up again once it is reachable.
+- **Cross-node dependencies:** when a dependency is unknown locally, the node asks all peers concurrently with
+  `GetResult` and follows the owning peer with `WaitResult` long polling. A dependency that is unknown in the whole
+  cluster is retried with backoff, so dependencies may be submitted after their dependents. Every lookup is bounded by
+  the remaining dependency timeout, even if a peer hangs.
+- **Failure propagation:** a dependency ending with `FAILED` or `CANCELLED` fails the dependent task with
+  `FAILED_PRECONDITION`, the message names the dependency and the node it ran on. A dependency that does not finish in
+  time fails the dependent task with `DEADLINE_EXCEEDED`.
+- **Forwarding:** tasks for methods that are not registered locally are forwarded once. Forwarded requests carry the
+  origin node id and are never forwarded again, which rules out loops. Queries for a forwarded task on the receiving
+  node are proxied to the executing node. Forwarding can be disabled per request with `disable_forwarding`.
+- **Cluster-wide cancellation:** `CancelTask` on any node locates the owning node and cancels the task there.
+- **Node ids:** node ids must be unique. They default to the listen address, or to `hostname:port` when listening on an
+  unspecified address such as `0.0.0.0`. A warning is logged if a peer reports the same id as the local node.
 
-- **Parameter Handling (`ArgValue` enum):**
-  Incoming `Any` arguments are converted into the `ArgValue` enum within the `TaskRegistry`. This allows task functions
-  to work with typed Rust values. Supported types include:
-    - Integers (i32, i64, u32, u64)
-    - Floating point numbers (f32, f64)
-    - Booleans
-    - Strings
-    - Byte arrays (`Vec<u8>`)
-    - Nested Arrays (`Vec<ArgValue>` via `ListValue`)
-    - Nested Maps (`HashMap<String, ArgValue>` via `MapValue`)
+### gRPC Interface
 
-- **Dependency Tracking & Caching:**
-  Before executing a task, the scheduler checks its dependencies (`deps` field in `TaskRequest`). It looks up each
-  dependency `task_id` in a sharded LRU cache (`Arc<[Mutex<LruCache<String, TaskResult>>]>` in `TaskRegistry`). If any
-  dependency's result is not found in the cache, the task execution fails early. Successful task results are added to
-  this cache. The cache helps ensure that dependent tasks only run after their prerequisites are complete within a
-  reasonable timeframe (defined by LRU eviction).
+The service is defined in [`../proto/task_scheduler.proto`](../proto/task_scheduler.proto):
+
+| RPC           | Description                                                                                       |
+|---------------|---------------------------------------------------------------------------------------------------|
+| `SubmitTask`  | Submits a task. Blocks until it finishes, or returns `PENDING` immediately when `detached` is set. |
+| `GetResult`   | Returns the current state of a task without waiting, `NOT_FOUND` if the node does not know it.     |
+| `WaitResult`  | Waits until the task is finished or `timeout_ms` elapses (capped at 30 seconds).                   |
+| `CancelTask`  | Cancels a task that is not finished yet, wherever it runs.                                         |
+| `GetNodeInfo` | Returns the node id, registered methods, pending and running task counts, and peer states.        |
+
+Important `TaskRequest` fields:
+
+| Field                       | Description                                                                       |
+|-----------------------------|-----------------------------------------------------------------------------------|
+| `task_id`                   | Cluster-wide unique id. Resubmitting a known id returns the existing task.         |
+| `method`                    | Name of the registered task function.                                             |
+| `args`                      | Arguments packed into `google.protobuf.Any`.                                      |
+| `deps`                      | Ids of tasks that must succeed first, on any node.                                |
+| `detached`                  | Return immediately with `PENDING` instead of waiting.                             |
+| `dependency_timeout_ms`     | Maximum time to wait for dependencies, `0` uses `--dependency-timeout-ms`.        |
+| `inject_dependency_results` | Prepend the dependency results (as strings, in `deps` order) to the arguments.    |
+| `execution_timeout_ms`      | Maximum execution time of the task itself, `0` means unlimited.                   |
+| `disable_forwarding`        | Fail with `NOT_FOUND` instead of forwarding when the method is not local.         |
+| `is_async`                  | Deprecated and ignored, sync and async methods are resolved automatically.        |
+
+Failed blocking submissions are reported as gRPC errors:
+
+| Status code           | Cause                                                       |
+|-----------------------|-------------------------------------------------------------|
+| `NOT_FOUND`           | The method is registered on no reachable node.              |
+| `INVALID_ARGUMENT`    | Invalid request or arguments rejected by the task.          |
+| `FAILED_PRECONDITION` | A dependency failed or was cancelled.                       |
+| `DEADLINE_EXCEEDED`   | Dependency timeout or execution timeout.                    |
+| `CANCELLED`           | The task was cancelled.                                     |
+| `INTERNAL`            | The task failed or panicked.                                |
+
+Errors of forwarded tasks keep the status code reported by the executing node.
+
+### Argument Conversion
+
+Incoming `Any` arguments are converted into the `ArgValue` enum, which allows task functions to work with typed Rust
+values. Supported types include:
+
+- Integers (i32, i64, u32, u64)
+- Floating point numbers (f32, f64)
+- Booleans
+- Strings
+- Byte arrays (`Vec<u8>`)
+- Nested Arrays (`Vec<ArgValue>` via `ListValue`)
+- Nested Maps (`HashMap<String, ArgValue>` via `MapValue`)
 
 ### High Performance Considerations
 
-1. **Concurrent Data Structures:**
-   The global task registry uses `DashMap` for efficient, low-contention concurrent access to registered tasks.
-2. **Asynchronous Runtime:**
-   The gRPC server and asynchronous tasks run on the `tokio` runtime, enabling non-blocking I/O and efficient handling
-   of many concurrent connections and tasks.
-3. **Sharded LRU Caching:**
-   Intermediate task results for dependency checking are stored in an LRU cache sharded across multiple
-   `parking_lot::Mutex` instances. This reduces lock contention compared to a single global lock when accessing or
-   updating the cache. `ahash` is used for fast hashing to determine the shard.
-4. **Efficient Serialization:**
-   `prost` is used for Protobuf message handling, providing fast serialization and deserialization.
+1. **Concurrent Data Structures:** the task registry and the task store use `DashMap` for low-contention access, task
+   states are published through `tokio::sync::watch` channels so waiters are notified without polling.
+2. **Asynchronous Runtime:** the gRPC server, dependency resolution and async tasks run on `tokio`, sync tasks run on
+   the blocking thread pool.
+3. **Long Polling:** cross-node waiting uses `WaitResult` long polls instead of tight polling loops.
+4. **Efficient Serialization:** `prost` is used for Protobuf message handling.
 
 ### TLS Configuration
 
-The server supports enabling Transport Layer Security (TLS) for encrypted communication (gRPCs). This requires providing
-server certificate and key files via command-line arguments.
+- **Server Authentication:** provide `--tls-cert` and `--tls-key` (PEM) to enable TLS.
+- **Mutual TLS (mTLS):** additionally provide `--tls-ca-cert` to require client certificates signed by this CA.
+- **Peers:** peers configured with `https://` URIs are contacted over TLS. `--peer-ca-cert` sets the CA used to verify
+  them (WebPKI roots are used otherwise), `--peer-tls-cert` and `--peer-tls-key` set the client identity for peers that
+  require mTLS.
 
-- **Server Authentication:** Provide `--tls-cert` (certificate chain in PEM format) and `--tls-key` (private key in PEM
-  format) arguments to enable TLS. The server will present this certificate to connecting clients.
-- **Mutual TLS (mTLS):** To additionally require clients to present a valid certificate for authentication, provide the
-  `--tls-ca-cert` argument with the path to the CA certificate (PEM format) that signed the allowed client certificates.
-  If this argument is provided, only clients with certificates signed by this CA will be able to connect.
-
-If TLS arguments are not provided, the server will run without encryption.
+If TLS arguments are not provided, the server runs without encryption.
 
 ## Usage
 
 ### Registering Built-in Tasks
 
-Register built-in tasks using the `#[sync_task]` or `#[async_task]` attributes. The function signature should accept
-`Vec<ArgValue>` and return `String`.
-
 ```rust
+use task_macro::{async_task, sync_task};
+use task_scheduler::error::{Result, TaskError};
 use task_scheduler::models::ArgValue;
-use task_macro::{sync_task, async_task};
-use std::time::Duration;
 
 #[sync_task]
-pub fn add(args: Vec<ArgValue>) -> String {
-    // Example: Sum i32 args
-    let sum: i32 = args.into_iter()
-        .filter_map(|v| if let ArgValue::Int32(n) = v { Some(n) } else { None })
+pub fn add(args: Vec<ArgValue>) -> Result<String> {
+    let sum: Result<i32> = args
+        .into_iter()
+        .map(|value| match value {
+            ArgValue::Int32(number) => Ok(number),
+            _ => Err(TaskError::InvalidArguments("Expected Int32".to_string())),
+        })
         .sum();
-    sum.to_string()
+    Ok(sum?.to_string())
 }
 
 #[async_task]
-pub async fn long_running_task(args: Vec<ArgValue>) -> String {
-    // Simulate work
-    tokio::time::sleep(Duration::from_secs(1)).await;
-    format!("Processed async task with {} args", args.len())
+pub async fn long_running_task(args: Vec<ArgValue>) -> Result<String> {
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    Ok(format!("Processed {} args", args.len()))
 }
-
-// Make sure to import the module containing tasks in src/bin/task-scheduler.rs or lib.rs
-// e.g., use task_scheduler::tasks::builtin;
 ```
 
-For example projects, see [examples](examples/plugin_example)
+Built-in tasks must live in a module that is linked into the binary, such as `src/tasks/builtin.rs`.
 
 ### Creating Dynamic Library Plugins
 
-1. Create a new Rust library project (`cargo new --lib my_plugin`).
-2. Set the `crate-type` to `["cdylib"]` in `Cargo.toml`.
-3. Add `task-scheduler` as a dependency using a path: `task-scheduler = { path = "../../path/to/task-scheduler" }`.
-4. Define your task functions (sync or async) similar to built-in tasks, but they don't need the `#[sync_task]` or
-   `#[async_task]` attributes.
-5. Implement the `init_plugin` function as described in the Architecture section to return metadata about your tasks.
-   Use `my_sync_task as usize` and `my_async_task as usize` to get the function pointer addresses.
-6. Build the library (`cargo build`).
-7. Copy the resulting dynamic library file (e.g., `target/debug/libmy_plugin.so`) into the directory specified by the
-   `--library-dir` argument (default: `./libraries`).
+1. Create a new Rust library project with `crate-type = ["cdylib"]`.
+2. Add `task-scheduler` as a path dependency.
+3. Define the task functions with `#[no_mangle]` and implement `init_plugin` returning their metadata.
+4. Build the library and copy it into the `--library-dir` directory (default: `./libraries`).
 
-```rust
-// Example plugin src/lib.rs
-use std::future::Future;
-use std::pin::Pin;
-use task_scheduler::error::{Result, TaskError}; // Assuming Result alias for std::result::Result<String, TaskError>
-use task_scheduler::models::ArgValue;
+See [`examples/plugin_example`](examples/plugin_example) for a complete plugin.
 
-// Example sync task within plugin
-#[no_mangle] // Important for C ABI compatibility
-pub unsafe fn plugin_multiply(args: Vec<ArgValue>) -> Result<String> {
-    let product: std::result::Result<i32, TaskError> = args.into_iter().try_fold(1, |acc, v| match v {
-        ArgValue::Int32(n) => Ok(acc * n),
-        _ => Err(TaskError::InvalidArguments("Expected Int32".to_string())),
-    });
-    Ok(product?.to_string())
-}
+Plugin caveats:
 
-// Example async task within plugin
-#[no_mangle]
-pub unsafe fn plugin_echo(args: Vec<ArgValue>) -> Pin<Box<dyn Future<Output = String> + Send>> {
-    Box::pin(async move {
-        let msg = args.iter().filter_map(|a| if let ArgValue::String(s) = a { Some(s.as_str()) } else { None }).collect::<Vec<_>>().join(" ");
-        format!("Plugin echo: {}", msg)
-    })
-}
+- A plugin links its own copy of `tokio` and cannot use the runtime of the scheduler. Async plugin tasks that use
+  timers or I/O must run on a plugin-owned runtime and return a future awaiting the join handle, as shown in the
+  example.
+- A panic inside a plugin cannot be caught by the scheduler and aborts the whole process. Plugins must return errors
+  instead of panicking.
+- Plugins must be built with the same compiler and `task-scheduler` version as the scheduler, because task functions
+  are exchanged through the Rust ABI.
 
-// Task metadata structure
-type TaskEntryInfo = (&'static str, bool, usize);
-
-// Initialization function called by the scheduler
-#[no_mangle]
-pub unsafe fn init_plugin() -> &'static [TaskEntryInfo] {
-    static TASKS: [TaskEntryInfo; 2] = [
-        ("multiply", false, plugin_multiply as usize), // (name, is_async, fn_ptr_address)
-        ("echo", true, plugin_echo as usize),
-    ];
-    &TASKS
-}
-```
-
-### Starting the Server
-
-Build and run the server using `cargo`:
+### Starting a Node
 
 ```bash
 cargo build --release
 
-# Without TLS, default library dir ('./libraries')
-./target/release/task-scheduler --addr "0.0.0.0:50051"
+# Standalone node
+./target/release/task-scheduler --addr 0.0.0.0:50051
 
-# Specify a custom library directory
-./target/release/task-scheduler --addr "0.0.0.0:50051" --library-dir /path/to/custom/plugins
+# With TLS and client certificate authentication (mTLS)
+./target/release/task-scheduler --addr 0.0.0.0:50051 --tls-cert server.crt --tls-key server.key --tls-ca-cert client_ca.crt
 
-# With TLS (server cert only)
-./target/release/task-scheduler --addr "0.0.0.0:50051" --tls-cert path/to/server.crt --tls-key path/to/server.key
-
-# With TLS and Client Certificate Authentication (mTLS)
-./target/release/task-scheduler --addr "0.0.0.0:50051" --tls-cert path/to/server.crt --tls-key path/to/server.key --tls-ca-cert path/to/client_ca.crt
-
-# Start in interactive CLI mode
+# Start with the interactive CLI
 ./target/release/task-scheduler --cli
-
-# Or using cargo run (example with TLS and CLI):
-# cargo run --release -- --addr "0.0.0.0:50051" --tls-cert path/to/server.crt --tls-key path/to/server.key --cli
 ```
 
-- Use the `--addr` (or `-a`) option to specify the host and port. Defaults to `127.0.0.1:50051`.
-- Use `--library-dir` (or `-l`) to specify the directory to scan for dynamic library plugins. Defaults to `./libraries`.
-- Use `--tls-cert` and `--tls-key` to provide the server's certificate and private key files (PEM format) for enabling
-  TLS.
-- Optionally, use `--tls-ca-cert` to provide a CA certificate file (PEM format) for verifying client certificates (
-  enables mutual TLS - mTLS).
-- Use `--cli` (or `-c`) to start the server in interactive command-line interface mode instead of directly starting the
-  gRPC server.
+### Starting a Cluster
+
+Each node lists the other nodes as peers and gets a unique id:
+
+```bash
+# Machine 1
+./target/release/task-scheduler --addr 0.0.0.0:50051 --node-id node-1 --peers http://10.0.0.2:50051,http://10.0.0.3:50051
+
+# Machine 2
+./target/release/task-scheduler --addr 0.0.0.0:50051 --node-id node-2 --peers http://10.0.0.1:50051,http://10.0.0.3:50051
+
+# Machine 3
+./target/release/task-scheduler --addr 0.0.0.0:50051 --node-id node-3 --peers http://10.0.0.1:50051,http://10.0.0.2:50051
+```
+
+Nodes may be started in any order, peer connections are established lazily and healed by the heartbeat.
+
+### Command-Line Options
+
+| Option                         | Default             | Description                                                     |
+|--------------------------------|---------------------|-----------------------------------------------------------------|
+| `-a`, `--addr`                 | `127.0.0.1:50051`   | Listen address.                                                 |
+| `-l`, `--library-dir`          | `./libraries`       | Directory scanned for dynamic library plugins.                  |
+| `-c`, `--cli`                  | off                 | Start the interactive CLI next to the gRPC server.              |
+| `--tls-cert`, `--tls-key`      | none                | Server certificate and private key (PEM), enables TLS.          |
+| `--tls-ca-cert`                | none                | CA for client certificates, enables mTLS.                       |
+| `--node-id`                    | see [Cluster](#cluster) | Unique id of this node.                                     |
+| `--peers`                      | none                | Comma separated peer URIs.                                      |
+| `--peer-ca-cert`               | none                | CA used to verify `https` peers.                                |
+| `--peer-tls-cert`, `--peer-tls-key` | none           | Client identity presented to peers requiring mTLS.              |
+| `--heartbeat-interval-ms`      | `3000`              | Interval between peer heartbeats.                               |
+| `--peer-timeout-ms`            | `5000`              | Timeout of short peer requests (heartbeat, lookup, cancel).     |
+| `--dependency-timeout-ms`      | `30000`             | Default time to wait for dependencies.                          |
+| `--max-concurrent-tasks`       | `0`                 | Maximum number of concurrently executing tasks, `0` unlimited.  |
+| `--result-ttl-secs`            | `600`               | How long finished results are kept.                             |
 
 ### Interactive CLI Mode
 
-If started with the `--cli` flag, the application enters an interactive mode where you can manage plugins and view
-tasks. The gRPC server does **not** start in this mode.
-
-Available commands:
+With `--cli`, an interactive console runs next to the gRPC server. Available commands:
 
 - `help`: Show the list of available commands.
-- `list`: List all currently registered tasks (both built-in and from plugins).
-- `plugins`: List all currently loaded dynamic library plugins and the tasks they provide.
-- `load <plugin_name>`: Load a dynamic library plugin by its name (e.g., `load my_plugin` will look for
-  `libmy_plugin.so` or similar in the library directory).
-- `unload <plugin_name>`: Unload a currently loaded plugin and unregister its tasks.
-- `reload`: Unload all currently loaded plugins and rescan the library directory to load all available plugins.
-- `exit`: Exit the CLI application.
+- `list`: List all registered tasks (built-in and from plugins).
+- `plugins`: List loaded plugins and the tasks they provide.
+- `load <plugin_name>`: Load a plugin by name (e.g., `load my_plugin` looks for `libmy_plugin.so` or similar).
+- `unload <plugin_name>`: Unload a plugin and unregister its tasks.
+- `reload`: Rescan the library directory and load all available plugins.
+- `exit`: Leave the CLI, the server keeps running.
 
-### gRPC Endpoint Interaction (Conceptual)
+## Limitations
 
-Clients need to use a Protobuf-compatible gRPC library.
+- Dependency cycles are not detected, the involved tasks fail with a dependency timeout.
+- Running sync tasks cannot be interrupted. When they are cancelled or time out, their result is discarded but the
+  thread keeps running until the function returns.
+- Peers are configured statically, there is no dynamic node discovery.
+- Task results are kept in memory only and are lost when a node restarts. Memory usage is bounded by
+  `--result-ttl-secs`, not by a maximum number of records.
+
+## Testing
+
+```bash
+# Build the example plugin used by the plugin and forwarding tests
+(cd examples/plugin_example && cargo build)
+mkdir -p libraries && cp examples/plugin_example/target/debug/libplugin_example.so libraries/
+
+cargo test
+```
+
+`tests/cluster.rs` and `tests/cluster_resilience.rs` start real multi-node clusters and cover cross-node dependencies,
+forwarding, cancellation, node crashes and recovery, unresponsive peers, concurrency limits and result eviction.

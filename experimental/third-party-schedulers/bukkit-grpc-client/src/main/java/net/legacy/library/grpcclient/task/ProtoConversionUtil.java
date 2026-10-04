@@ -42,7 +42,7 @@ public class ProtoConversionUtil {
      * @param value the Java object to convert
      * @return an {@link Any} message containing the packed representation of the value
      */
-    public static Any convertToProtoAny(Object value) {
+    static Any convertToProtoAny(Object value) {
         return switch (value) {
             case null -> Any.newBuilder().build();
             case String s -> Any.pack(StringValue.of(s));
@@ -78,7 +78,7 @@ public class ProtoConversionUtil {
      * @param list the Java List to convert. Must not be {@code null}
      * @return an {@link Any} message containing the packed {@code taskscheduler.ListValue}
      */
-    public static Any convertListToCustomProtoAny(List<?> list) {
+    static Any convertListToCustomProtoAny(List<?> list) {
         taskscheduler.TaskSchedulerOuterClass.ListValue.Builder listBuilder = taskscheduler.TaskSchedulerOuterClass.ListValue.newBuilder();
         for (Object item : list) {
             listBuilder.addValues(convertToProtoAny(item));
@@ -93,7 +93,7 @@ public class ProtoConversionUtil {
      * @param map the Java Map to convert. Must not be {@code null}, and keys must be Strings
      * @return an {@link Any} message containing the packed {@code taskscheduler.MapValue}
      */
-    public static Any convertMapToCustomProtoAny(Map<String, ?> map) {
+    static Any convertMapToCustomProtoAny(Map<String, ?> map) {
         taskscheduler.TaskSchedulerOuterClass.MapValue.Builder mapBuilder = taskscheduler.TaskSchedulerOuterClass.MapValue.newBuilder();
         for (Map.Entry<String, ?> entry : map.entrySet()) {
             mapBuilder.putFields(entry.getKey(), convertToProtoAny(entry.getValue()));
