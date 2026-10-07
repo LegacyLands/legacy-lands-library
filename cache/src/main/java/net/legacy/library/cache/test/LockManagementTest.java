@@ -2,6 +2,7 @@ package net.legacy.library.cache.test;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.legacy.library.cache.exception.LockAcquisitionTimeoutException;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.AbstractLockable;
 import net.legacy.library.cache.service.LockableInterface;
@@ -109,7 +110,9 @@ public class LockManagementTest {
                 return false; // Should not reach here
 
             } catch (RuntimeException exception) {
-                boolean isTimeoutException = exception.getMessage().contains("Could not acquire lock");
+                // The dedicated type, with the message it always had
+                boolean isTimeoutException = exception instanceof LockAcquisitionTimeoutException
+                        && exception.getMessage().startsWith("Could not acquire lock within the specified time: ");
 
                 TestLogger.logInfo("cache", "Lock timeout test: caught expected exception=%s, message=%s",
                         isTimeoutException, exception.getMessage());

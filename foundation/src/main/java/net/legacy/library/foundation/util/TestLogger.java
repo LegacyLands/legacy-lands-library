@@ -44,7 +44,7 @@ public class TestLogger {
      * @param replace    format arguments for testName string formatting
      */
     public static void logTestComplete(String moduleName, String testName, long durationMs, Object... replace) {
-        String formattedTestName = String.format(testName, replace);
+        String formattedTestName = format(testName, replace);
         Log.info("%s [%s] %s Test completed: %s (took %dms)", TEST_PREFIX, moduleName, "🏁", formattedTestName, durationMs);
     }
 
@@ -56,7 +56,7 @@ public class TestLogger {
      * @param replace    format arguments for message string formatting
      */
     public static void logSuccess(String moduleName, String message, Object... replace) {
-        String formattedMessage = String.format(message, replace);
+        String formattedMessage = format(message, replace);
         Log.info("%s [%s] %s %s", TEST_PREFIX, moduleName, SUCCESS_ICON, formattedMessage);
     }
 
@@ -68,7 +68,7 @@ public class TestLogger {
      * @param replace    format arguments for message string formatting
      */
     public static void logFailure(String moduleName, String message, Object... replace) {
-        String formattedMessage = String.format(message, replace);
+        String formattedMessage = format(message, replace);
         Log.warn("%s [%s] %s %s", TEST_PREFIX, moduleName, FAILURE_ICON, formattedMessage);
     }
 
@@ -81,7 +81,7 @@ public class TestLogger {
      * @param replace    format arguments for message string formatting
      */
     public static void logFailure(String moduleName, String message, Exception exception, Object... replace) {
-        String formattedMessage = String.format(message, replace);
+        String formattedMessage = format(message, replace);
         Log.error("%s [%s] %s %s", TEST_PREFIX, moduleName, FAILURE_ICON, formattedMessage, exception);
     }
 
@@ -93,7 +93,7 @@ public class TestLogger {
      * @param replace    format arguments for message string formatting
      */
     public static void logInfo(String moduleName, String message, Object... replace) {
-        String formattedMessage = String.format(message, replace);
+        String formattedMessage = format(message, replace);
         Log.info("%s [%s] %s %s", TEST_PREFIX, moduleName, INFO_ICON, formattedMessage);
     }
 
@@ -105,7 +105,7 @@ public class TestLogger {
      * @param replace    format arguments for message string formatting
      */
     public static void logWarning(String moduleName, String message, Object... replace) {
-        String formattedMessage = String.format(message, replace);
+        String formattedMessage = format(message, replace);
         Log.warn("%s [%s] %s %s", TEST_PREFIX, moduleName, WARNING_ICON, formattedMessage);
     }
 
@@ -152,7 +152,7 @@ public class TestLogger {
      */
     public static void logDebug(String moduleName, String message, boolean debugMode, Object... replace) {
         if (debugMode) {
-            String formattedMessage = String.format(message, replace);
+            String formattedMessage = format(message, replace);
             Log.info("%s [%s] [DEBUG] %s", TEST_PREFIX, moduleName, formattedMessage);
         }
     }
@@ -171,7 +171,7 @@ public class TestLogger {
         String icon = condition ? SUCCESS_ICON : FAILURE_ICON;
         String result = condition ? "PASSED" : "FAILED";
 
-        String formattedDescription = String.format(description, replace);
+        String formattedDescription = format(description, replace);
         if (condition) {
             Log.info("%s [%s] %s %s: %s - %s", TEST_PREFIX, moduleName, icon, testName, result, formattedDescription);
         } else {
@@ -187,10 +187,24 @@ public class TestLogger {
      * @param replace    format arguments for summary string formatting
      */
     public static void logSummary(String moduleName, String summary, Object... replace) {
-        String formattedSummary = String.format(summary, replace);
+        String formattedSummary = format(summary, replace);
         Arrays.stream(formattedSummary.split("\n"))
                 .filter(line -> !line.trim().isEmpty())
                 .forEach(line -> Log.info("%s [%s] %s", TEST_PREFIX, moduleName, line.trim()));
+    }
+
+    /**
+     * Formats a message with its arguments, or returns it unchanged when there are none.
+     *
+     * <p>A message without arguments is often already formatted, or carries text such as an exception message; it
+     * may contain {@code %}, which formatting again would misread as a conversion.
+     *
+     * @param message the message, a format string when arguments are given
+     * @param replace the format arguments, possibly none
+     * @return the formatted message, or {@code message} itself if there are no arguments
+     */
+    private static String format(String message, Object... replace) {
+        return replace == null || replace.length == 0 ? message : String.format(message, replace);
     }
 
 }

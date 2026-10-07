@@ -13,11 +13,18 @@ import net.legacy.library.player.util.RKeyUtil;
 import net.legacy.library.player.util.TTLUtil;
 import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
+import org.redisson.api.RSet;
 import org.redisson.api.RType;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -40,6 +47,17 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final int limit;
     private final Duration ttl;
+
+    /**
+     * Whether this is the last run before shutdown: it persists everything this server wrote to L2, and a database
+     * step skipped is worth a warning, as nothing runs after it.
+     */
+    private boolean finalRun;
+
+    /**
+     * How many players one database write saves.
+     */
+    private static final int DATABASE_BATCH_SIZE = 1000;
 
     /**
      * Factory method to create a new {@link PlayerDataPersistenceTask}.
@@ -90,6 +108,17 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
     }
 
     /**
+     * Marks this run as the last before shutdown: it persists to the database everything this server wrote to L2,
+     * however much, and a database step skipped because the lock stayed held is logged as a warning.
+     *
+     * @return this task
+     */
+    public PlayerDataPersistenceTask asFinalRun() {
+        this.finalRun = true;
+        return this;
+    }
+
+    /**
      * Executes the persistence task, transferring player data from L2 cache to the database.
      *
      * <p>Acquires an exclusive lock to prevent concurrent modifications, iterates through the
@@ -136,12 +165,27 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
         try {
             // Try to acquire lock
             if (!lock.tryLock(lockSettings.getWaitTime(), lockSettings.getLeaseTime(), lockSettings.getTimeUnit())) {
-                throw new RuntimeException("Could not acquire lock: " + lock.getName());
+                /*
+                 * Another persistence, on this server or another, is writing to the database; what is waiting to be
+                 * persisted stays in the pending set for the next run, of any server
+                 */
+                if (finalRun) {
+                    Log.warn("Skipped the final persistence to the database: %s stayed held; %s players written to L2 wait to be persisted by another server",
+                            lock.getName(), redissonClient.getSet(RKeyUtil.getPendingDatabaseKey(legacyPlayerDataService)).size());
+                } else {
+                    Log.debug("Skipped persisting to the database, another persistence holds %s", lock.getName());
+                }
+                return;
             }
 
             try {
                 Datastore datastore = legacyPlayerDataService.getMongoDBConnectionConfig().getDatastore();
-                processPlayerDataInL2Cache(l2Cache, redissonClient, datastore);
+
+                // What this server wrote first, then what the scan finds with the rest of the limit
+                int persisted = persistPendingPlayerData(l2Cache, datastore);
+                if (persisted < limit) {
+                    processPlayerDataInL2Cache(l2Cache, redissonClient, datastore, limit - persisted);
+                }
             } finally {
                 // Ensure the lock is always released safely
                 if (lock.isHeldByCurrentThread()) {
@@ -161,7 +205,58 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
     }
 
     /**
-     * Processes all player data from L2 cache and saves it to the database.
+     * Saves to the database the players written to L2 and not persisted yet, by any server: up to the limit, or all
+     * of them on the final run, in batches.
+     *
+     * <p>Every write to L2 adds the player to a Redis set, so a player one server wrote and could not persist, such as
+     * one that crashed, is persisted by the next run of any server. Each is saved as it is in L2, read a batch at a
+     * time, or as cached here if L2 no longer holds it. A batch that fails goes back to the set for the next run.
+     *
+     * @param l2Cache   the Redis cache service
+     * @param datastore the MongoDB datastore
+     * @return how many players were taken from the set
+     */
+    private int persistPendingPlayerData(RedisCacheServiceInterface l2Cache, Datastore datastore) {
+        RedissonClient redissonClient = l2Cache.getResource();
+        RSet<String> pending = redissonClient.getSet(RKeyUtil.getPendingDatabaseKey(legacyPlayerDataService));
+        Map<UUID, LegacyPlayerData> cached = legacyPlayerDataService.getL1Cache().getResource().asMap();
+        int max = finalRun ? Integer.MAX_VALUE : limit;
+        int taken = 0;
+
+        while (taken < max) {
+            Set<String> batch = pending.removeRandom(Math.min(DATABASE_BATCH_SIZE, max - taken));
+            if (batch.isEmpty()) {
+                break;
+            }
+            taken += batch.size();
+
+            try {
+                Map<String, String> keys = new HashMap<>();
+                batch.forEach(uuid -> keys.put(uuid, RKeyUtil.getRLPDSKey(UUID.fromString(uuid), legacyPlayerDataService)));
+                Map<String, Object> stored = redissonClient.getBuckets().get(keys.values().toArray(new String[0]));
+
+                List<LegacyPlayerData> copies = new ArrayList<>();
+                for (String uuid : batch) {
+                    Object value = stored.get(keys.get(uuid));
+                    LegacyPlayerData playerData = cached.get(UUID.fromString(uuid));
+                    String serialized = value instanceof String string && !string.isEmpty() ? string
+                            : playerData != null ? SimplixSerializer.serialize(playerData).toString() : "";
+                    if (!serialized.isEmpty()) {
+                        copies.add(SimplixSerializer.deserialize(serialized, LegacyPlayerData.class));
+                    }
+                }
+                datastore.save(copies);
+            } catch (Exception exception) {
+                pending.addAll(batch);
+                Log.error("Failed to persist %s players to the database; they are retried next run", exception, batch.size());
+                break;
+            }
+        }
+        return taken;
+    }
+
+    /**
+     * Processes player data from L2 cache and saves it to the database.
      *
      * <p>This method scans the Redis cache for player data keys, deserializes the data,
      * and persists it to the MongoDB database. It also maintains TTL for each entry in Redis,
@@ -170,15 +265,17 @@ public class PlayerDataPersistenceTask implements TaskInterface<CompletableFutur
      * @param l2Cache        the Redis cache service
      * @param redissonClient the Redisson client
      * @param datastore      the MongoDB datastore
+     * @param budget         how many entries to process at most
      */
     private void processPlayerDataInL2Cache(RedisCacheServiceInterface l2Cache,
                                             RedissonClient redissonClient,
-                                            Datastore datastore) {
+                                            Datastore datastore,
+                                            int budget) {
         // Get all LPDS keys and process them
         RKeys keys = redissonClient.getKeys();
         KeysScanOptions keysScanOptions = KeysScanOptions.defaults()
                 .pattern(RKeyUtil.getPlayerKeyPattern(legacyPlayerDataService))
-                .limit(limit);
+                .limit(budget);
 
         for (String key : keys.getKeys(keysScanOptions)) {
             if (keys.getType(key) != RType.OBJECT) {

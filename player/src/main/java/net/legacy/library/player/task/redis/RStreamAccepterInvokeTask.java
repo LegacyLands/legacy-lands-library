@@ -12,6 +12,8 @@ import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.player.annotation.RStreamAccepterRegister;
 import net.legacy.library.player.service.LegacyPlayerDataService;
 import net.legacy.library.player.util.RKeyUtil;
+import net.legacy.library.player.util.OutageLog;
+import net.legacy.library.player.util.StreamRetentionUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
@@ -47,7 +49,32 @@ public class RStreamAccepterInvokeTask implements TaskInterface<VirtualThreadSch
 
     private final Set<Class<?>> annotatedClasses;
     private final Set<RStreamAccepterInterface> accepters;
+    /**
+     * No longer filled: the read cursor delivers every message once. Kept so {@code getAcceptedId()} still exists.
+     */
     private final Set<StreamMessageId> acceptedId;
+
+    /**
+     * How many messages one read takes from the stream.
+     */
+    private static final int READ_BATCH_SIZE = 1000;
+
+    /**
+     * Messages an accepter that does not record them has handled, delivered again every round while they stay.
+     */
+    private final Set<StreamMessageId> redeliveredId = Sets.newConcurrentHashSet();
+
+    /**
+     * The last message read; the next round reads from after it. It starts at the newest message when the task is
+     * created: the state from before is in L2 or the database, and replaying what the stream still holds would apply
+     * old updates over it again.
+     */
+    private volatile StreamMessageId readCursor;
+
+    /**
+     * Logs failed rounds once per outage.
+     */
+    private final OutageLog roundLog = new OutageLog("Reading the player stream");
 
     /**
      * Constructs a new {@link RStreamAccepterInvokeTask}.
@@ -65,6 +92,8 @@ public class RStreamAccepterInvokeTask implements TaskInterface<VirtualThreadSch
         this.annotatedClasses = Sets.newConcurrentHashSet();
         this.accepters = Sets.newConcurrentHashSet();
         this.acceptedId = Sets.newConcurrentHashSet();
+        this.readCursor = StreamRetentionUtil.lastMessageId(
+                legacyPlayerDataService.getL2Cache().getResource().getStream(RKeyUtil.getRStreamNameKey(legacyPlayerDataService)));
         updateAccepter();
     }
 
@@ -132,117 +161,161 @@ public class RStreamAccepterInvokeTask implements TaskInterface<VirtualThreadSch
     @Override
     public VirtualThreadScheduledFuture start() {
         Runnable runnable = () -> {
-            RedisCacheServiceInterface redisCacheService = legacyPlayerDataService.getL2Cache();
-            RedissonClient redissonClient = redisCacheService.getResource();
+            // A failed round must not end the schedule: an exception thrown out of it would stop every later round
+            try {
+                RedisCacheServiceInterface redisCacheService = legacyPlayerDataService.getL2Cache();
+                RedissonClient redissonClient = redisCacheService.getResource();
 
-            /*
-             * Each LegacyPlayerDataService has its own RStream communication
-             * which will not contain data from other LegacyPlayerDataService
-             */
-            RStream<Object, Object> rStream = redissonClient.getStream(RKeyUtil.getRStreamNameKey(legacyPlayerDataService));
+                /*
+                 * Each LegacyPlayerDataService has its own RStream communication
+                 * which will not contain data from other LegacyPlayerDataService
+                 */
+                RStream<Object, Object> rStream = redissonClient.getStream(RKeyUtil.getRStreamNameKey(legacyPlayerDataService));
 
-            StreamReadArgs args = StreamReadArgs.greaterThan(StreamMessageId.ALL);
-            Map<StreamMessageId, Map<Object, Object>> messages = rStream.read(args);
+                // Expired messages and those past the retention are removed here: messages are read once, from a cursor
+                StreamRetentionUtil.bound(rStream, legacyPlayerDataService.getStreamRetention(), "expiration-time", true);
 
-            // Get all messages
-            for (Map.Entry<StreamMessageId, Map<Object, Object>> streamMessageIdMapEntry : messages.entrySet()) {
-                // LPDS name and data
-                StreamMessageId streamMessageId = streamMessageIdMapEntry.getKey();
-                Map<Object, Object> value = streamMessageIdMapEntry.getValue();
-
-                if (acceptedId.contains(streamMessageId)) {
-                    continue;
-                }
-
-                // The message published by RStreamPubTask is definitely a Pair
-                if (value.isEmpty()) {
-                    Log.error("RStream message is empty! StreamMessageId: %s", streamMessageId);
-                    continue;
-                }
-
-                // Greater than 2 because, in addition to the data, there is also an expiration time
-                if (value.size() > 2) {
-                    Log.error("RStream message is not a pair! StreamMessageId: %s", streamMessageId);
-                    continue;
-                }
-
-                long expirationTime =
-                        Long.parseLong(value.getOrDefault("expiration-time", 0).toString());
-
-                if (expirationTime == 0 || System.currentTimeMillis() > expirationTime) {
-                    rStream.remove(streamMessageId);
-                    continue;
-                }
-
-                for (Map.Entry<Object, Object> entry : value.entrySet()) {
-                    Object key = entry.getKey();
-                    String left = key.toString();
-
-                    if (left.equals("expiration-time")) {
+                // Messages an accepter that does not record them handled come again every round while they stay, as before
+                for (StreamMessageId streamMessageId : List.copyOf(redeliveredId)) {
+                    Map<StreamMessageId, Map<Object, Object>> redelivered = rStream.range(streamMessageId, streamMessageId);
+                    if (redelivered.isEmpty()) {
+                        redeliveredId.remove(streamMessageId);
                         continue;
                     }
+                    dispatch(rStream, streamMessageId, redelivered.get(streamMessageId), false);
+                }
 
-                    String right = entry.getValue().toString();
-                    Pair<String, String> pair = Pair.of(left, right);
+                /*
+                 * New messages are read once, from where the previous round stopped: reading the stream whole every round
+                 * costs as much as the stream is long, on every server, every round
+                 */
+                while (true) {
+                    Map<StreamMessageId, Map<Object, Object>> messages =
+                            rStream.read(StreamReadArgs.greaterThan(readCursor).count(READ_BATCH_SIZE));
+                    if (messages == null || messages.isEmpty()) {
+                        break;
+                    }
 
-                    // Get all registered accepters
-                    for (RStreamAccepterInterface accepter : accepters) {
-                        String actionName = accepter.getActionName();
+                    for (Map.Entry<StreamMessageId, Map<Object, Object>> entry : messages.entrySet()) {
+                        readCursor = entry.getKey();
+                        dispatch(rStream, entry.getKey(), entry.getValue(), true);
+                    }
 
-                        // Filter action name
-                        if (actionName != null && !actionName.equals(left)) {
-                            continue;
-                        }
-
-                        boolean recordLimit = accepter.isRecordLimit();
-                        boolean useVirtualThread = accepter.useVirtualThread();
-
-                        if (useVirtualThread) {
-                            new TaskInterface<CompletableFuture<?>>() {
-                                @Override
-                                public ExecutorService getVirtualThreadPerTaskExecutor() {
-                                    return accepter.getVirtualThreadPerTaskExecutor();
-                                }
-
-                                @Override
-                                public CompletableFuture<?> start() {
-                                    CompletableFuture<Void> completableFuture =
-                                            submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
-
-                                    if (recordLimit) {
-                                        completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
-                                    }
-
-                                    return completableFuture;
-                                }
-                            }.start();
-                        } else {
-                            // Use bukkit thread
-                            new TaskInterface<CompletableFuture<?>>() {
-                                @Override
-                                public MCScheduler getMCScheduler() {
-                                    return accepter.getMCScheduler();
-                                }
-
-                                @Override
-                                public CompletableFuture<?> start() {
-                                    CompletableFuture<?> completableFuture =
-                                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight())).getFuture();
-
-                                    if (recordLimit) {
-                                        completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
-                                    }
-
-                                    return completableFuture;
-                                }
-                            }.start();
-                        }
+                    if (messages.size() < READ_BATCH_SIZE) {
+                        break;
                     }
                 }
+                roundLog.succeeded();
+            } catch (Exception exception) {
+                // Every round fails while Redis is unreachable: the first failure is logged, the rest counted
+                roundLog.failed(exception);
             }
         };
 
         return scheduleWithFixedDelayWithVirtualThread(runnable, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Hands one message to the accepters it is meant for.
+     *
+     * <p>On its first delivery a message goes to every matching accepter. An accepter that does not record the messages
+     * it handled ({@link RStreamAccepterInterface#isRecordLimit()} is {@code false}) receives it again every round while
+     * it stays in the stream, as it did when the whole stream was read every round; on those later deliveries only such
+     * accepters receive it.
+     *
+     * @param rStream         the stream the message is in
+     * @param streamMessageId the message id
+     * @param value           the message entries
+     * @param firstDelivery   whether the message is read for the first time
+     */
+    private void dispatch(RStream<Object, Object> rStream, StreamMessageId streamMessageId, Map<Object, Object> value,
+                          boolean firstDelivery) {
+
+        // The message published by RStreamPubTask is definitely a Pair
+        if (value.isEmpty()) {
+            Log.error("RStream message is empty! StreamMessageId: %s", streamMessageId);
+            return;
+        }
+
+        // Greater than 2 because, in addition to the data, there is also an expiration time
+        if (value.size() > 2) {
+            Log.error("RStream message is not a pair! StreamMessageId: %s", streamMessageId);
+            return;
+        }
+
+        long expirationTime =
+                Long.parseLong(value.getOrDefault("expiration-time", 0).toString());
+
+        if (expirationTime == 0 || System.currentTimeMillis() > expirationTime) {
+            rStream.remove(streamMessageId);
+            redeliveredId.remove(streamMessageId);
+            return;
+        }
+
+        for (Map.Entry<Object, Object> entry : value.entrySet()) {
+            Object key = entry.getKey();
+            String left = key.toString();
+
+            if (left.equals("expiration-time")) {
+                continue;
+            }
+
+            String right = entry.getValue().toString();
+            Pair<String, String> pair = Pair.of(left, right);
+
+            // Get all registered accepters
+            for (RStreamAccepterInterface accepter : accepters) {
+                String actionName = accepter.getActionName();
+
+                // Filter action name
+                if (actionName != null && !actionName.equals(left)) {
+                    continue;
+                }
+
+                boolean recordLimit = accepter.isRecordLimit();
+                if (recordLimit && !firstDelivery) {
+                    continue;
+                }
+                if (!recordLimit) {
+                    redeliveredId.add(streamMessageId);
+                }
+
+                boolean useVirtualThread = accepter.useVirtualThread();
+
+                if (useVirtualThread) {
+                    new TaskInterface<CompletableFuture<?>>() {
+                        @Override
+                        public ExecutorService getVirtualThreadPerTaskExecutor() {
+                            return accepter.getVirtualThreadPerTaskExecutor();
+                        }
+
+                        @Override
+                        public CompletableFuture<?> start() {
+                            CompletableFuture<Void> completableFuture =
+                                    submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight()));
+
+                            return completableFuture;
+                        }
+                    }.start();
+                } else {
+                    // Use bukkit thread
+                    new TaskInterface<CompletableFuture<?>>() {
+                        @Override
+                        public MCScheduler getMCScheduler() {
+                            return accepter.getMCScheduler();
+                        }
+
+                        @Override
+                        public CompletableFuture<?> start() {
+                            CompletableFuture<?> completableFuture =
+                                    schedule(() -> accepter.accept(rStream, streamMessageId, legacyPlayerDataService, pair.getRight())).getFuture();
+
+                            return completableFuture;
+                        }
+                    }.start();
+                }
+            }
+        }
     }
 
 }

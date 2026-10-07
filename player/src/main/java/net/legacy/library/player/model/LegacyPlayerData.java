@@ -2,6 +2,7 @@ package net.legacy.library.player.model;
 
 import dev.morphia.annotations.Entity;
 import dev.morphia.annotations.Id;
+import dev.morphia.annotations.PostLoad;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class LegacyPlayerData {
     /**
      * A map containing the custom key-value pairs associated with the player.
      */
-    private final Map<String, String> data = new ConcurrentHashMap<>();
+    private Map<String, String> data = new ConcurrentHashMap<>();
 
     /**
      * No-args constructor for Morphia serialization/deserialization.
@@ -49,6 +50,19 @@ public class LegacyPlayerData {
     protected LegacyPlayerData() {
         // noinspection DataFlowIssue
         this.uuid = null; // Will be overwritten during deserialization
+    }
+
+    /**
+     * Restores the thread-safe map after this instance was read back from L2 or the database.
+     *
+     * <p>Gson and Morphia fill the map with a type of their own, which is not safe for concurrent use. Morphia calls
+     * this after loading; {@code LegacyPlayerSerializable} after Gson. Idempotent.
+     */
+    @PostLoad
+    public void restoreConcurrentCollections() {
+        if (!(data instanceof ConcurrentHashMap)) {
+            data = new ConcurrentHashMap<>(data == null ? Map.of() : data);
+        }
     }
 
     /**

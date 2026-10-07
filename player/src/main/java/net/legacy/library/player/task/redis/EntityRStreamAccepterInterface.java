@@ -103,6 +103,20 @@ public interface EntityRStreamAccepterInterface {
     }
 
     /**
+     * Determines whether this accepter handles messages published by its own {@link LegacyEntityDataService} instance.
+     *
+     * <p>Defaults to {@code true}. An accepter that applies remote state to the local cache may return
+     * {@code false}: a message it published itself describes a state it already holds, or an older one, so reading it
+     * back is wasted work, and for an accepter that does not merge by stamps it would roll newer local changes back.
+     * Messages that carry no publisher are always handled.
+     *
+     * @return {@code true} if messages from the same service instance are handled, {@code false} if they are skipped
+     */
+    default boolean acceptOwnMessages() {
+        return true;
+    }
+
+    /**
      * Determines whether to use virtual threads.
      *
      * <p>Defaults to {@code true}.If set to {@code false},

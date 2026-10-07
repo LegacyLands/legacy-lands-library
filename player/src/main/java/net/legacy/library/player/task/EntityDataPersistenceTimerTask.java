@@ -97,7 +97,11 @@ public class EntityDataPersistenceTimerTask implements TaskInterface<VirtualThre
      */
     @Override
     public VirtualThreadScheduledFuture start() {
-        return scheduleWithFixedDelayWithVirtualThread(() -> EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start(),
+        return scheduleWithFixedDelayWithVirtualThread(() -> {
+                    // Removal stamps older than the tombstone retention go first, so the persisted state drops them too
+                    service.pruneTombstones();
+                    EntityDataPersistenceTask.of(lockSettings, service, limit, ttl).start();
+                },
                 delay.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
     }
 

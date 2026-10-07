@@ -24,7 +24,10 @@ public class LegacyPlayerSerializable implements SimplixSerializable<LegacyPlaye
      */
     @Override
     public LegacyPlayerData deserialize(@NonNull Object object) throws ClassCastException {
-        return GsonUtil.getGson().fromJson(object.toString(), LegacyPlayerData.class);
+        LegacyPlayerData legacyPlayerData = GsonUtil.getGson().fromJson(object.toString(), LegacyPlayerData.class);
+        // Gson fills the map with its own, non-concurrent type
+        legacyPlayerData.restoreConcurrentCollections();
+        return legacyPlayerData;
     }
 
     /**

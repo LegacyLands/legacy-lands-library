@@ -104,6 +104,16 @@ public class ResilientEntityRStreamAccepter implements EntityRStreamAccepterInte
      * @return {@inheritDoc}
      */
     @Override
+    public boolean acceptOwnMessages() {
+        return delegate.acceptOwnMessages();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
+    @Override
     public MCScheduler getMCScheduler() {
         return delegate.getMCScheduler();
     }

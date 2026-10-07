@@ -98,17 +98,11 @@ public class RelationshipUpdateRStreamAccepter implements EntityRStreamAccepterI
                 return;
             }
 
-            // Update the relationship
-            if (remove) {
-                sourceEntity.removeRelationship(relationshipType, targetEntityUuid);
-            } else {
-                sourceEntity.addRelationship(relationshipType, targetEntityUuid);
-            }
-
-            // Save the updated entity without republishing to avoid infinite loops
-            legacyEntityDataService.saveEntityWithoutRepublish(sourceEntity);
-
-            ack(rStream, streamMessageId);
+            /*
+             * Applied to the cached instance as every server does alike; a change already in place, such as one read
+             * again, is not stamped anew. The scheduled persistence writes it on
+             */
+            sourceEntity.applyRelationshipChange(relationshipType, targetEntityUuid, remove);
         } catch (Exception exception) {
             Log.error(exception);
         }

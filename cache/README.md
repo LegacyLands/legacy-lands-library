@@ -50,6 +50,28 @@ limited to, caches, database connections, file system access, and so on.
 The cache service interface inherits from this generic interface, thereby inheriting the same thread-safety
 capabilities.
 
+If the lock is not acquired within the wait time of the `LockSettings`, `execute` throws a `LockAcquisitionTimeoutException`.
+It extends `RuntimeException`, so existing `catch (RuntimeException ...)` blocks still catch it.
+
+```java
+public class LockTimeoutExample {
+    public void saveLater(LockableInterface<DatabaseConnection> lockableDb, User user) {
+        try {
+            lockableDb.execute(
+                    conn -> new ReentrantLock(),
+                    conn -> conn.save(user),
+                    LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
+            );
+        } catch (LockAcquisitionTimeoutException exception) {
+            // Someone else holds the lock, try again later
+        }
+    }
+}
+```
+
+Note: when several servers write the same Redis entry at the same time, a lock timeout is normal.
+The player module catches it and writes the entry again in the next round.
+
 ### Example
 
 ```java

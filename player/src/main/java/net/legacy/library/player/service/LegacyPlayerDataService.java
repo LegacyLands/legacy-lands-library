@@ -17,6 +17,7 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.VirtualThreadScheduledFuture;
 import net.legacy.library.mongodb.model.MongoDBConnectionConfig;
 import net.legacy.library.player.model.LegacyPlayerData;
+import net.legacy.library.player.task.CoalescedPersistence;
 import net.legacy.library.player.task.PlayerDataPersistenceTask;
 import net.legacy.library.player.task.PlayerDataPersistenceTimerTask;
 import net.legacy.library.player.task.redis.RStreamAccepterInvokeTask;
@@ -71,11 +72,26 @@ public class LegacyPlayerDataService {
      */
     public static final Duration DEFAULT_TTL_DURATION = Duration.ofDays(1);
 
+    /**
+     * Default retention of messages in the Redis stream (1 hour).
+     *
+     * <p>Messages are removed once they expire; this bounds the stream for messages published without an expiry,
+     * and is far longer than the expiry of the messages this library publishes, so a slow server still reads them.
+     */
+    public static final Duration DEFAULT_STREAM_RETENTION_DURATION = Duration.ofHours(1);
+
     private final String name;
     private final MongoDBConnectionConfig mongoDBConnectionConfig;
     private final FlexibleMultiLevelCacheService flexibleMultiLevelCacheService;
     private final VirtualThreadScheduledFuture playerDataPersistenceTimerTask;
     private final VirtualThreadScheduledFuture redisStreamAcceptTask;
+    private final Duration streamRetention;
+
+    /**
+     * The persistence the save methods ask for, coalesced so a burst of saves does not start one per save.
+     */
+    private final CoalescedPersistence savePersistence =
+            new CoalescedPersistence(synced -> PlayerDataPersistenceTask.of(LockSettings.of(500, 30000, TimeUnit.MILLISECONDS), this).start());
 
     /**
      * Constructs a new {@link LegacyPlayerDataService}.
@@ -91,9 +107,28 @@ public class LegacyPlayerDataService {
      */
     public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
                                    Config config, Duration autoSaveInterval, List<String> basePackages,
-                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl
+                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl) {
+        this(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders,
+                redisStreamAcceptInterval, ttl, DEFAULT_STREAM_RETENTION_DURATION);
+    }
 
-    ) {
+    /**
+     * Constructs a new {@link LegacyPlayerDataService}.
+     *
+     * @param name                      the unique name of the service
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration for initializing the Redis cache
+     * @param autoSaveInterval          the interval for auto-saving player data to the database
+     * @param basePackages              the base packages to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param classLoaders              the class loaders to scan for {@link net.legacy.library.player.annotation.RStreamAccepterRegister} annotations
+     * @param ttl                       the custom TTL to apply to player data in Redis
+     * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
+     * @param streamRetention           how long messages are kept in the Redis stream at most, expired or not
+     */
+    public LegacyPlayerDataService(String name, MongoDBConnectionConfig mongoDBConnectionConfig,
+                                   Config config, Duration autoSaveInterval, List<String> basePackages,
+                                   List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl,
+                                   Duration streamRetention) {
         // Record all LegacyPlayerDataService first
         Cache<String, LegacyPlayerDataService> cache = LEGACY_PLAYER_DATA_SERVICES.getResource();
 
@@ -105,6 +140,7 @@ public class LegacyPlayerDataService {
 
         this.name = name;
         this.mongoDBConnectionConfig = mongoDBConnectionConfig;
+        this.streamRetention = streamRetention;
 
         // Create L1 cache using Caffeine
         CacheServiceInterface<Cache<UUID, LegacyPlayerData>, LegacyPlayerData> cacheStringCacheServiceInterface =
@@ -145,6 +181,28 @@ public class LegacyPlayerDataService {
                                              Duration autoSaveInterval, List<String> basePackages,
                                              List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl) {
         return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders, redisStreamAcceptInterval, ttl);
+    }
+
+    /**
+     * Creates a new {@link LegacyPlayerDataService} with a custom retention of messages in the Redis stream.
+     *
+     * @param name                      the unique name of the service
+     * @param mongoDBConnectionConfig   the MongoDB connection configuration
+     * @param config                    the Redis configuration
+     * @param autoSaveInterval          the interval between auto-save operations
+     * @param basePackages              the base packages to scan for accepter annotations
+     * @param classLoaders              the class loaders to scan for accepter annotations
+     * @param redisStreamAcceptInterval the interval for accepting messages from the Redis stream
+     * @param ttl                       the custom TTL to apply to player data in Redis
+     * @param streamRetention           how long messages are kept in the Redis stream at most, expired or not
+     * @return a new instance of {@link LegacyPlayerDataService}
+     */
+    public static LegacyPlayerDataService of(String name, MongoDBConnectionConfig mongoDBConnectionConfig, Config config,
+                                             Duration autoSaveInterval, List<String> basePackages,
+                                             List<ClassLoader> classLoaders, Duration redisStreamAcceptInterval, Duration ttl,
+                                             Duration streamRetention) {
+        return new LegacyPlayerDataService(name, mongoDBConnectionConfig, config, autoSaveInterval, basePackages, classLoaders,
+                redisStreamAcceptInterval, ttl, streamRetention);
     }
 
     /**
@@ -310,8 +368,9 @@ public class LegacyPlayerDataService {
         Cache<UUID, LegacyPlayerData> l1CacheImpl = l1Cache.getResource();
         LegacyPlayerData legacyPlayerData = getFromL2Cache(uuid).orElseGet(() -> getFromDatabase(uuid));
 
-        l1CacheImpl.put(uuid, legacyPlayerData);
-        return legacyPlayerData;
+        // Another thread may have cached the player meanwhile, with changes the loaded state lacks; that one is kept
+        LegacyPlayerData cached = l1CacheImpl.asMap().putIfAbsent(uuid, legacyPlayerData);
+        return cached == null ? legacyPlayerData : cached;
     }
 
     /**
@@ -364,13 +423,19 @@ public class LegacyPlayerDataService {
      * @throws InterruptedException if the shutdown process is interrupted
      */
     public void shutdown() throws InterruptedException {
+        // A persistence a save started may still run; the final one starts after it, so it cannot be skipped by it
+        savePersistence.close();
+        if (!savePersistence.awaitIdle(Duration.ofMinutes(2))) {
+            Log.warn("A player persistence started by a save was still running after 2 minutes; persisting once more anyway");
+        }
+
         // Create a latch to track completion of persistence task
         CountDownLatch completionLatch = new CountDownLatch(1);
 
-        // Wait for the player data persistence task to finish
+        // The final run waits longer for the lock another server may hold, and keeps it long enough to finish
         PlayerDataPersistenceTask task = PlayerDataPersistenceTask.of(
-                LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this
-        );
+                LockSettings.of(10, 60, TimeUnit.SECONDS), this
+        ).asFinalRun();
 
         // Start the task
         task.start().whenComplete((ignored, throwable) -> completionLatch.countDown());
@@ -413,7 +478,7 @@ public class LegacyPlayerDataService {
         saveLegacyPlayerDataToL2Cache(legacyPlayerData);
 
         // Schedule persistence to database
-        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+        savePersistence.request();
     }
 
     public void saveLegacyPlayersData(List<LegacyPlayerData> legacyPlayerDataList) {
@@ -426,7 +491,7 @@ public class LegacyPlayerDataService {
         }
 
         // Schedule persistence to database
-        PlayerDataPersistenceTask.of(LockSettings.of(500, 500, TimeUnit.MILLISECONDS), this).start();
+        savePersistence.request();
     }
 
     public void saveLegacyPlayerDataToL2Cache(LegacyPlayerData legacyPlayerData) {
@@ -448,6 +513,8 @@ public class LegacyPlayerDataService {
                     // Store operation with TTL using the new Duration-based method
                     RedissonClient client = getL2Cache().getResource();
                     client.getBucket(key).set(serialized);
+                    // To persist to the database, by the next run of any server
+                    client.getSet(RKeyUtil.getPendingDatabaseKey(this)).add(uuid.toString());
                     // Use TTLUtil for consistent TTL setting
                     TTLUtil.setReliableTTL(client, key, DEFAULT_TTL_DURATION.getSeconds());
                     return null;

@@ -311,6 +311,8 @@ public class OptimisticLockingIntegrationTest {
             // Get the saved entity to establish it in cache
             LegacyEntityData cachedEntity = service.getEntityData(entityUuid);
             long baseVersion = cachedEntity.getVersion();
+            // The cached instance takes in every later save, so its time is read now
+            long cachedTimestamp = cachedEntity.getLastModifiedTime();
 
             // Create entity2 with same version but different timestamp (simulate concurrent update)
             LegacyEntityData entity2 = LegacyEntityData.of(entityUuid, "TestEntity");
@@ -327,12 +329,12 @@ public class OptimisticLockingIntegrationTest {
 
             LegacyEntityData finalEntity = service.getEntityData(entityUuid);
             boolean newerWon = "second".equals(finalEntity.getAttribute("source"));
-            boolean timestampDifferent = newerTimestamp > cachedEntity.getLastModifiedTime();
+            boolean timestampDifferent = newerTimestamp > cachedTimestamp;
 
             TestLogger.logValidation("player", "TimestampConflictResolution",
                     newerWon && timestampDifferent,
                     "Timestamp Resolution - newerWon: " + newerWon + ", timestampDiff: " + timestampDifferent +
-                            " (" + cachedEntity.getLastModifiedTime() + " vs " + newerTimestamp + ")");
+                            " (" + cachedTimestamp + " vs " + newerTimestamp + ")");
 
             return newerWon && timestampDifferent;
         } catch (Exception exception) {

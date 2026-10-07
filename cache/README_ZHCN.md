@@ -43,6 +43,26 @@ public class CacheLauncher {
 这种设计使得同一套锁定机制可以应用于多种不同类型的资源，包括但不限于缓存、数据库连接、文件系统访问等。
 缓存服务接口继承了这个通用接口，因此具备了相同的线程安全能力。
 
+如果在 `LockSettings` 的等待时间内没有拿到锁，`execute` 会抛出 `LockAcquisitionTimeoutException`。它继承自 `RuntimeException`，所以原来的 `catch (RuntimeException ...)` 照样能捕获到。
+
+```java
+public class LockTimeoutExample {
+    public void saveLater(LockableInterface<DatabaseConnection> lockableDb, User user) {
+        try {
+            lockableDb.execute(
+                    conn -> new ReentrantLock(),
+                    conn -> conn.save(user),
+                    LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
+            );
+        } catch (LockAcquisitionTimeoutException exception) {
+            // 锁被别人占着，稍后再试
+        }
+    }
+}
+```
+
+注意：多台服务端同时写同一个 Redis 条目时，拿锁超时是正常的。player 模块会捕获它，在下一轮重新写入。
+
 ### 举个例子
 
 ```java

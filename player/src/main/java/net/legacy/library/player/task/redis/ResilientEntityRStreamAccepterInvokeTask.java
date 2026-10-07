@@ -14,6 +14,8 @@ import net.legacy.library.player.service.LegacyEntityDataService;
 import net.legacy.library.player.task.redis.resilience.ResilienceFactory;
 import net.legacy.library.player.task.redis.resilience.ResilientEntityRStreamAccepter;
 import net.legacy.library.player.util.EntityRKeyUtil;
+import net.legacy.library.player.util.OutageLog;
+import net.legacy.library.player.util.StreamRetentionUtil;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.StreamMessageId;
@@ -49,7 +51,32 @@ public class ResilientEntityRStreamAccepterInvokeTask implements TaskInterface<V
 
     private final Set<Class<?>> annotatedClasses;
     private final Set<EntityRStreamAccepterInterface> accepters;
+    /**
+     * No longer filled: the read cursor delivers every message once. Kept so {@code getAcceptedId()} still exists.
+     */
     private final Set<StreamMessageId> acceptedId;
+
+    /**
+     * How many messages one read takes from the stream.
+     */
+    private static final int READ_BATCH_SIZE = 1000;
+
+    /**
+     * Messages an accepter that does not record them has handled, delivered again every round while they stay.
+     */
+    private final Set<StreamMessageId> redeliveredId = Sets.newConcurrentHashSet();
+
+    /**
+     * The last message read; the next round reads from after it. It starts at the newest message when the task is
+     * created: the state from before comes from L2 or the database when an entity is first needed, and replaying what
+     * the stream still holds would apply old relationship commands again.
+     */
+    private volatile StreamMessageId readCursor;
+
+    /**
+     * Logs failed rounds once per outage.
+     */
+    private final OutageLog roundLog = new OutageLog("Reading the entity stream");
 
     /**
      * Constructs a new resilient entity RStream accepter invoke task.
@@ -73,6 +100,8 @@ public class ResilientEntityRStreamAccepterInvokeTask implements TaskInterface<V
         this.annotatedClasses = Sets.newConcurrentHashSet();
         this.accepters = Sets.newConcurrentHashSet();
         this.acceptedId = Sets.newConcurrentHashSet();
+        this.readCursor = StreamRetentionUtil.lastMessageId(legacyEntityDataService.getL2Cache().getResource()
+                .getStream(EntityRKeyUtil.getEntityStreamKey(legacyEntityDataService)));
         updateAccepter();
     }
 
@@ -181,107 +210,155 @@ public class ResilientEntityRStreamAccepterInvokeTask implements TaskInterface<V
                 RedisCacheServiceInterface redisCacheService = legacyEntityDataService.getL2Cache();
                 RedissonClient redissonClient = redisCacheService.getResource();
 
-                /*
-                 * Each LegacyEntityDataService has its own RStream communication
-                 * which will not contain data from other LegacyEntityDataService
-                 */
+                // Each service has its own RStream communication channel
                 RStream<Object, Object> rStream = redissonClient.getStream(EntityRKeyUtil.getEntityStreamKey(legacyEntityDataService));
 
-                StreamReadArgs args = StreamReadArgs.greaterThan(StreamMessageId.ALL);
-                Map<StreamMessageId, Map<Object, Object>> messages = rStream.read(args);
+                // Expired messages and those past the retention are removed here: messages are read once, from a cursor
+                StreamRetentionUtil.bound(rStream, legacyEntityDataService.getSyncSettings().getStreamRetention(), "timeout", false);
 
-                // Process all messages
-                for (Map.Entry<StreamMessageId, Map<Object, Object>> entry : messages.entrySet()) {
-                    StreamMessageId streamMessageId = entry.getKey();
-                    Map<Object, Object> value = entry.getValue();
-
-                    // Skip already processed messages
-                    if (acceptedId.contains(streamMessageId)) {
+                // Messages an accepter that does not record them handled come again every round while they stay, as before
+                for (StreamMessageId streamMessageId : List.copyOf(redeliveredId)) {
+                    Map<StreamMessageId, Map<Object, Object>> redelivered = rStream.range(streamMessageId, streamMessageId);
+                    if (redelivered.isEmpty()) {
+                        redeliveredId.remove(streamMessageId);
                         continue;
                     }
+                    dispatch(rStream, streamMessageId, redelivered.get(streamMessageId), false);
+                }
 
-                    // Validate message
-                    if (value.isEmpty()) {
-                        Log.error("Entity RStream message is empty! StreamMessageId: %s", streamMessageId);
-                        continue;
+                /*
+                 * New messages are read once, from where the previous round stopped: messages stay in the stream until they
+                 * expire, so reading it whole every round would cost as much as the stream is long
+                 */
+                while (true) {
+                    Map<StreamMessageId, Map<Object, Object>> messages =
+                            rStream.read(StreamReadArgs.greaterThan(readCursor).count(READ_BATCH_SIZE));
+                    if (messages == null || messages.isEmpty()) {
+                        break;
                     }
 
-                    // Check expiration time
-                    long expirationTime = Long.parseLong(value.getOrDefault("timeout", 0).toString());
-                    if (expirationTime > 0 && System.currentTimeMillis() > expirationTime) {
-                        rStream.remove(streamMessageId);
-                        continue;
+                    for (Map.Entry<StreamMessageId, Map<Object, Object>> entry : messages.entrySet()) {
+                        readCursor = entry.getKey();
+                        dispatch(rStream, entry.getKey(), entry.getValue(), true);
                     }
 
-                    // Process message entries
-                    String actionName = (String) value.get("actionName");
-                    String data = (String) value.get("data");
-
-                    if (actionName == null || data == null) {
-                        Log.error("Entity RStream message has invalid format! StreamMessageId: %s", streamMessageId);
-                        continue;
-                    }
-
-                    // Find and invoke matching accepters
-                    for (EntityRStreamAccepterInterface accepter : accepters) {
-                        String accepterActionName = accepter.getActionName();
-
-                        // Skip non-matching accepters
-                        if (accepterActionName != null && !accepterActionName.equals(actionName)) {
-                            continue;
-                        }
-
-                        boolean recordLimit = accepter.isRecordLimit();
-                        boolean useVirtualThread = accepter.useVirtualThread();
-
-                        if (useVirtualThread) {
-                            new TaskInterface<CompletableFuture<?>>() {
-                                @Override
-                                public ExecutorService getVirtualThreadPerTaskExecutor() {
-                                    return accepter.getVirtualThreadPerTaskExecutor();
-                                }
-
-                                @Override
-                                public CompletableFuture<?> start() {
-                                    CompletableFuture<Void> completableFuture =
-                                            submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, legacyEntityDataService, data));
-
-                                    if (recordLimit) {
-                                        completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
-                                    }
-
-                                    return completableFuture;
-                                }
-                            }.start();
-                        } else {
-                            // Use bukkit thread
-                            new TaskInterface<CompletableFuture<?>>() {
-                                @Override
-                                public MCScheduler getMCScheduler() {
-                                    return accepter.getMCScheduler();
-                                }
-
-                                @Override
-                                public CompletableFuture<?> start() {
-                                    CompletableFuture<?> completableFuture =
-                                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyEntityDataService, data)).getFuture();
-
-                                    if (recordLimit) {
-                                        completableFuture.whenComplete((aVoid, throwable) -> acceptedId.add(streamMessageId));
-                                    }
-
-                                    return completableFuture;
-                                }
-                            }.start();
-                        }
+                    if (messages.size() < READ_BATCH_SIZE) {
+                        break;
                     }
                 }
+                roundLog.succeeded();
             } catch (Exception exception) {
-                Log.error("Error during entity Redis stream processing", exception);
+                // Every round fails while Redis is unreachable: the first failure is logged, the rest counted
+                roundLog.failed(exception);
             }
         };
 
         return scheduleWithFixedDelayWithVirtualThread(runnable, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Hands one message to the accepters it is meant for.
+     *
+     * <p>On its first delivery a message goes to every matching accepter. An accepter that does not record the messages
+     * it handled ({@link EntityRStreamAccepterInterface#isRecordLimit()} is {@code false}) receives it again every
+     * round while it stays in the stream, so such an accepter retries until it removes the message, as it did when the
+     * whole stream was read every round; on those later deliveries only such accepters receive it.
+     *
+     * @param rStream         the stream the message is in
+     * @param streamMessageId the message id
+     * @param value           the message entries
+     * @param firstDelivery   whether the message is read for the first time
+     */
+    private void dispatch(RStream<Object, Object> rStream, StreamMessageId streamMessageId, Map<Object, Object> value,
+                          boolean firstDelivery) {
+
+        // Validate message
+        if (value.isEmpty()) {
+            Log.error("Entity RStream message is empty! StreamMessageId: %s", streamMessageId);
+            return;
+        }
+
+        // Check expiration time
+        long expirationTime = Long.parseLong(value.getOrDefault("timeout", 0).toString());
+        if (expirationTime > 0 && System.currentTimeMillis() > expirationTime) {
+            rStream.remove(streamMessageId);
+            redeliveredId.remove(streamMessageId);
+            return;
+        }
+
+        // Process message entries
+        String actionName = (String) value.get("actionName");
+        String data = (String) value.get("data");
+        Object publisher = value.get("publisher");
+        boolean ownMessage = publisher != null && legacyEntityDataService.getInstanceId().toString().equals(publisher.toString());
+
+        if (actionName == null || data == null) {
+            Log.error("Entity RStream message has invalid format! StreamMessageId: %s", streamMessageId);
+            return;
+        }
+
+        // Find and invoke matching accepters
+        for (EntityRStreamAccepterInterface accepter : accepters) {
+            String accepterActionName = accepter.getActionName();
+
+            // Skip non-matching accepters
+            if (accepterActionName != null && !accepterActionName.equals(actionName)) {
+                continue;
+            }
+
+            // Skip messages this service published itself, for accepters that must not apply them
+            if (ownMessage && !accepter.acceptOwnMessages()) {
+                continue;
+            }
+
+            boolean recordLimit = accepter.isRecordLimit();
+            if (recordLimit && !firstDelivery) {
+                continue;
+            }
+            if (!recordLimit) {
+                redeliveredId.add(streamMessageId);
+            }
+
+            invoke(accepter, rStream, streamMessageId, data, recordLimit);
+        }
+    }
+
+    private void invoke(EntityRStreamAccepterInterface accepter, RStream<Object, Object> rStream,
+                        StreamMessageId streamMessageId, String data, boolean recordLimit) {
+        boolean useVirtualThread = accepter.useVirtualThread();
+
+        if (useVirtualThread) {
+            new TaskInterface<CompletableFuture<?>>() {
+                @Override
+                public ExecutorService getVirtualThreadPerTaskExecutor() {
+                    return accepter.getVirtualThreadPerTaskExecutor();
+                }
+
+                @Override
+                public CompletableFuture<?> start() {
+                    CompletableFuture<Void> completableFuture =
+                            submitWithVirtualThreadAsync(() -> accepter.accept(rStream, streamMessageId, legacyEntityDataService, data));
+
+                    return completableFuture;
+                }
+            }.start();
+        } else {
+            // Use bukkit thread
+            new TaskInterface<CompletableFuture<?>>() {
+                @Override
+                public MCScheduler getMCScheduler() {
+                    return accepter.getMCScheduler();
+                }
+
+                @Override
+                public CompletableFuture<?> start() {
+                    CompletableFuture<?> completableFuture =
+                            schedule(() -> accepter.accept(rStream, streamMessageId, legacyEntityDataService, data)).getFuture();
+
+                    return completableFuture;
+                }
+            }.start();
+        }
     }
 
 }

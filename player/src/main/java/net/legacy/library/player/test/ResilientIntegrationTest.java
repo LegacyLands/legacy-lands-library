@@ -212,7 +212,12 @@ public class ResilientIntegrationTest {
             );
             StreamMessageId networkMessageId = rStream.add(StreamAddArgs.entries(networkData));
             networkResilient.accept(rStream, networkMessageId, service, "{\"test\":\"network\"}");
-            Thread.sleep(2000);
+
+            // The third attempt runs about three seconds in (retries after 1s, then 2s); wait for it, bounded
+            long retryDeadline = System.currentTimeMillis() + 10000;
+            while (!networkRetrySucceeded.get() && System.currentTimeMillis() < retryDeadline) {
+                Thread.sleep(100);
+            }
 
             // Test non-network error (should not retry)
             try {
