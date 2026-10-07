@@ -1603,7 +1603,7 @@ The rest are written by the next run of this or any other server, so the entries
 If Redis cannot be reached, the run is retried, a few seconds apart at most, and the saved changes are sent to the other servers once Redis is back.
 
 When the player plugin is disabled, it shuts down every registered player and entity service by itself, so you usually do not need to call `shutdown()`.
-Shutting down waits for the run in progress, then writes everything once more, waiting up to 10 seconds if another server holds the persistence lock.
+Shutting down first stops the service's own scheduled persistence and Stream reads, waits for the run in progress, then writes everything once more, waiting up to 10 seconds if another server holds the persistence lock.
 
 Note: plugins that depend on player are disabled before it.
 If your plugin closes something the service uses in its own onDisable (for example its own MongoClient or connection), the automatic shutdown would run after that is gone, so call `shutdown()` yourself before closing it.
