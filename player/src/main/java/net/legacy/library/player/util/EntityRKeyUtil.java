@@ -86,6 +86,16 @@ public class EntityRKeyUtil {
     }
 
     /**
+     * Gets the key of the set of entities written to L2 and not yet persisted to the database.
+     *
+     * @param service the entity data service
+     * @return the set's key
+     */
+    public static String getPendingDatabaseKey(LegacyEntityDataService service) {
+        return ENTITY_LOCK_PREFIX + service.getName() + ":pending-db";
+    }
+
+    /**
      * Gets the pattern for entity keys to match all entity data keys.
      *
      * @param service the entity data service
@@ -100,7 +110,9 @@ public class EntityRKeyUtil {
      *
      * @param service the entity data service
      * @return the map cache key
+     * @deprecated stream messages are now built in memory and added in one command, so no temporary map is used
      */
+    @Deprecated
     public static String getTempRMapCacheKey(LegacyEntityDataService service) {
         return ENTITY_TEMP_MAP_PREFIX + service.getName() + ":map-cache";
     }

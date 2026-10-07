@@ -47,8 +47,8 @@ The Player module employs a three-tier caching architecture to optimize performa
 ### Write Path
 
 1. Data is first written to L1 cache (Caffeine)
-2. Synchronized to L2 cache (Redis) via Redis Stream
-3. Scheduled tasks or explicit calls persist data to the database (MongoDB)
+2. Scheduled tasks or explicit saves write it to L2 cache (Redis) and then persist it to the database (MongoDB)
+3. For entities, `saveEntity` also sends the change to the other servers through Redis Stream (see [Cross-Server Entity Synchronization](#cross-server-entity-synchronization))
 
 ### Performance Benchmarks
 
@@ -121,14 +121,61 @@ Duration: 407ms
 **4. Lock Contention Impact Test:**
 
 ```
-Test Configuration: 4 concurrent threads, comparing individual vs batch strategies
-Thread Configuration: Each thread processes 12-13 entities (50/4)
-Individual Save Strategy (high lock contention): 1,600.0 QPS
-Batch Save Strategy (zero lock contention): 3,846.2 QPS
-Performance Improvement: 2.4x
-Lock Contention Performance Loss: 58.4%
-Duration Improvement: 2.3x
+Test Configuration: 4 concurrent threads, comparing individual vs batch strategies on the same threads
+Thread Configuration: Each thread saves 100 prepared entities (400/4), one call each or one batch call
+Individual Save Strategy (saves coalesce their persistence): 26,666.7 QPS (15 ms)
+Batch Save Strategy: 19,047.6 QPS (21 ms)
+Batch / Individual: 0.7x
 ```
+
+Note: both finish in a few tens of milliseconds, so the ratio changes from run to run. The test only checks that individual saves keep at least half the batch throughput.
+
+**5. Multi-Server Benchmark:**
+
+```
+Test Configuration: 3 Paper 1.20.1 servers on the machine above, sharing one Valkey 9.1.2 and one MongoDB 8.3
+Load: all 3 servers at the same time, 4 threads each, 3s warmup then 20s measured
+Result: median of 3 runs, throughput summed over the 3 servers
+L1 Attribute Writes: 58.2M ops/s (p50 0.2us)
+saveEntity: 36,481 ops/s (p50 0.19ms, p99 2.2ms)
+Player Stream Publish: 130,359 ops/s (p50 77us)
+Player L1 Data Writes: 124.3M ops/s
+Propagation Delay (20 writes/s): p50 508ms, p99 1,062ms
+Propagation Delay (burst of 300 writes): p50 257ms, p99 286ms
+3 Servers Writing One Entity for 20s: same state on all servers within 0.8-1.4s, 0 of 600 writes lost
+```
+
+Note: the other servers read the stream once per second in this test, which is most of the propagation delay.
+
+**6. Stability Tests:**
+
+```
+Server Stopped While Saving (4 threads): 85,548 saves, all of them in MongoDB
+10-Minute Load (3 servers, 100 saves/s each, 200 shared entities): heap 264.8MB at start, 270.4MB at the end,
+    0.2 cores per server, same state on all servers
+Server Killed After Writing 51,238 Entities to L2: all written to MongoDB by the other 2 servers within 270s
+Redis Not Responding for 20s (2 servers saving 50/s each): 2 log lines, same state on both servers afterwards
+```
+
+### Why Earlier Versions Were Slower
+
+On the same machine and test, earlier versions (up to 1.2.6) reached 1,595 saveEntity ops/s with a p50 of 4.8ms in the first run and failed the other two, and 6,845 player stream publishes per second.
+Changes never reached the other servers. The reasons:
+
+- Every `saveEntity` started a full persistence run of its own, and all of them waited for the same lock. Under load this gave 12,000-13,700 `Could not acquire lock` errors per server, Redis timeouts, and about 760MB of Redis memory.
+- The entity update was published through a locked call that was given no lock, so it was never added to the stream.
+- Every accept round read the whole stream again.
+- Persistence to MongoDB only looked at the first 1000 keys, in the same order every time. After a server stopped, 699 of its 1,978 saves were missing from MongoDB.
+- Every player stream message created a temporary Redis map.
+- Reading from L2 took a read lock, and had to wait for every write to the same entry.
+
+### Running the Tests
+
+The tests run inside a server and need Redis on `localhost:6379` and MongoDB on `localhost:27017`.
+
+1. Set `DEBUG` to `true` in `PlayerLauncher` and build with `./gradlew shadowJar`
+2. Start a Paper or Folia server with `fairy-lib-plugin` and the `foundation`, `annotation`, `commons`, `configuration`, `mongodb`, `cache` and `player` plugins
+3. Every test logs a `PASSED` or `FAILED` line, and a full pass ends with `All player module tests completed successfully`
 
 ### Best Practices
 
@@ -1494,3 +1541,119 @@ public class PersistenceStrategyExample {
     }
 }
 ```
+
+## Cross-Server Entity Synchronization
+
+Several servers can run a `LegacyEntityDataService` with the same name on the same Redis and MongoDB.
+When one server saves an entity, the other servers that have this entity loaded receive the change through Redis Stream and apply it to their own copy.
+
+### Saving Changes
+
+```java
+public class EntitySyncExample {
+    public void upgradeGuild(LegacyEntityDataService service, UUID guildId) {
+        // 1. Change the entity on this server
+        LegacyEntityData guild = service.getEntityData(guildId);
+        guild.addAttribute("level", "5");
+        guild.removeAttribute("oldBanner");
+
+        // 2. Save it
+        // The change is written to L2 first, then sent to the other servers,
+        // which apply it to the guild they have loaded
+        service.saveEntity(guild);
+    }
+}
+```
+
+Note: a server only receives changes for entities it has already loaded.
+An entity it has not loaded is read from L2 or MongoDB the first time `getEntityData` is called, and that copy already contains the change.
+
+Note: changes made with `addAttribute` and the other methods but never saved stay on this server.
+The scheduled task still persists them, but the other servers do not receive them.
+
+Relationship commands sent with `RelationshipUpdateRStreamAccepter.createRStreamTask` are applied by every server, which loads the entity first if needed.
+Sending the same command twice changes nothing the second time.
+
+### When Two Servers Change the Same Entity
+
+Every attribute and every relationship remembers when it was last changed.
+When two servers have changed the same entity, the changes are combined key by key, and for each key the newer change is kept.
+
+For example, server A sets `level` while server B sets `banner`: afterwards both servers have both values.
+If both servers set `level` at the same time, both end up with the same one of the two values.
+
+Removing an attribute or a relationship is remembered in the same way, so a removal reaches every server, even one whose copy still has the old value.
+`clearRelationships(type)` also removes relationships of that type that another server added before the clear but this server has not seen yet.
+
+Note: changes are combined per attribute key.
+If you store a whole document (for example a JSON string) in one attribute, two servers editing it at the same time do not combine their edits, and the later one replaces the whole document.
+Put data that several servers edit at the same time into separate keys.
+
+Note: "newer" is decided by the entity's version number first, which goes up with every change, and only then by the clock.
+A removal is remembered for `tombstoneRetention` (24 hours by default) and then forgotten.
+A copy that still has the removed value after that, such as on a server that was offline the whole time, brings it back.
+Set `tombstoneRetention` longer than any of your servers can be offline.
+
+### Persistence
+
+Saves share their persistence runs: while one run is going, the saves made meanwhile wait for the next one, so a burst of saves only causes a few runs.
+A run writes the saved entities to L2, then writes entries from L2 to MongoDB, at most 1000 per run (the `limit` of the persistence task).
+The rest are written by the next run of this or any other server, so the entries of a server that crashed after writing to L2 still reach MongoDB.
+
+If Redis cannot be reached, the run is retried, a few seconds apart at most, and the saved changes are sent to the other servers once Redis is back.
+
+When the player plugin is disabled, it shuts down every registered player and entity service by itself, so you usually do not need to call `shutdown()`.
+Shutting down waits for the run in progress, then writes everything once more, waiting up to 10 seconds if another server holds the persistence lock.
+
+Note: plugins that depend on player are disabled before it.
+If your plugin closes something the service uses in its own onDisable (for example its own MongoClient or connection), the automatic shutdown would run after that is gone, so call `shutdown()` yourself before closing it.
+A service removes itself from the registry when it shuts down, so it is never shut down twice.
+
+```java
+public class ShutdownExample {
+    public void onDisable(LegacyEntityDataService entityService, MongoDBConnectionConfig mongoConfig) throws InterruptedException {
+        // 1. Shut the service down first: writes the L1 cache to L2, and everything still waiting to MongoDB
+        entityService.shutdown();
+
+        // 2. Then close your own connection
+        mongoConfig.close();
+    }
+}
+```
+
+### Synchronization Settings
+
+`EntitySyncSettings` controls how long messages and removals are kept. Every value has a default, so only set what you want to change, and pass it as the last argument:
+
+```java
+LegacyEntityDataService entityService = LegacyEntityDataService.of(
+        "game-entity-service", mongoConfig, redisConfig,
+        Duration.ofMinutes(5),  // Auto-save interval
+        List.of("your.package", "net.legacy.library.player"),
+        List.of(PlayerLauncher.class.getClassLoader()),
+        Duration.ofSeconds(2),  // Redis Stream accept interval
+        LegacyEntityDataService.DEFAULT_TTL_DURATION,
+        EntitySyncSettings.builder()
+                .updateExpiration(Duration.ofMinutes(5))  // How long other servers can still read a change
+                .streamRetention(Duration.ofHours(1))  // How long any message is kept at most
+                .tombstoneRetention(Duration.ofHours(24))  // How long a removal is remembered
+                .build()
+);
+```
+
+`LegacyPlayerDataService` takes its stream retention as a `Duration` in the same place.
+
+Note: `streamRetention` trims the stream with `XTRIM MINID`, which needs Redis 6.2 or later.
+On an older Redis the stream still works, it is just not trimmed by `streamRetention`, and a warning is logged once.
+
+### Requirements
+
+- All servers of the same service must run this version. Servers on an earlier version do not read the changes this version sends, and their own saves do not reach the stream.
+- Redis 6.2 or later, for `streamRetention`.
+- `tombstoneRetention` longer than any server can be offline.
+- Data saved by earlier versions can be used as it is. Messages in the older format, sent with `EntityDataUpdateRStreamAccepter.createRStreamTask(uuid, map, version, ttl)`, are still accepted, but they have no change times, so changes saved with this version win over them.
+
+### Limits
+
+- A server that has an entity loaded but does not read the stream for longer than `updateExpiration` misses those changes until it saves or reloads the entity.
+- Only attributes and relationships are synchronized. Fields such as `entityType` are not.

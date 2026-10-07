@@ -21,8 +21,8 @@ import java.util.UUID;
  * An {@link EntityRStreamAccepterInterface} implementation that updates entity data by entity UUID.
  *
  * <p>The action name for tasks recognized by this class is {@code "entity-data-update"}.
- * Once a task is received, this accepter attempts to find the entity (by UUID) and
- * updates its data in L1 cache.
+ * Once a task is received, this accepter attempts to find the entity (by UUID) in L1 cache and merges the data
+ * into it.
  *
  * <p>Classes annotated with {@link EntityRStreamAccepterRegister} are automatically
  * discovered and registered for handling Redis stream tasks.
@@ -88,16 +88,16 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
     /**
      * {@inheritDoc}
      *
-     * <p>This method deserializes the incoming JSON (a pair of entity UUID and data map),
-     * retrieves the entity data and updates its attributes in L1 cache.
-     * The stream message is then acknowledged and removed if the update is successful.
+     * <p>This method deserializes the incoming JSON (a triple of entity UUID, data map and version, or the older pair
+     * without a version) and merges the data into the entity this server holds in L1, with
+     * {@link LegacyEntityData#mergeAttributes}. These formats carry no stamps, so each attribute is taken as stamped
+     * with the message version and no time: it wins over older local changes and loses to local changes of the same
+     * version. An entity not held in L1 is left alone; it is loaded from L2 or the database when it is first needed.
      *
-     * <p>This implementation includes version control to handle concurrent modifications:
-     * <ul>
-     *   <li>If the incoming entity has a lower version than the local entity, updates are merged.</li>
-     *   <li>If the incoming entity has a higher version than the local entity, the local entity is replaced.</li>
-     *   <li>If versions match, timestamps are used to determine the most recent update.</li>
-     * </ul>
+     * <p>{@link LegacyEntityDataService#saveEntity(LegacyEntityData)} publishes the stamped
+     * {@code "entity-state-update"} format instead (see {@link EntityStateUpdateRStreamAccepter}); this accepter
+     * handles messages published with {@link #createRStreamTask(UUID, Map, long, Duration)} and by older versions.
+     * The message is not removed from the stream: every server must read it, and it is removed once it expires.
      *
      * @param rStream                 {@inheritDoc}
      * @param streamMessageId         {@inheritDoc}
@@ -130,7 +130,7 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
                 pairData = parsed;
             }
 
-            if (tripleData != null) {
+            if (tripleData != null && tripleData.getMiddle() != null) {
                 uuidString = tripleData.getLeft();
                 dataMap = tripleData.getMiddle();
                 remoteVersion = tripleData.getRight();
@@ -143,71 +143,12 @@ public class EntityDataUpdateRStreamAccepter implements EntityRStreamAccepterInt
             }
 
             UUID uuid = UUID.fromString(uuidString);
+            long version = remoteVersion;
 
-            // Get entity data from local cache
-            LegacyEntityData localEntity = legacyEntityDataService.getEntityData(uuid);
-            if (localEntity == null) {
-                // Entity doesn't exist locally, no conflict to resolve
-                Log.warn("Received update for non-existent entity: %s", uuid);
-                ack(rStream, streamMessageId);
-                return;
-            }
-
-            long localVersion = localEntity.getVersion();
-            boolean needsRepublish = false;
-
-            // Handle version conflicts
-            if (remoteVersion > localVersion) {
-                // Remote version is newer, apply all updates
-                localEntity.addAttributes(dataMap);
-                localEntity.setVersion(remoteVersion);
-                localEntity.updateLastModifiedTime();
-            } else if (remoteVersion < localVersion) {
-                /*
-                 * Local version is newer, selectively merge updates.
-                 * Create a temporary entity with the remote data for merging
-                 */
-                LegacyEntityData tempEntity = new LegacyEntityData(uuid);
-                tempEntity.addAttributes(dataMap);
-                tempEntity.setVersion(remoteVersion);
-
-                // Merge changes from remote entity
-                if (localEntity.mergeChangesFrom(tempEntity)) {
-                    needsRepublish = true;
-                }
-            } else {
-                /*
-                 * Versions are equal, update based on timestamp.
-                 * This is handled by adding the attributes which will update the timestamp
-                 */
-                localEntity.addAttributes(dataMap);
-
-                // If attributes were changed, this might have updated the version
-                if (localEntity.getVersion() > localVersion) {
-                    needsRepublish = true;
-                }
-            }
-
-            /*
-             * Save the entity to ensure changes are persisted.
-             * We use a special flag to avoid republishing from saveEntity method
-             */
-            if (needsRepublish) {
-                // Avoid infinite loops in the synchronization process
-                legacyEntityDataService.saveEntityWithoutRepublish(localEntity);
-
-                // Manually publish the merged entity update
-                legacyEntityDataService.pubEntityRStreamTask(createRStreamTask(
-                        uuid,
-                        localEntity.getAttributes(),
-                        localEntity.getVersion(),
-                        Duration.ofMinutes(5)
-                ));
-            } else {
-                legacyEntityDataService.saveEntity(localEntity);
-            }
-
-            ack(rStream, streamMessageId);
+            // Merged into the cached instance itself; the scheduled persistence writes it on
+            legacyEntityDataService.noteUpdateReceived(uuid);
+            legacyEntityDataService.getFromL1Cache(uuid).ifPresent(localEntity -> localEntity.mergeAttributes(
+                    dataMap, Map.of(), version, 0, new LegacyEntityData.Stamp(version, 0, "")));
         } catch (Exception exception) {
             Log.error("Error processing entity data update task.", exception);
         }

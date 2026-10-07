@@ -51,7 +51,9 @@ public class RKeyUtil {
      *
      * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance
      * @return the temporary Redis map cache key as a {@link String}
+     * @deprecated stream messages are now built in memory and added in one command, so no temporary map is used
      */
+    @Deprecated
     public static String getTempRMapCacheKey(LegacyPlayerDataService legacyPlayerDataService) {
         return PREFIX_LEGACY + legacyPlayerDataService.getName() + SUFFIX_MAP_CACHE + COLON + UUID.randomUUID();
     }
@@ -127,6 +129,16 @@ public class RKeyUtil {
      */
     public static String getRLPDSReadWriteLockKey(String bucketKey) {
         return bucketKey + SUFFIX_RW_LOCK;
+    }
+
+    /**
+     * Gets the key of the set of players written to L2 and not yet persisted to the database.
+     *
+     * @param legacyPlayerDataService the {@link LegacyPlayerDataService} instance
+     * @return the set's key
+     */
+    public static String getPendingDatabaseKey(LegacyPlayerDataService legacyPlayerDataService) {
+        return getRLPDSKey(legacyPlayerDataService, "pending-db");
     }
 
 }

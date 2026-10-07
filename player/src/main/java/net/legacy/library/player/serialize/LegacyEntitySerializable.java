@@ -24,7 +24,10 @@ public class LegacyEntitySerializable implements SimplixSerializable<LegacyEntit
      */
     @Override
     public LegacyEntityData deserialize(@NonNull Object object) throws ClassCastException {
-        return GsonUtil.getGson().fromJson(object.toString(), LegacyEntityData.class);
+        LegacyEntityData legacyEntityData = GsonUtil.getGson().fromJson(object.toString(), LegacyEntityData.class);
+        // Gson fills the maps with its own, non-concurrent types
+        legacyEntityData.restoreConcurrentCollections();
+        return legacyEntityData;
     }
 
     /**

@@ -41,8 +41,8 @@ Player 模块采用三层缓存架构以优化性能和可扩展性：
 ### 写入路径
 
 1. 数据首先写入L1缓存（Caffeine）
-2. 通过 Redis Stream 同步到 L2 缓存（Redis）
-3. 定时任务或显式调用将数据持久化到数据库（MongoDB）
+2. 定时任务或显式保存会把数据写入 L2 缓存（Redis），再持久化到数据库（MongoDB）
+3. 对于实体，`saveEntity` 还会通过 Redis Stream 把改动发给其他服务端（见 [跨服实体同步](#跨服实体同步)）
 
 ### 性能基准测试
 
@@ -110,14 +110,59 @@ Java：OpenJDK 21.0.6 LTS (Amazon Corretto)
 **4. 锁争用影响对比测试:**
 
 ```
-测试配置: 4 个并发线程，对比个体vs批量策略
-线程配置: 每线程处理 12-13 个实体 (50/4)
-个体保存策略 (高锁竞争): 1,600.0 QPS
-批量保存策略 (零锁竞争): 3,846.2 QPS
-性能提升倍数: 2.4x
-锁竞争性能损失: 58.4%
-持续时间改善: 2.3x
+测试配置: 4 个并发线程，在相同线程上对比个体vs批量策略
+线程配置: 每线程保存 100 个预先准备好的实体 (400/4)，逐个保存或一次批量保存
+个体保存策略 (保存合并持久化): 26,666.7 QPS (15 ms)
+批量保存策略: 19,047.6 QPS (21 ms)
+批量 / 个体: 0.7x
 ```
+
+注意：两者都在几十毫秒内完成，所以每次运行的比值都不太一样。测试只检查单独保存的吞吐量至少有批量保存的一半。
+
+**5. 多服基准测试:**
+
+```
+测试配置: 在上述机器上运行 3 台 Paper 1.20.1 服务端，共用一个 Valkey 9.1.2 和一个 MongoDB 8.3
+负载: 3 台同时运行，每台 4 个线程，预热 3 秒后测量 20 秒
+结果: 3 次运行取中位数，吞吐量为 3 台之和
+L1 属性写入: 58.2M ops/s (p50 0.2us)
+saveEntity: 36,481 ops/s (p50 0.19ms, p99 2.2ms)
+玩家 Stream 发布: 130,359 ops/s (p50 77us)
+玩家 L1 数据写入: 124.3M ops/s
+传播延迟 (每秒 20 次写入): p50 508ms, p99 1,062ms
+传播延迟 (一次性写入 300 次): p50 257ms, p99 286ms
+3 台同时写同一个实体 20 秒: 0.8-1.4 秒内各服务端状态一致，600 次写入一次都没丢
+```
+
+注意：这个测试中其他服务端每秒读取一次 Stream，传播延迟大部分来自这里。
+
+**6. 稳定性测试:**
+
+```
+保存时停服 (4 个线程): 85,548 次保存，全部在 MongoDB 中
+10 分钟负载 (3 台，每台每秒 100 次保存，200 个共享实体): 堆开始 264.8MB，结束 270.4MB，每台 0.2 核，各服务端状态一致
+写入 51,238 个实体到 L2 后直接杀掉服务端: 另外 2 台在 270 秒内全部写进 MongoDB
+Redis 20 秒无响应 (2 台各每秒 50 次保存): 共 2 行日志，之后两台状态一致
+```
+
+### 为什么早期版本 QPS 较低
+
+在同一台机器、同样的测试下，早期版本（直到 1.2.6）的 `saveEntity` 第一次运行只有 1,595 ops/s，p50 4.8ms，另外两次直接失败；玩家 Stream 发布每秒 6,845 次；改动也从来没有到达其他服务端。原因如下：
+
+- 每次 `saveEntity` 都会单独启动一次完整的持久化，所有持久化都在等同一把锁。负载下每台服务端会出现 12,000-13,700 条 `Could not acquire lock` 错误，Redis 超时，Redis 内存涨到约 760MB。
+- 实体更新是通过一个需要锁的调用发布的，但没有传入锁，所以消息从来没有加进 Stream。
+- 每轮接收都会把整个 Stream 重新读一遍。
+- 持久化到 MongoDB 时只看前 1000 个键，而且每次顺序都一样。一台服务端停服后，它的 1,978 次保存中有 699 次不在 MongoDB 里。
+- 每发布一条玩家 Stream 消息都会创建一个临时的 Redis map。
+- 读取 L2 时要拿读锁，同一条数据的每次写入都会让它等待。
+
+### 运行测试
+
+测试在服务端内运行，需要 `localhost:6379` 上的 Redis 和 `localhost:27017` 上的 MongoDB。
+
+1. 把 `PlayerLauncher` 中的 `DEBUG` 设为 `true`，然后用 `./gradlew shadowJar` 构建
+2. 启动一个 Paper 或 Folia 服务端，装上 `fairy-lib-plugin` 以及 `foundation`、`annotation`、`commons`、`configuration`、`mongodb`、`cache`、`player` 插件
+3. 每个测试会输出一行 `PASSED` 或 `FAILED`，全部通过时最后会输出 `All player module tests completed successfully`
 
 ### 最佳实践
 
@@ -1453,3 +1498,108 @@ public class PersistenceStrategyExample {
     }
 }
 ```
+
+## 跨服实体同步
+
+多台服务端可以用同一个名字运行 `LegacyEntityDataService`，共用同一套 Redis 和 MongoDB。
+一台服务端保存实体后，已经加载了这个实体的其他服务端会通过 Redis Stream 收到改动，并应用到自己的那一份上。
+
+### 保存改动
+
+```java
+public class EntitySyncExample {
+    public void upgradeGuild(LegacyEntityDataService service, UUID guildId) {
+        // 1. 在本服修改实体
+        LegacyEntityData guild = service.getEntityData(guildId);
+        guild.addAttribute("level", "5");
+        guild.removeAttribute("oldBanner");
+
+        // 2. 保存
+        // 改动会先写入 L2，再发给其他服务端，
+        // 它们会把改动应用到自己已经加载的这个公会上
+        service.saveEntity(guild);
+    }
+}
+```
+
+注意：服务端只会收到它已经加载过的实体的改动。还没加载的实体会在第一次调用 `getEntityData` 时从 L2 或 MongoDB 读取，读到的数据已经包含了这次改动。
+
+注意：用 `addAttribute` 等方法改了但没有保存的内容只留在本服。定时任务仍然会持久化它们，但其他服务端收不到。
+
+用 `RelationshipUpdateRStreamAccepter.createRStreamTask` 发送的关系命令会在每台服务端上执行，需要的话会先加载实体。
+同一个命令发两次，第二次不会有任何变化。
+
+### 两台服务端同时修改同一个实体
+
+每个属性和每个关系都会记住自己最后一次是什么时候改的。两台服务端都改了同一个实体时，改动会按键逐个合并，每个键保留更新的那一次。
+
+比如服务端 A 设置了 `level`，同时服务端 B 设置了 `banner`，之后两台服务端都会同时有这两个值。如果两台同时设置了 `level`，两台最后都会是这两个值中的同一个。
+
+删除属性或关系也会以同样的方式记下来，所以删除会到达每台服务端，即使某台的副本里还留着旧值。`clearRelationships(type)` 还会删掉其他服务端在清空之前加上、但本服还没收到的该类型关系。
+
+注意：改动是按属性键合并的。如果你把整份文档（比如一个 JSON 字符串）存在一个属性里，两台服务端同时修改它时不会合并，后保存的会覆盖整份文档。会被多台服务端同时修改的数据请拆成不同的键。
+
+注意："更新" 先看实体的版本号（每次改动都会增加），版本号相同时才看时间。 删除记录会保留 `tombstoneRetention`（默认 24 小时），之后就会被忘掉。
+在这之后，如果还有副本留着被删除的值（比如一台一直离线的服务端），它会把这个值带回来。 所以 `tombstoneRetention` 要设得比任何一台服务端可能离线的时间都长。
+
+### 持久化
+
+多次保存会共用持久化：一次持久化正在进行时，这期间的保存会等下一次，所以连续很多次保存也只会触发几次持久化。
+每次持久化先把保存过的实体写入 L2，再把 L2 中的条目写入 MongoDB，每次最多 1000 条（持久化任务的 `limit`）。
+剩下的由本服或任何一台服务端的下一次持久化继续写，所以就算一台服务端写完 L2 就崩溃了，它的数据也还是会进入 MongoDB。 
+
+Redis 连不上时会重试，间隔最多几秒，保存的改动会在 Redis 恢复后再发给其他服务端。
+
+player 插件停用时会自动关闭所有已注册的玩家和实体服务，一般不需要自己调用 `shutdown()`。
+关闭时会等正在进行的持久化结束，再把所有内容写一遍；如果持久化锁被其他服务端占着，最多等 10 秒。
+
+注意：依赖 player 的插件会比 player 先停用。如果你的插件在自己的 onDisable 里关闭了服务要用的资源（比如它自己的 MongoClient 或连接），自动关闭会在这些资源关掉之后才运行，这时请在关闭它们之前自己调用 `shutdown()`。服务关闭后会从注册表中移除，不会被关闭两次。
+
+```java
+public class ShutdownExample {
+    public void onDisable(LegacyEntityDataService entityService, MongoDBConnectionConfig mongoConfig) throws InterruptedException {
+        // 1. 先关闭服务：把 L1 缓存写入 L2，并把还在等待的内容写入 MongoDB
+        entityService.shutdown();
+
+        // 2. 再关闭自己的连接
+        mongoConfig.close();
+    }
+}
+```
+
+### 同步设置
+
+`EntitySyncSettings` 控制消息和删除记录保留多久。每一项都有默认值，只设置需要改的就行，作为最后一个参数传入：
+
+```java
+LegacyEntityDataService entityService = LegacyEntityDataService.of(
+        "game-entity-service", mongoConfig, redisConfig,
+        Duration.ofMinutes(5),  // 自动保存间隔
+        List.of("your.package", "net.legacy.library.player"),
+        List.of(PlayerLauncher.class.getClassLoader()),
+        Duration.ofSeconds(2),  // Redis Stream 接收间隔
+        LegacyEntityDataService.DEFAULT_TTL_DURATION,
+        EntitySyncSettings.builder()
+                .updateExpiration(Duration.ofMinutes(5))  // 其他服务端还能读到这次改动的时间
+                .streamRetention(Duration.ofHours(1))  // 任何消息最多保留多久
+                .tombstoneRetention(Duration.ofHours(24))  // 删除记录保留多久
+                .build()
+);
+```
+
+`LegacyPlayerDataService` 在同样的位置用一个 `Duration` 接收 Stream 保留时长。
+
+注意：`streamRetention` 用 `XTRIM MINID` 裁剪 Stream，需要 Redis 6.2 或更高版本。在更旧的 Redis 上 Stream 照常工作，只是不会按 `streamRetention` 裁剪，并且只会记录一次警告。
+
+### 运行要求
+
+- 同一个服务的所有服务端都要运行这个版本。运行早期版本的服务端读不到这个版本发出的改动，它自己的保存也不会进入 Stream。
+- Redis 6.2 或更高版本，用于 `streamRetention`。
+- `tombstoneRetention` 要比任何一台服务端可能离线的时间都长。
+- 早期版本保存的数据可以直接使用。
+  用 `EntityDataUpdateRStreamAccepter.createRStreamTask(uuid, map, version, ttl)` 发送的旧格式消息仍然会被接收，但它们没有改动时间，所以这个版本保存的改动会优先于它们。
+
+### 限制
+
+- 服务端加载了某个实体，但超过 `updateExpiration` 没有读取 Stream 时，会错过这段时间的改动，直到它保存或重新加载这个实体。
+- 只有属性和关系会同步，`entityType` 之类的字段不会。

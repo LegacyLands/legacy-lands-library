@@ -1,6 +1,7 @@
 package net.legacy.library.cache.service;
 
 import lombok.Data;
+import net.legacy.library.cache.exception.LockAcquisitionTimeoutException;
 import net.legacy.library.cache.model.LockSettings;
 import org.redisson.api.RLock;
 
@@ -56,7 +57,8 @@ public abstract class AbstractLockable<R> implements LockableInterface<R> {
      * @param lockSettings    the settings controlling lock behavior including timeout and retry policies
      * @param <T>             the return type of the executed function
      * @return the result of the executed function
-     * @throws RuntimeException if lock acquisition fails or the thread is interrupted
+     * @throws LockAcquisitionTimeoutException if the lock is not acquired within the wait time
+     * @throws RuntimeException                 if the thread is interrupted while waiting for the lock
      * @see Lock
      * @see LockSettings
      */
@@ -80,7 +82,7 @@ public abstract class AbstractLockable<R> implements LockableInterface<R> {
                     }
                 }
             } else {
-                throw new RuntimeException("Could not acquire lock within the specified time: " + simpleName);
+                throw new LockAcquisitionTimeoutException("Could not acquire lock within the specified time: " + simpleName);
             }
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();

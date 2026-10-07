@@ -2,6 +2,7 @@ package net.legacy.library.player.task;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import de.leonhard.storage.internal.serialize.SimplixSerializer;
+import io.fairyproject.log.Log;
 import lombok.RequiredArgsConstructor;
 import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.cache.service.CacheServiceInterface;
@@ -9,8 +10,10 @@ import net.legacy.library.cache.service.redis.RedisCacheServiceInterface;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.model.LegacyPlayerData;
 import net.legacy.library.player.service.LegacyPlayerDataService;
+import net.legacy.library.player.util.LockTimeoutUtil;
 import net.legacy.library.player.util.RKeyUtil;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -72,9 +75,12 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture
                     legacyPlayerDataService.getL1Cache();
             RedisCacheServiceInterface l2Cache = legacyPlayerDataService.getL2Cache();
 
-            l1Cache.getResource().asMap().forEach((key, legacyPlayerData) -> {
+            int deferred = 0;
+            for (Map.Entry<UUID, LegacyPlayerData> entry : l1Cache.getResource().asMap().entrySet()) {
+                UUID key = entry.getKey();
+                LegacyPlayerData legacyPlayerData = entry.getValue();
                 if (this.uuid != null && !this.uuid.equals(key)) {
-                    return;
+                    continue;
                 }
 
                 String serialized = SimplixSerializer.serialize(legacyPlayerData).toString();
@@ -83,21 +89,35 @@ public class L1ToL2PlayerDataSyncTask implements TaskInterface<CompletableFuture
 
                 // If the data is the same, no need to sync
                 if (nowCache.equals(serialized)) {
-                    return;
+                    continue;
                 }
 
                 String syncLockKey = RKeyUtil.getRLPDSReadWriteLockKey(bucketKey);
 
-                // Write lock
-                l2Cache.execute(
-                        client -> client.getReadWriteLock(syncLockKey).writeLock(),
-                        client -> {
-                            client.getBucket(bucketKey).set(serialized);
-                            return null;
-                        },
-                        LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
-                );
-            });
+                // Write lock; a player whose lock stays busy, as another server writes it, is written by the next run
+                try {
+                    l2Cache.execute(
+                            client -> client.getReadWriteLock(syncLockKey).writeLock(),
+                            client -> {
+                                client.getBucket(bucketKey).set(serialized);
+
+                                // To persist to the database, by the next run of any server
+                                client.getSet(RKeyUtil.getPendingDatabaseKey(legacyPlayerDataService)).add(key.toString());
+                                return null;
+                            },
+                            LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
+                    );
+                } catch (RuntimeException exception) {
+                    if (!LockTimeoutUtil.isLockTimeout(exception)) {
+                        throw exception;
+                    }
+                    deferred++;
+                }
+            }
+
+            if (deferred > 0) {
+                Log.debug("Deferred %s players to the next run: their L2 write locks stayed busy", deferred);
+            }
         });
     }
 

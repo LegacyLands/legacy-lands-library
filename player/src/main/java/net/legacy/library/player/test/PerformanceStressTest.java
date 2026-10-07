@@ -172,9 +172,9 @@ public class PerformanceStressTest {
 
             TestLogger.logValidation("player", "PlayerDataServiceQPS",
                     performanceAcceptable && syncEfficient && serviceHealthy,
-                    String.format("Player QPS - Save: %.1f ops/s, Sync: %.1f ops/s, UnifiedBatchLatency: %.2fms, " +
-                                    "TotalPlayers: %d, Duration: %dms, ServiceHealthy: %s",
-                            saveQPS, syncQPS, unifiedBatchLatencyMs, savedPlayers, totalDurationMs, serviceHealthy));
+                    "Player QPS - Save: %.1f ops/s, Sync: %.1f ops/s, UnifiedBatchLatency: %.2fms, " +
+                            "TotalPlayers: %d, Duration: %dms, ServiceHealthy: %s",
+                    saveQPS, syncQPS, unifiedBatchLatencyMs, savedPlayers, totalDurationMs, serviceHealthy);
 
             return performanceAcceptable && syncEfficient && serviceHealthy;
 
@@ -228,8 +228,8 @@ public class PerformanceStressTest {
 
                         preparedEntities.addAndGet(batchEntities.size());
 
-                        TestLogger.logInfo("player", String.format("Batch %d: prepared %d entities",
-                                finalBatchId, batchEntities.size()));
+                        TestLogger.logInfo("player", "Batch %d: prepared %d entities",
+                                finalBatchId, batchEntities.size());
 
                         return batchEntities;
 
@@ -306,9 +306,9 @@ public class PerformanceStressTest {
 
             TestLogger.logValidation("player", "EntityDataServiceQPS",
                     batchPerformanceGood && retrievalPerformanceGood && serviceStable,
-                    String.format("Entity QPS - Batch: %.1f ops/s, Retrieval: %.1f ops/s, " +
-                                    "UnifiedBatchLatency: %.2fms, TotalEntities: %d, Duration: %dms, ServiceStable: %s",
-                            batchQPS, retrievalQPS, unifiedEntityBatchLatencyMs, totalSaved, totalDurationMs, serviceStable));
+                    "Entity QPS - Batch: %.1f ops/s, Retrieval: %.1f ops/s, " +
+                            "UnifiedBatchLatency: %.2fms, TotalEntities: %d, Duration: %dms, ServiceStable: %s",
+                    batchQPS, retrievalQPS, unifiedEntityBatchLatencyMs, totalSaved, totalDurationMs, serviceStable);
 
             return batchPerformanceGood && retrievalPerformanceGood && serviceStable;
 
@@ -433,9 +433,9 @@ public class PerformanceStressTest {
 
             TestLogger.logValidation("player", "MixedWorkloadPerformance",
                     mixedPerformanceGood && syncEfficient && operationCountReasonable,
-                    String.format("Mixed Workload - QPS: %.1f ops/s, PlayerSyncThroughput: %.1f ops/s, " +
-                                    "TotalOps: %d, Duration: %dms, SyncDuration: %dms",
-                            mixedQPS, playerSyncThroughput, totalOperations.get(), totalDurationMs, syncDurationMs));
+                    "Mixed Workload - QPS: %.1f ops/s, PlayerSyncThroughput: %.1f ops/s, " +
+                            "TotalOps: %d, Duration: %dms, SyncDuration: %dms",
+                    mixedQPS, playerSyncThroughput, totalOperations.get(), totalDurationMs, syncDurationMs);
 
             return mixedPerformanceGood && syncEfficient && operationCountReasonable;
 
@@ -485,8 +485,8 @@ public class PerformanceStressTest {
                             largeEntities.add(entity);
                         }
 
-                        TestLogger.logInfo("player", String.format("Batch %d prepared %d entities",
-                                finalBatchId, largeEntities.size()));
+                        TestLogger.logInfo("player", "Batch %d prepared %d entities",
+                                finalBatchId, largeEntities.size());
 
                         return largeEntities;
 
@@ -530,8 +530,8 @@ public class PerformanceStressTest {
                 System.gc();
 
                 long currentMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-                TestLogger.logInfo("player", String.format("Unified batch completed, memory: %d MB",
-                        currentMemory / 1024 / 1024));
+                TestLogger.logInfo("player", "Unified batch completed, memory: %d MB",
+                        currentMemory / 1024 / 1024);
 
             } catch (Exception exception) {
                 TestLogger.logFailure("player", "Unified batch save failed: %s", exception.getMessage());
@@ -557,10 +557,10 @@ public class PerformanceStressTest {
 
             TestLogger.logValidation("player", "MemoryPressurePerformance",
                     allBatchesProcessed && performanceUnderPressure && memoryUsageReasonable,
-                    String.format("Memory Pressure - QPS: %.1f ops/s, MemoryIncrease: %d MB, " +
-                                    "ProcessedBatches: %d/%d, TotalEntities: %d, Duration: %dms",
-                            qpsUnderPressure, memoryIncrease / 1024 / 1024, processedBatches,
-                            largeBatchCount, totalEntities, totalDurationMs));
+                    "Memory Pressure - QPS: %.1f ops/s, MemoryIncrease: %d MB, " +
+                            "ProcessedBatches: %d/%d, TotalEntities: %d, Duration: %dms",
+                    qpsUnderPressure, memoryIncrease / 1024 / 1024, processedBatches,
+                    largeBatchCount, totalEntities, totalDurationMs);
 
             return allBatchesProcessed && performanceUnderPressure && memoryUsageReasonable;
 
@@ -598,13 +598,13 @@ public class PerformanceStressTest {
 
             TestLogger.logValidation("player", "PerformanceSummary",
                     overallPerformanceGood && suiteCompletedInTime,
-                    String.format("Performance Suite - PassedTests: %d/4, Duration: %dms, " +
-                                    "PlayerQPS: %s, EntityQPS: %s, MixedWorkload: %s, MemoryPressure: %s",
-                            passedTests, totalSuiteDuration,
-                            playerQPS ? "PASS" : "FAIL",
-                            entityQPS ? "PASS" : "FAIL",
-                            mixedWorkload ? "PASS" : "FAIL",
-                            memoryPressure ? "PASS" : "FAIL"));
+                    "Performance Suite - PassedTests: %d/4, Duration: %dms, " +
+                            "PlayerQPS: %s, EntityQPS: %s, MixedWorkload: %s, MemoryPressure: %s",
+                    passedTests, totalSuiteDuration,
+                    playerQPS ? "PASS" : "FAIL",
+                    entityQPS ? "PASS" : "FAIL",
+                    mixedWorkload ? "PASS" : "FAIL",
+                    memoryPressure ? "PASS" : "FAIL");
 
             return overallPerformanceGood && suiteCompletedInTime;
 

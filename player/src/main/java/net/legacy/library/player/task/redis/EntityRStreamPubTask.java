@@ -1,17 +1,16 @@
 package net.legacy.library.player.task.redis;
 
 import lombok.RequiredArgsConstructor;
-import net.legacy.library.cache.model.LockSettings;
 import net.legacy.library.commons.task.TaskInterface;
 import net.legacy.library.player.service.LegacyEntityDataService;
 import net.legacy.library.player.util.EntityRKeyUtil;
-import org.redisson.api.RMapCache;
 import org.redisson.api.RStream;
 import org.redisson.api.stream.StreamAddArgs;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Task responsible for publishing {@link EntityRStreamTask} instances to the Redis stream.
@@ -44,6 +43,11 @@ public class EntityRStreamPubTask implements TaskInterface<CompletableFuture<?>>
      *
      * <p>This method creates a message map containing the task data and adds it to the Redis stream.
      * If an expiration time is set, it will also include an expiration timestamp in the message.
+     * The message also carries the {@link LegacyEntityDataService#getInstanceId() instance id} of the publishing
+     * service, so accepters can tell their own messages apart.
+     *
+     * <p>The entries are built for this publication alone and added in a single {@code XADD}, so concurrent
+     * publications, on this server or another, never see or overwrite each other's entries.
      *
      * @return {@inheritDoc}
      */
@@ -52,51 +56,27 @@ public class EntityRStreamPubTask implements TaskInterface<CompletableFuture<?>>
         return submitWithVirtualThreadAsync(() -> {
             // Get the stream key and client
             String streamKey = EntityRKeyUtil.getEntityStreamKey(service);
-
-            // Create map cache for storing data with expiration
-            RMapCache<Object, Object> mapCache = service.getL2Cache().getResource().getMapCache(
-                    EntityRKeyUtil.getTempRMapCacheKey(service)
-            );
+            RStream<Object, Object> stream = service.getL2Cache().getResource().getStream(streamKey);
 
             // Set task data
-            mapCache.put("actionName", entityRStreamTask.getActionName());
-            mapCache.put("data", entityRStreamTask.getData());
+            Map<Object, Object> entries = new LinkedHashMap<>();
+            entries.put("actionName", entityRStreamTask.getActionName());
+            entries.put("data", entityRStreamTask.getData());
+            entries.put("publisher", service.getInstanceId().toString());
 
             // Add expiration time if timeout is set
             long timeoutMillis = entityRStreamTask.getExpirationTimeMillis();
             if (timeoutMillis > 0) {
-                long expirationTime = System.currentTimeMillis() + timeoutMillis;
-                mapCache.put(
-                        "timeout",
-                        String.valueOf(expirationTime),
-                        timeoutMillis,
-                        TimeUnit.MILLISECONDS
-                );
-
-                // Set expiration time for the cache
-                mapCache.put(
-                        "expiration-time",
-                        String.valueOf(expirationTime),
-                        timeoutMillis + 200,
-                        TimeUnit.MILLISECONDS
-                );
+                String expirationTime = String.valueOf(System.currentTimeMillis() + timeoutMillis);
+                entries.put("timeout", expirationTime);
+                entries.put("expiration-time", expirationTime);
             }
 
             // Add unique UUID to prevent duplicate processing
-            mapCache.put("uuid", UUID.randomUUID().toString());
+            entries.put("uuid", UUID.randomUUID().toString());
 
             // Publish to Redis stream using StreamAddArgs
-            service.getL2Cache().getWithType(
-                    client -> null,
-                    client -> {
-                        RStream<Object, Object> stream = client.getStream(streamKey);
-                        return stream.add(StreamAddArgs.entries(mapCache));
-                    },
-                    () -> null,
-                    null,
-                    false,
-                    LockSettings.of(500, 500, TimeUnit.MILLISECONDS)
-            );
+            stream.add(StreamAddArgs.entries(entries));
         });
     }
 

@@ -113,10 +113,10 @@ public class LockContentionQPSTest {
 
             TestLogger.logValidation("player", "IndividualSaveQPS",
                     totalSaved.get() >= totalEntities * 0.5, // At least 50% should succeed despite contention
-                    String.format("Individual Save QPS - Saved: %d/%d, QPS: %.1f ops/s, " +
-                                    "LockContentionRate: %.1f%%, Duration: %dms",
-                            totalSaved.get(), totalEntities, individualQPS,
-                            lockContentionRate, durationMs));
+                    "Individual Save QPS - Saved: %d/%d, QPS: %.1f ops/s, " +
+                            "LockContentionRate: %.1f%%, Duration: %dms",
+                    totalSaved.get(), totalEntities, individualQPS,
+                    lockContentionRate, durationMs);
 
             return totalSaved.get() >= totalEntities * 0.5;
 
@@ -205,10 +205,10 @@ public class LockContentionQPSTest {
 
             TestLogger.logValidation("player", "BatchSaveQPS",
                     allEntities.size() == totalEntities,
-                    String.format("Batch Save QPS - Saved: %d/%d, OverallQPS: %.1f ops/s, " +
-                                    "PureBatchQPS: %.1f ops/s, BatchDuration: %dms, TotalDuration: %dms",
-                            allEntities.size(), totalEntities, batchQPS, pureQPS,
-                            batchSaveDurationMs, totalDurationMs));
+                    "Batch Save QPS - Saved: %d/%d, OverallQPS: %.1f ops/s, " +
+                            "PureBatchQPS: %.1f ops/s, BatchDuration: %dms, TotalDuration: %dms",
+                    allEntities.size(), totalEntities, batchQPS, pureQPS,
+                    batchSaveDurationMs, totalDurationMs);
 
             return allEntities.size() == totalEntities;
 
@@ -220,6 +220,10 @@ public class LockContentionQPSTest {
 
     /**
      * Compare lock contention impact by running both strategies and measuring performance difference.
+     *
+     * <p>Saves coalesce the persistence they ask for, so individual saves no longer start one persistence each and
+     * contend for its lock; the comparison checks that individual saves keep at least half the batch throughput.
+     * Both sides run on the same 4 threads over entities prepared beforehand, so only the save calls are compared.
      */
     public static boolean testLockContentionImpactComparison() {
         try {
@@ -227,7 +231,7 @@ public class LockContentionQPSTest {
             timer.startTimer("lock-contention-comparison");
 
             // Test parameters for comparison
-            int testEntities = 50; // Moderate load for clear comparison
+            int testEntities = 400; // Enough work that timer resolution and warmup do not decide the ratio
 
             // Run individual save test (high contention)
             TestLogger.logInfo("player", "Starting individual save QPS measurement...");
@@ -247,18 +251,16 @@ public class LockContentionQPSTest {
             double lockContentionImpact = (1 - (individualResult.qps / batchResult.qps)) * 100;
             double durationImprovement = (double) individualResult.durationMs / batchResult.durationMs;
 
-            boolean significantImprovement = qpsImprovementRatio >= 2.0; // Batch should be at least 2x faster
-            boolean lowLockContention = individualResult.lockContentionRate < 50.0; // Should be manageable
+            // Individual saves should not collapse under contention: at least half the batch throughput
+            boolean contentionContained = qpsImprovementRatio <= 2.0;
 
-            TestLogger.logValidation("player", "LockContentionImpact",
-                    significantImprovement && lowLockContention,
-                    String.format("Lock Contention Impact - IndividualQPS: %.1f ops/s, BatchQPS: %.1f ops/s, " +
-                                    "QpsImprovement: %.1fx, LockContentionImpact: %.1f%%, DurationImprovement: %.1fx, " +
-                                    "LockContentionRate: %.1f%%",
-                            individualResult.qps, batchResult.qps, qpsImprovementRatio,
-                            lockContentionImpact, durationImprovement, individualResult.lockContentionRate));
+            TestLogger.logValidation("player", "LockContentionImpact", contentionContained,
+                    "Lock Contention Impact - IndividualQPS: %.1f ops/s, BatchQPS: %.1f ops/s, " +
+                            "QpsImprovement: %.1fx, LockContentionImpact: %.1f%%, DurationImprovement: %.1fx",
+                    individualResult.qps, batchResult.qps, qpsImprovementRatio,
+                    lockContentionImpact, durationImprovement);
 
-            return significantImprovement && lowLockContention;
+            return contentionContained;
 
         } catch (Exception exception) {
             TestLogger.logFailure("player", "Lock contention impact comparison failed: " + exception.getMessage());
@@ -273,27 +275,19 @@ public class LockContentionQPSTest {
         try {
             LegacyEntityDataService service = TestConnectionResource.createTestEntityService("measure-individual");
 
-            long startTime = System.nanoTime();
             AtomicInteger saved = new AtomicInteger(0);
             AtomicInteger lockErrors = new AtomicInteger(0);
 
             // 4 threads for moderate contention
-            int threadCount = 4;
-            CountDownLatch latch = new CountDownLatch(threadCount);
+            List<List<LegacyEntityData>> batches = prepareThreadBatches(entityCount, "MeasureEntity");
+            CountDownLatch latch = new CountDownLatch(batches.size());
+            long startTime = System.nanoTime();
 
-            for (int threadId = 0; threadId < threadCount; threadId++) {
-                final int entitiesPerThread = entityCount / threadCount;
-                final int finalThreadId = threadId;
-
+            for (List<LegacyEntityData> batch : batches) {
                 CompletableFuture.runAsync(() -> {
                     try {
-                        for (int i = 0; i < entitiesPerThread; i++) {
+                        for (LegacyEntityData entity : batch) {
                             try {
-                                UUID entityUuid = UUID.randomUUID();
-                                LegacyEntityData entity = LegacyEntityData.of(entityUuid, "MeasureEntity");
-                                entity.addAttribute("thread", String.valueOf(finalThreadId));
-                                entity.addAttribute("index", String.valueOf(i));
-
                                 service.saveEntity(entity);
                                 saved.incrementAndGet();
 
@@ -331,32 +325,48 @@ public class LockContentionQPSTest {
         try {
             LegacyEntityDataService service = TestConnectionResource.createTestEntityService("measure-batch");
 
+            // The same 4 threads as the individual saves, each saving its share in one call
+            List<List<LegacyEntityData>> batches = prepareThreadBatches(entityCount, "BatchMeasureEntity");
             long startTime = System.nanoTime();
 
-            // Prepare all entities
-            List<LegacyEntityData> entities = new ArrayList<>();
-            for (int i = 0; i < entityCount; i++) {
-                UUID entityUuid = UUID.randomUUID();
-                LegacyEntityData entity = LegacyEntityData.of(entityUuid, "BatchMeasureEntity");
-                entity.addAttribute("index", String.valueOf(i));
-                entity.addAttribute("batch", "true");
-                entities.add(entity);
-            }
-
-            // Single batch save
-            service.saveEntities(entities);
+            CompletableFuture.allOf(batches.stream()
+                    .map(batch -> CompletableFuture.runAsync(() -> service.saveEntities(batch)))
+                    .toArray(CompletableFuture[]::new)).get(60, TimeUnit.SECONDS);
 
             long endTime = System.nanoTime();
 
             long durationMs = Duration.ofNanos(endTime - startTime).toMillis();
-            double qps = (double) entities.size() / (durationMs / 1000.0);
+            double qps = (double) entityCount / (durationMs / 1000.0);
 
-            return new QpsResult(qps, durationMs, 0.0, entities.size()); // No lock contention expected
+            return new QpsResult(qps, durationMs, 0.0, entityCount); // No lock contention expected
 
         } catch (Exception exception) {
             TestLogger.logFailure("player", "Batch QPS measurement failed: " + exception.getMessage());
             return new QpsResult(0, 0, 0, 0);
         }
+    }
+
+    /**
+     * Prepares the entities of a comparison run, split into the shares of 4 threads.
+     *
+     * @param entityCount the number of entities
+     * @param entityType  the entity type
+     * @return the shares, one per thread
+     */
+    private static List<List<LegacyEntityData>> prepareThreadBatches(int entityCount, String entityType) {
+        int threadCount = 4;
+        List<List<LegacyEntityData>> batches = new ArrayList<>();
+        for (int threadId = 0; threadId < threadCount; threadId++) {
+            List<LegacyEntityData> batch = new ArrayList<>();
+            for (int i = 0; i < entityCount / threadCount; i++) {
+                LegacyEntityData entity = LegacyEntityData.of(UUID.randomUUID(), entityType);
+                entity.addAttribute("thread", String.valueOf(threadId));
+                entity.addAttribute("index", String.valueOf(i));
+                batch.add(entity);
+            }
+            batches.add(batch);
+        }
+        return batches;
     }
 
     /**
