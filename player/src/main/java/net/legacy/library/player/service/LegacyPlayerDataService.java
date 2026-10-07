@@ -423,6 +423,10 @@ public class LegacyPlayerDataService {
      * @throws InterruptedException if the shutdown process is interrupted
      */
     public void shutdown() throws InterruptedException {
+        // Nothing new starts: no scheduled persistence, no more stream reads
+        playerDataPersistenceTimerTask.cancel(false);
+        redisStreamAcceptTask.cancel(false);
+
         // A persistence a save started may still run; the final one starts after it, so it cannot be skipped by it
         savePersistence.close();
         if (!savePersistence.awaitIdle(Duration.ofMinutes(2))) {

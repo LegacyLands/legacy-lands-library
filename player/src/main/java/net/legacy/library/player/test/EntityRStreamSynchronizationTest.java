@@ -448,8 +448,6 @@ public class EntityRStreamSynchronizationTest {
             return false;
         } finally {
             shutdownQuietly(entities);
-            players.getRedisStreamAcceptTask().cancel(false);
-            players.getPlayerDataPersistenceTimerTask().cancel(false);
             try {
                 players.shutdown();
             } catch (InterruptedException exception) {
@@ -494,8 +492,6 @@ public class EntityRStreamSynchronizationTest {
             TestLogger.logFailure("player", "Player stream retention test failed: " + exception.getMessage());
             return false;
         } finally {
-            service.getRedisStreamAcceptTask().cancel(false);
-            service.getPlayerDataPersistenceTimerTask().cancel(false);
             try {
                 service.shutdown();
             } catch (InterruptedException exception) {
@@ -1147,8 +1143,6 @@ public class EntityRStreamSynchronizationTest {
             TestLogger.logFailure("player", "Concurrent player publish test failed: " + exception.getMessage());
             return false;
         } finally {
-            service.getRedisStreamAcceptTask().cancel(false);
-            service.getPlayerDataPersistenceTimerTask().cancel(false);
             try {
                 service.shutdown();
             } catch (InterruptedException exception) {
@@ -2037,8 +2031,6 @@ public class EntityRStreamSynchronizationTest {
             TestLogger.logFailure("player", "Player pending test failed: " + exception.getMessage());
             return false;
         } finally {
-            players.getRedisStreamAcceptTask().cancel(false);
-            players.getPlayerDataPersistenceTimerTask().cancel(false);
             try {
                 players.shutdown();
             } catch (Exception exception) {
@@ -2271,8 +2263,6 @@ public class EntityRStreamSynchronizationTest {
         } finally {
             Log.set(original);
             shutdownQuietly(service);
-            players.getRedisStreamAcceptTask().cancel(false);
-            players.getPlayerDataPersistenceTimerTask().cancel(false);
             try {
                 players.shutdown();
             } catch (Exception exception) {
@@ -2510,6 +2500,33 @@ public class EntityRStreamSynchronizationTest {
     }
 
     /**
+     * Test that shutting down a player data service stops its own schedules, and leaves the shared scheduler running
+     * for every other service.
+     */
+    public static boolean testPlayerShutdownStopsSchedulesFirst() {
+        LegacyPlayerDataService service = TestConnectionResource.createTestService(
+                "player-shutdown-order", Duration.ofMinutes(30), ACCEPT_INTERVAL);
+
+        try {
+            service.shutdown();
+            boolean timerStopped = service.getPlayerDataPersistenceTimerTask().getScheduledFuture().isCancelled();
+            boolean readsStopped = service.getRedisStreamAcceptTask().getScheduledFuture().isCancelled();
+            boolean schedulerRunning = !service.getPlayerDataPersistenceTimerTask().getScheduledExecutorService().isShutdown();
+
+            boolean success = timerStopped && readsStopped && schedulerRunning;
+
+            TestLogger.logValidation("player", "PlayerShutdownStopsSchedulesFirst", success,
+                    "Player shutdown order - timerStopped: " + timerStopped + ", readsStopped: " + readsStopped
+                            + ", schedulerRunning: " + schedulerRunning);
+
+            return success;
+        } catch (Exception exception) {
+            TestLogger.logFailure("player", "Player shutdown order test failed: " + exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Test that two threads loading the same player at once get the same instance, so neither one's changes are
      * made on a copy the cache dropped.
      */
@@ -2548,8 +2565,6 @@ public class EntityRStreamSynchronizationTest {
             TestLogger.logFailure("player", "Player load race test failed: " + exception.getMessage());
             return false;
         } finally {
-            players.getRedisStreamAcceptTask().cancel(false);
-            players.getPlayerDataPersistenceTimerTask().cancel(false);
             try {
                 players.shutdown();
             } catch (Exception exception) {
