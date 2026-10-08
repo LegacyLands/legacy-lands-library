@@ -3,6 +3,7 @@ name: Publishing
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,7 +14,7 @@ jobs:
   Publish:
     name: Publish
     runs-on: ubuntu-24.04
-    if: contains(github.event.head_commit.message, 'published')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'published')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
