@@ -67,8 +67,46 @@ Detailed documentation in each module's `README`
 
 ### Maven Repository
 
-Configure GitHub authentication
-first ([Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens))
+No authentication required.
+
+Gradle (Kotlin DSL):
+
+```kotlin
+repositories {
+    maven("https://repo.qwqdev.top/releases")
+}
+
+dependencies {
+    compileOnly("net.legacy.library:module-name:version")
+}
+```
+
+Maven:
+
+```xml
+<repositories>
+    <repository>
+        <id>legacy-lands</id>
+        <url>https://repo.qwqdev.top/releases</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>net.legacy.library</groupId>
+        <artifactId>module-name</artifactId>
+        <version>version</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+```
+
+Available versions can be browsed at [repo.qwqdev.top](https://repo.qwqdev.top/#/releases/net/legacy/library).
+
+#### GitHub Packages
+
+Artifacts are also published to GitHub Packages, which requires GitHub
+authentication ([Learn More](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens))
 
 ```kotlin
 repositories {

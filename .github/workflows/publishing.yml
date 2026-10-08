@@ -40,8 +40,10 @@ jobs:
       - name: Get Repository Name
         uses: MariachiBear/get-repo-name-action@v1.1.0
 
-      - name: Publish to GitHub Packages
+      - name: Publish to GitHub Packages and Reposilite
         run: ./gradlew publish -PisGitHubActions=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.actor }}
+          REPOSILITE_USERNAME: ${{ secrets.REPOSILITE_USERNAME }}
+          REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
