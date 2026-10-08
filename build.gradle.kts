@@ -268,9 +268,10 @@ publishing {
             }
         }
 
-        // GitHub Packages
         repositories {
+            // GitHub Packages
             maven {
+                name = "GitHubPackages"
                 url = uri("https://maven.pkg.github.com/LegacyLands/legacy-lands-library/")
                 credentials {
                     username =
@@ -280,6 +281,20 @@ publishing {
                     password =
                         project.findProperty("githubToken")?.toString() ?: System.getenv("GITHUB_TOKEN")
                                 ?: error("GitHub token is missing")
+                }
+            }
+
+            // Self-hosted Reposilite, publicly readable without credentials
+            maven {
+                name = "Reposilite"
+                url = uri("https://repo.qwqdev.top/releases/")
+                credentials {
+                    username =
+                        project.findProperty("reposiliteUsername")?.toString() ?: System.getenv("REPOSILITE_USERNAME")
+                                ?: error("Reposilite username is missing")
+                    password =
+                        project.findProperty("reposiliteToken")?.toString() ?: System.getenv("REPOSILITE_TOKEN")
+                                ?: error("Reposilite token is missing")
                 }
             }
         }

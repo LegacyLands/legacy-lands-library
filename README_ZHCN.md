@@ -51,7 +51,45 @@
 
 ### Maven 仓库
 
-首先配置 GitHub
+无需任何认证。
+
+Gradle（Kotlin DSL）：
+
+```kotlin
+repositories {
+    maven("https://repo.qwqdev.top/releases")
+}
+
+dependencies {
+    compileOnly("net.legacy.library:模块名称:版本号")
+}
+```
+
+Maven：
+
+```xml
+<repositories>
+    <repository>
+        <id>legacy-lands</id>
+        <url>https://repo.qwqdev.top/releases</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>net.legacy.library</groupId>
+        <artifactId>模块名称</artifactId>
+        <version>版本号</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+```
+
+可在 [repo.qwqdev.top](https://repo.qwqdev.top/#/releases/net/legacy/library) 浏览所有可用版本。
+
+#### GitHub Packages
+
+构件同时也会发布到 GitHub Packages，使用前需要配置 GitHub
 认证（[了解更多](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)）
 
 ```kotlin
