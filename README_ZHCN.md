@@ -1,19 +1,48 @@
 <div align="center">
     <img src="./logo.png" alt="legacy-lands-library-logo">
     <br /><br />
+    <a href="https://repo.qwqdev.top/#/releases/net/legacy/library"><img alt="Maven" src="https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo.qwqdev.top%2Freleases%2Fnet%2Flegacy%2Flibrary%2Ffoundation%2Fmaven-metadata.xml&label=maven"></a>
+    <a href="https://github.com/LegacyLands/legacy-lands-library/actions/workflows/main.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/LegacyLands/legacy-lands-library/main.yml?branch=main"></a>
+    <a><img alt="Java" src="https://img.shields.io/badge/Java-21-orange"></a>
     <a href="https://app.codacy.com/gh/LegacyLands/legacy-lands-library/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/cccd526f9bc94aaabc990dd65920cd21"/></a>
     <a><img alt="Issues" src="https://img.shields.io/github/issues/LegacyLands/legacy-lands-library"></a>
     <a><img alt="Stars" src="https://img.shields.io/github/stars/LegacyLands/legacy-lands-library"></a>
     <a><img alt="Forks" src="https://img.shields.io/github/forks/LegacyLands/legacy-lands-library"></a>
     <a><img alt="License" src="https://img.shields.io/github/license/LegacyLands/legacy-lands-library"></a>
     <br /><br />
-    <p>基于 <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>，作为插件运行，旨在封装多种现有库来简化插件的开发过程。</p>
+    <p>面向 Minecraft 服务端开发的企业级模块化框架，提供多级缓存、Redis Streams、弹性数据处理与现代 Java 并发能力，支持 Spigot、Paper 和 Folia。</p>
 </div>
 
 ## 概述
 
 这是一个基于 [Fairy Framework](https://github.com/FairyProject/fairy) 构建的模块化插件工具库，采用模块化设计，深度利用 Java 21 现代化特性。
 为现代 Minecraft 插件开发提供了必要的工具和实用程序，跨平台支持 Spigot、Paper 和 Folia。
+
+## 快速上手
+
+**1. 添加仓库与所需模块**（无需任何认证）：
+
+```kotlin
+repositories {
+    maven("https://repo.qwqdev.top/releases")
+}
+
+dependencies {
+    compileOnly("net.legacy.library:annotation:<版本号>")
+}
+```
+
+最新的 `<版本号>` 见上方的 Maven 徽章。
+
+**2. 服务器安装**：将 [fairy-lib-plugin](https://github.com/FairyProject/fairy-lib-plugin) 以及所用模块（包括其依赖的模块）的 jar 放入 `plugins` 文件夹。
+
+**3. 声明依赖**，确保你的插件在库之后加载：
+
+```kotlin
+fairy {
+    bukkitProperties().depends.add("annotation")
+}
+```
 
 ## 核心模块
 
@@ -36,8 +65,6 @@
 - **security** - *即将推出。*
 
 ## 使用方法
-
-虽然版本号目前仍是 SNAPSHOT，但这并不代表它不能用于生产环境。事实上，我们计划在一个大型插件开发项目中广泛使用此版本，并在充分验证其稳定性和功能性后，发布第一个正式版本。
 
 ### 分发包说明
 
@@ -108,6 +135,10 @@ dependencies {
 }
 ```
 
+### 版本说明
+
+虽然版本号目前仍是 SNAPSHOT，但这并不代表它不能用于生产环境。事实上，我们计划在一个大型插件开发项目中广泛使用此版本，并在充分验证其稳定性和功能性后，发布第一个正式版本。
+
 ## 社区
 
 - [English Version](README.md)
@@ -151,6 +182,6 @@ Scala 3，利用其优越的类型系统、并发模型和函数式编程能力�
 
 ## Star 历史
 
-[![Star History Chart](https://star-history.dera.page/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.dera.page/#LegacyLands/legacy-lands-library&Date)
+[![Star History Chart](https://api.star-history.com/chart?repos=LegacyLands/legacy-lands-library&type=date&legend=top-left)](https://www.star-history.com/?type=date&repos=LegacyLands%2Flegacy-lands-library)
 
 ---
