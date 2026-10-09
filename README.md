@@ -1,13 +1,16 @@
 <div align="center">
     <img src="./logo.png" alt="legacy-lands-library-logo">
     <br /><br />
+    <a href="https://repo.qwqdev.top/#/releases/net/legacy/library"><img alt="Maven" src="https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo.qwqdev.top%2Freleases%2Fnet%2Flegacy%2Flibrary%2Ffoundation%2Fmaven-metadata.xml&label=maven"></a>
+    <a href="https://github.com/LegacyLands/legacy-lands-library/actions/workflows/main.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/LegacyLands/legacy-lands-library/main.yml?branch=main"></a>
+    <a><img alt="Java" src="https://img.shields.io/badge/Java-21-orange"></a>
     <a href="https://app.codacy.com/gh/LegacyLands/legacy-lands-library/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/cccd526f9bc94aaabc990dd65920cd21"/></a>
     <a><img alt="Issues" src="https://img.shields.io/github/issues/LegacyLands/legacy-lands-library"></a>
     <a><img alt="Stars" src="https://img.shields.io/github/stars/LegacyLands/legacy-lands-library"></a>
     <a><img alt="Forks" src="https://img.shields.io/github/forks/LegacyLands/legacy-lands-library"></a>
     <a><img alt="License" src="https://img.shields.io/github/license/LegacyLands/legacy-lands-library"></a>
     <br /><br />
-    <p>Based on <a href="https://github.com/FairyProject/fairy" target="_blank">Fairy Framework</a>, it runs as a plugin, aiming to encapsulate various existing libraries to simplify the development of plugins.</p>
+    <p>Enterprise-grade modular framework for Minecraft server development with multi-tier caching, Redis Streams, resilient data processing, and modern Java concurrency. Supports Spigot, Paper and Folia.</p>
 </div>
 
 ## Overview
@@ -16,6 +19,33 @@ A Modular Plugin Toolkit built on [Fairy Framework](https://github.com/FairyProj
 leveraging modern Java 21 features.
 It provides essential tools and utilities for modern Minecraft plugin development with cross-platform support for
 Spigot, Paper, and Folia.
+
+## Quick Start
+
+**1. Add the repository and the modules you need** (no authentication required):
+
+```kotlin
+repositories {
+    maven("https://repo.qwqdev.top/releases")
+}
+
+dependencies {
+    compileOnly("net.legacy.library:annotation:<version>")
+}
+```
+
+The latest `<version>` is shown in the Maven badge above.
+
+**2. Install on the server**: put [fairy-lib-plugin](https://github.com/FairyProject/fairy-lib-plugin) and the jars of
+the modules you use (including the modules they depend on) into the `plugins` folder.
+
+**3. Declare the dependency** in your plugin so it loads after the library:
+
+```kotlin
+fairy {
+    bukkitProperties().depends.add("annotation")
+}
+```
 
 ## Core Modules
 
@@ -50,10 +80,6 @@ Spigot, Paper, and Folia.
 - **security** - *Coming soon.*
 
 ## Usage
-
-Although the version number is currently still a SNAPSHOT, this does not mean it is unsuitable for production use.
-In fact, we plan to extensively utilize this version in a large-scale plugin development project, and will release the
-first official version once we have thoroughly validated its stability and functionality.
 
 ### Distribution Packages
 
@@ -124,6 +150,12 @@ dependencies {
 }
 ```
 
+### Versioning
+
+Although the version number is currently still a SNAPSHOT, this does not mean it is unsuitable for production use.
+In fact, we plan to extensively utilize this version in a large-scale plugin development project, and will release the
+first official version once we have thoroughly validated its stability and functionality.
+
 ## Community
 
 - [中文文档](README_ZHCN.md)
@@ -171,6 +203,6 @@ performance and maintainability.
 
 ## Star History
 
-[![Star History Chart](https://star-history.dera.page/svg?repos=LegacyLands/legacy-lands-library&type=Date)](https://star-history.dera.page/#LegacyLands/legacy-lands-library&Date)
+[![Star History Chart](https://api.star-history.com/chart?repos=LegacyLands/legacy-lands-library&type=date&legend=top-left)](https://www.star-history.com/?type=date&repos=LegacyLands%2Flegacy-lands-library)
 
 ---
