@@ -3,6 +3,7 @@ package net.legacy.library.cache;
 import io.fairyproject.FairyLaunch;
 import io.fairyproject.container.InjectableComponent;
 import io.fairyproject.plugin.Plugin;
+import net.legacy.library.cache.service.redis.RedissonSharedResources;
 import net.legacy.library.cache.test.CacheTestRunner;
 import net.legacy.library.foundation.test.TestExecutionUtil;
 
@@ -33,6 +34,12 @@ public class CacheLauncher extends Plugin {
         if (DEBUG) {
             runDebugTests();
         }
+    }
+
+    @Override
+    public void onPluginDisable() {
+        // Every plugin that depends on this module is disabled first, so their clients are already shut down
+        RedissonSharedResources.shutdown();
     }
 
     /**

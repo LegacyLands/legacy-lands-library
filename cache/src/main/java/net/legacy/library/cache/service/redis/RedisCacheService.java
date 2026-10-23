@@ -29,11 +29,26 @@ public class RedisCacheService extends AbstractLockable<RedissonClient> implemen
     /**
      * Constructs a new Redis cache service with the specified Redisson client.
      *
+     * <p>The client gets its own Redisson thread pools, unless the system property
+     * {@value RedissonSharedResources#ENABLED_PROPERTY} is {@code true}, see {@link RedissonSharedResources}.
+     *
      * @param config {@link Config}
      * @see Config
      */
     public RedisCacheService(Config config) {
-        super(Redisson.create(config));
+        this(config, RedissonSharedResources.enabledByDefault());
+    }
+
+    /**
+     * Constructs a new Redis cache service with the specified Redisson client.
+     *
+     * @param config       {@link Config}
+     * @param shareThreads whether the client runs on the event loop group and worker pool shared by every Legacy
+     *                     Redis service in the JVM that opts in, see {@link RedissonSharedResources}
+     * @see Config
+     */
+    public RedisCacheService(Config config, boolean shareThreads) {
+        super(Redisson.create(shareThreads ? RedissonSharedResources.share(config) : config));
     }
 
     /**

@@ -72,6 +72,13 @@ public class LockTimeoutExample {
 Note: when several servers write the same Redis entry at the same time, a lock timeout is normal.
 The player module catches it and writes the entry again in the next round.
 
+A `RedisCacheService` can run its Redisson client on one Netty event loop group and one worker pool shared by
+every service that opts in (4 threads each by default), instead of 32 + 16 new threads per client. Sharing is off by
+default: opt in per service with `new RedisCacheService(config, true)`, or for every service with
+`-Dlegacy.cache.redisson.sharedThreads=true`. Change the sizes with `-Dlegacy.cache.redisson.nettyThreads=<n>` and
+`-Dlegacy.cache.redisson.threads=<n>`. A `Config` that sets its own event loop group or executor, or a transport other
+than NIO, keeps them. The shared pools stop when the cache module is disabled.
+
 ### Example
 
 ```java
