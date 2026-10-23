@@ -63,11 +63,14 @@ public class LockTimeoutExample {
 
 注意：多台服务端同时写同一个 Redis 条目时，拿锁超时是正常的。player 模块会捕获它，在下一轮重新写入。
 
-`RedisCacheService` 可以让它的 Redisson 客户端和其他选择共享的服务共用一个 Netty event loop group 和一个工作线程池
-（默认各 4 个线程），不再每个客户端各开 32 + 16 个线程。默认不共享：单个服务用 `new RedisCacheService(config, true)` 开启，
-或者用 `-Dlegacy.cache.redisson.sharedThreads=true` 让所有服务都开启。用 `-Dlegacy.cache.redisson.nettyThreads=<n>` 和
-`-Dlegacy.cache.redisson.threads=<n>` 调整大小。`Config` 自己设置了 event loop group 或 executor，或者用的不是 NIO 传输时，
-保持原样。cache 模块停用时关闭共享的两个池。
+`RedisCacheService` 默认会限制 Redisson 客户端的线程数：`Config` 还是 Redisson 默认值（32 个 Netty 线程 + 16 个工作线程）时，
+改成 4 个 Netty 线程和 8 个工作线程；你自己设置过的数值保持不变。用 `-Dlegacy.cache.redisson.limitThreads=false` 关闭这个限制。
+
+另外还可以选择让各个服务在整个 JVM 里共用一个 Netty event loop group 和一个工作线程池。默认不共享：单个服务用
+`new RedisCacheService(config, true)` 开启，或者用 `-Dlegacy.cache.redisson.sharedThreads=true` 让所有服务都开启。
+`Config` 自己设置了 event loop group 或 executor，或者用的不是 NIO 传输时，保持原样。cache 模块停用时关闭共享的两个池。
+
+限制和共享池的大小都由 `-Dlegacy.cache.redisson.nettyThreads=<n>`（默认 4）和 `-Dlegacy.cache.redisson.threads=<n>`（默认 8）决定。
 
 ### 举个例子
 

@@ -31,6 +31,61 @@ import java.util.concurrent.Executors;
 public class RedissonSharedResourcesTest {
 
     /**
+     * Tests that a configuration on Redisson's default thread counts is capped, counts the caller set are kept, and
+     * the caller's configuration is untouched.
+     */
+    public static boolean testDefaultCountsAreCapped() {
+        try {
+            Config plain = singleServer();
+            Config capped = RedissonSharedResources.limit(plain);
+            boolean cappedDefaults = capped != plain
+                    && capped.getNettyThreads() == RedissonSharedResources.DEFAULT_NETTY_THREADS
+                    && capped.getThreads() == RedissonSharedResources.DEFAULT_THREADS;
+            Config defaults = new Config();
+            boolean callerUntouched = plain.getNettyThreads() == defaults.getNettyThreads()
+                    && plain.getThreads() == defaults.getThreads();
+
+            Config own = singleServer().setNettyThreads(2).setThreads(3);
+            boolean ownKept = RedissonSharedResources.limit(own) == own;
+
+            Config half = singleServer().setThreads(3);
+            Config halfCapped = RedissonSharedResources.limit(half);
+            boolean halfKept = halfCapped.getThreads() == 3
+                    && halfCapped.getNettyThreads() == RedissonSharedResources.DEFAULT_NETTY_THREADS;
+
+            TestLogger.logInfo("cache", "Cap test: cappedDefaults=%s, callerUntouched=%s, ownKept=%s, halfKept=%s",
+                    cappedDefaults, callerUntouched, ownKept, halfKept);
+
+            return cappedDefaults && callerUntouched && ownKept && halfKept;
+        } catch (Exception exception) {
+            TestLogger.logFailure("cache", "Cap test failed: %s", exception.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Tests that the cap can be turned off with its system property.
+     */
+    public static boolean testCapCanBeTurnedOff() {
+        String before = System.getProperty(RedissonSharedResources.LIMIT_PROPERTY);
+        try {
+            System.setProperty(RedissonSharedResources.LIMIT_PROPERTY, "false");
+            Config plain = singleServer();
+            boolean off = RedissonSharedResources.limit(plain) == plain;
+
+            TestLogger.logInfo("cache", "Cap off test: off=%s", off);
+
+            return off;
+        } finally {
+            if (before == null) {
+                System.clearProperty(RedissonSharedResources.LIMIT_PROPERTY);
+            } else {
+                System.setProperty(RedissonSharedResources.LIMIT_PROPERTY, before);
+            }
+        }
+    }
+
+    /**
      * Tests that sharing is off unless the system property turns it on.
      */
     public static boolean testOffByDefault() {
