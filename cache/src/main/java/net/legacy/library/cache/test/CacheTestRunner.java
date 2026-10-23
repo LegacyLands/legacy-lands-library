@@ -92,6 +92,9 @@ public class CacheTestRunner extends AbstractModuleTestRunner {
         // Execute cache implementations tests
         executeTestClass(CacheImplementationsTest.class, "Cache Implementations Logic");
 
+        // Execute shared Redisson thread pool tests
+        executeTestClass(RedissonSharedResourcesTest.class, "Redisson Shared Resources");
+
         timer.stopTimer("test-execution");
         timer.startTimer("validation");
 
