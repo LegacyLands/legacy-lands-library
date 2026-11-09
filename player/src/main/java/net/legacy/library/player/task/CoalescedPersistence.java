@@ -32,6 +32,8 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class CoalescedPersistence {
 
+    private static final long FIRST_BACKOFF_MILLIS = 200;
+    private static final long MAX_BACKOFF_MILLIS = 5000;
     /**
      * Starts a persistence run: completes the future it is given once the cache has reached L2, and returns the
      * future of the whole run.
@@ -41,25 +43,20 @@ public class CoalescedPersistence {
     private final AtomicBoolean requested = new AtomicBoolean();
     private final Queue<CompletableFuture<Void>> waiting = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean closed = new AtomicBoolean();
-
     /**
      * Completed by the final persistence of a shutdown; what the requests made after {@link #close()} wait for.
      */
     private final CompletableFuture<Void> finalRun = new CompletableFuture<>();
-
     /**
      * How long the next run waits after a failed one, in milliseconds; 0 after a run that succeeded.
      */
     private final AtomicLong backoff = new AtomicLong();
 
-    private static final long FIRST_BACKOFF_MILLIS = 200;
-    private static final long MAX_BACKOFF_MILLIS = 5000;
-
     /**
      * Asks for a persistence: starts one now if none is running, otherwise makes sure one more follows the current run.
      *
      * @return a future completed once a run that started after this request has put the cache in L2, or has ended,
-     *         failed or not: what was cached before the request has then reached L2 unless the run failed
+     * failed or not: what was cached before the request has then reached L2 unless the run failed
      */
     public CompletableFuture<Void> request() {
         // The final persistence of a shutdown covers what is saved from then on

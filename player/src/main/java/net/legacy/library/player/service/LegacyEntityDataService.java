@@ -90,7 +90,10 @@ public class LegacyEntityDataService {
      * Default TTL for entity data in Redis (30 minutes).
      */
     public static final Duration DEFAULT_TTL_DURATION = Duration.ofMinutes(30);
-
+    /**
+     * How many persistence runs a save's publication waits for at most for its state to reach L2.
+     */
+    private static final int PUBLISH_WAITS = 10;
     /**
      * Identifies this service instance in the Redis stream messages it publishes, so that its own accepters can
      * tell the updates it sent itself apart from those of other servers. A new id is generated for every instance.
@@ -102,7 +105,6 @@ public class LegacyEntityDataService {
     private final VirtualThreadScheduledFuture entityDataPersistenceTimerTask;
     private final VirtualThreadScheduledFuture redisStreamAcceptTask;
     private final EntitySyncSettings syncSettings;
-
     /**
      * When the last update of each entity arrived from the stream, by {@link System#nanoTime()}, for a load of an
      * entity this server did not hold yet: an update arriving during the load was skipped, so it reads L2 again.
@@ -112,7 +114,6 @@ public class LegacyEntityDataService {
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .maximumSize(100_000)
             .build();
-
     /**
      * The persistence the save methods ask for, coalesced so a burst of saves does not start one per save.
      */
@@ -120,41 +121,30 @@ public class LegacyEntityDataService {
             new CoalescedPersistence(synced -> EntityDataPersistenceTask.of(LockSettings.of(500, 30000, TimeUnit.MILLISECONDS), this)
                     .savedOnly()
                     .start(synced));
-
     /**
-     * How many persistence runs a save's publication waits for at most for its state to reach L2.
+     * The entities whose changes were put back while L2 was unreachable, to publish once it is reached again.
      */
-    private static final int PUBLISH_WAITS = 10;
-
+    @Getter(AccessLevel.NONE)
+    private final Set<UUID> unpublished = ConcurrentHashMap.newKeySet();
+    /**
+     * Publications started and not yet done, so a shutdown can let them finish before closing Redis.
+     */
+    @Getter(AccessLevel.NONE)
+    private final AtomicInteger publishing = new AtomicInteger();
+    @Getter(AccessLevel.NONE)
+    private final OutageLog l2ReadLog = new OutageLog("Reading an entity from L2");
+    @Getter(AccessLevel.NONE)
+    private final OutageLog l2WriteLog = new OutageLog("Writing entities to L2");
+    /**
+     * What this server saved and wrote and has yet to write to L2 and the database.
+     */
+    private final PersistenceBacklog persistenceBacklog = new PersistenceBacklog();
     /**
      * Whether the last persistence run reached L2. While it does not, as with Redis unreachable, saves stop waiting
      * to publish: their changes are put back and published once L2 is reached again.
      */
     @Getter(AccessLevel.NONE)
     private volatile boolean l2Reachable = true;
-
-    /**
-     * The entities whose changes were put back while L2 was unreachable, to publish once it is reached again.
-     */
-    @Getter(AccessLevel.NONE)
-    private final Set<UUID> unpublished = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Publications started and not yet done, so a shutdown can let them finish before closing Redis.
-     */
-    @Getter(AccessLevel.NONE)
-    private final AtomicInteger publishing = new AtomicInteger();
-
-    @Getter(AccessLevel.NONE)
-    private final OutageLog l2ReadLog = new OutageLog("Reading an entity from L2");
-
-    @Getter(AccessLevel.NONE)
-    private final OutageLog l2WriteLog = new OutageLog("Writing entities to L2");
-
-    /**
-     * What this server saved and wrote and has yet to write to L2 and the database.
-     */
-    private final PersistenceBacklog persistenceBacklog = new PersistenceBacklog();
 
     /**
      * Constructs a new {@link LegacyEntityDataService}.
@@ -1133,7 +1123,7 @@ public class LegacyEntityDataService {
      * contexts where startup latency is acceptable for the benefit of later read performance.
      *
      * @return a {@link List} containing all {@link LegacyEntityData} objects found in the database.
-     *         Returns an empty list if no entity data is found.
+     * Returns an empty list if no entity data is found.
      */
     public List<LegacyEntityData> getAllLegacyEntityData() {
         // Get all LegacyEntityData objects

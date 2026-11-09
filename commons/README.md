@@ -376,8 +376,7 @@ When using virtual threads in this module, be aware of the "pinning" issue: if a
 **Guidelines:**
 
 1. **Avoid `synchronized`** in code that may be called from virtual threads. Use `java.util.concurrent.locks.ReentrantLock` instead.
-2. **Shutdown methods** like `VirtualThreadExecutors.destroy()` and `VirtualThreadSchedulerManager.destroy()` use blocking
-   operations (`awaitTermination`) and should be called from **platform threads only** (e.g., main thread or shutdown hooks).
+2. **Shutdown methods** like `VirtualThreadExecutors.destroy()` and `VirtualThreadSchedulerManager.destroy()` use blocking operations (`awaitTermination`) and should be called from **platform threads only** (e.g., main thread or shutdown hooks).
 3. **Testing**: Add JVM argument `-Djdk.tracePinnedThreads=short` to detect pinning events during development.
 4. **Java 24 has resolved this issue** ([JEP 491](https://openjdk.org/jeps/491) delivered). Upgrade to remove these restrictions.
 
@@ -483,8 +482,7 @@ wide range of data types.
   throw exceptions upon validation failure (e.g., `requireNonNull`, `requireNotEmpty`).
 * **Exception Flexibility**: Supports throwing standard Java exceptions (`IllegalArgumentException`,
   `NullPointerException`, `IndexOutOfBoundsException`) or custom exceptions provided by the caller (via `Supplier`).
-* **Broad Type Coverage**: Supports validation for objects, strings, collections, maps, arrays, numeric types (
-  int/long), and indices.
+* **Broad Type Coverage**: Supports validation for objects, strings, collections, maps, arrays, numeric types (int/long), and indices.
 * **Ease of Use**: All methods are static, allowing for direct invocation.
 
 **Detailed Method Descriptions and Examples:**
@@ -948,6 +946,78 @@ public class BlockCheckExample {
         }
     }
 }
+```
+
+### [BukkitServiceUtil](src/main/java/net/legacy/library/commons/util/BukkitServiceUtil.java)
+
+`BukkitServiceUtil` calls services other plugins register with Bukkit's `ServicesManager`, found by the name of the plugin that provides them, so two plugins can talk without either depending on the other's jar. The provider registers under a JDK type (`BiConsumer<UUID, String>` for a signal, `Function<UUID, Integer>` for a query, and so on), and the caller looks it up by that type and the provider's plugin name.
+
+Absence is a normal answer: no provider, a provider that throws, and a provider built against classes that are not there (`LinkageError`) all give the caller's fallback, never an exception. Since providers are told apart by type and plugin name, register at most one provider per JDK type in one plugin.
+
+```java
+public class Example {
+    // The provider plugin, "Contracts", in its onPluginEnable
+    public void register(Plugin plugin, WantedService wanted) {
+        Function<UUID, Integer> wantedLevel = wanted::levelOf;
+        Bukkit.getServicesManager().register(Function.class, wantedLevel, plugin, ServicePriority.Normal);
+    }
+
+    // Any other plugin: 0 when Contracts is not installed or fails
+    public int wantedLevel(UUID player) {
+        return BukkitServiceUtil.<Function<UUID, Integer>, Integer>query(
+                Function.class, "Contracts", function -> function.apply(player), 0);
+    }
+
+    // Send a signal to every plugin of the family except this one; each receiver is called on its own
+    public void signal(UUID player, String key) {
+        BukkitServiceUtil.<BiConsumer<UUID, String>>broadcast(BiConsumer.class,
+                name -> name.startsWith("Pillage") && !name.equals("PillageMarket"),
+                consumer -> consumer.accept(player, key));
+    }
+}
+```
+
+### [RateLimitedLogger](src/main/java/net/legacy/library/commons/util/RateLimitedLogger.java)
+
+`RateLimitedLogger` prints at most one line per topic per window. The lines held back in between are counted, and the next printed line says how many there were, so a warning that fires on every packet or tick cannot flood the console when the server is already in trouble. It is lock-free, so it is safe on virtual threads, and the number of topics is bounded (`maxTopics`, 256 by default).
+
+```java
+public class Example {
+    private static final RateLimitedLogger LOGGER = RateLimitedLogger.of(Duration.ofSeconds(30));
+
+    public void onPacketError(String player, Exception exception) {
+        // At most one line every 30 seconds; the next one ends with "(41 similar lines held back)"
+        LOGGER.warn("packet-error", "Could not read a packet from %s", exception, player);
+    }
+}
+```
+
+### [DurationUtil](src/main/java/net/legacy/library/commons/util/DurationUtil.java)
+
+`DurationUtil` reads durations written by people and writes them the same way. `parse` accepts amounts with units `ms`, `s`, `m`, `h`, `d` and `w` (and words such as `min` or `hours`), separated by spaces, commas or nothing, a bare `0`, and ISO-8601 such as `PT1H30M`; anything else throws an `IllegalArgumentException` whose message can be shown to the person who wrote it. `format` writes the two largest units, cut off rather than rounded, and drops a zero unit.
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        Duration cooldown = DurationUtil.parse("1h 30m");               // PT1H30M
+        Duration fallback = DurationUtil.tryParse("soon").orElse(Duration.ofMinutes(5));
+
+        DurationUtil.format(Duration.ofSeconds(750));                    // "12m 30s"
+        DurationUtil.format(Duration.ofHours(51).plusMinutes(59));       // "2d 3h"
+        DurationUtil.format(Duration.ofDays(2).plusMinutes(5));          // "2d"
+        DurationUtil.format(Duration.ofSeconds(3725), 3);                // "1h 2m 5s"
+    }
+}
+```
+
+### [PluralUtil](src/main/java/net/legacy/library/commons/util/PluralUtil.java)
+
+`PluralUtil` puts an English noun in agreement with a count: exactly one takes the singular, every other number (zero included) the plural. Both nouns are passed in, because pairs such as `entry/entries` defeat any rule.
+
+```java
+PluralUtil.count(1, "entry", "entries");  // "1 entry"
+PluralUtil.count(0, "entry", "entries");  // "0 entries"
+PluralUtil.noun(3, "item", "items");      // "items"
 ```
 
 ### [AnvilGUI](https://github.com/WesJD/AnvilGUI)

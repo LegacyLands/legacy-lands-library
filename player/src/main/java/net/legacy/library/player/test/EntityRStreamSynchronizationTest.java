@@ -2272,87 +2272,6 @@ public class EntityRStreamSynchronizationTest {
     }
 
     /**
-     * Passes every line on and records those logged at error level or with a stack trace, which shows as errors.
-     */
-    private static final class RecordingLogger implements ILogger {
-
-        private final ILogger delegate;
-        private final List<String> errors = new CopyOnWriteArrayList<>();
-
-        private RecordingLogger(ILogger delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public void info(String message, Object... args) {
-            delegate.info(message, args);
-        }
-
-        @Override
-        public void debug(String message, Object... args) {
-            delegate.debug(message, args);
-        }
-
-        @Override
-        public void warn(String message, Object... args) {
-            delegate.warn(message, args);
-        }
-
-        @Override
-        public void error(String message, Object... args) {
-            errors.add(message);
-            delegate.error(message, args);
-        }
-
-        @Override
-        public void info(String message, Throwable throwable, Object... args) {
-            errors.add(message);
-            delegate.info(message, throwable, args);
-        }
-
-        @Override
-        public void debug(String message, Throwable throwable, Object... args) {
-            delegate.debug(message, throwable, args);
-        }
-
-        @Override
-        public void warn(String message, Throwable throwable, Object... args) {
-            errors.add(message);
-            delegate.warn(message, throwable, args);
-        }
-
-        @Override
-        public void error(String message, Throwable throwable, Object... args) {
-            errors.add(message);
-            delegate.error(message, throwable, args);
-        }
-
-        @Override
-        public void info(Throwable throwable) {
-            errors.add(String.valueOf(throwable));
-            delegate.info(throwable);
-        }
-
-        @Override
-        public void debug(Throwable throwable) {
-            delegate.debug(throwable);
-        }
-
-        @Override
-        public void warn(Throwable throwable) {
-            errors.add(String.valueOf(throwable));
-            delegate.warn(throwable);
-        }
-
-        @Override
-        public void error(Throwable throwable) {
-            errors.add(String.valueOf(throwable));
-            delegate.error(throwable);
-        }
-
-    }
-
-    /**
      * Test that TestLogger logs a message without arguments as written, so a {@code %} in it needs no escaping, and
      * still formats a message given arguments.
      */
@@ -2718,7 +2637,8 @@ public class EntityRStreamSynchronizationTest {
             AtomicInteger ranges = new AtomicInteger();
             RStream<Object, Object> stream = (RStream<Object, Object>) java.lang.reflect.Proxy.newProxyInstance(
                     RStream.class.getClassLoader(), new Class<?>[]{RStream.class}, (proxy, method, args) -> switch (method.getName()) {
-                        case "trim" -> throw new org.redisson.client.RedisException("ERR syntax error, XTRIM MINID needs Redis 6.2");
+                        case "trim" ->
+                                throw new org.redisson.client.RedisException("ERR syntax error, XTRIM MINID needs Redis 6.2");
                         case "range" -> ranges.incrementAndGet() % 2 == 1
                                 ? Map.of(new StreamMessageId(1, 0), Map.of("timeout", "1"))
                                 : Map.of();
@@ -2901,6 +2821,87 @@ public class EntityRStreamSynchronizationTest {
         } catch (Exception exception) {
             TestLogger.logWarning("player", "Failed to shut down test service %s: %s", service.getName(), exception.getMessage());
         }
+    }
+
+    /**
+     * Passes every line on and records those logged at error level or with a stack trace, which shows as errors.
+     */
+    private static final class RecordingLogger implements ILogger {
+
+        private final ILogger delegate;
+        private final List<String> errors = new CopyOnWriteArrayList<>();
+
+        private RecordingLogger(ILogger delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void info(String message, Object... args) {
+            delegate.info(message, args);
+        }
+
+        @Override
+        public void debug(String message, Object... args) {
+            delegate.debug(message, args);
+        }
+
+        @Override
+        public void warn(String message, Object... args) {
+            delegate.warn(message, args);
+        }
+
+        @Override
+        public void error(String message, Object... args) {
+            errors.add(message);
+            delegate.error(message, args);
+        }
+
+        @Override
+        public void info(String message, Throwable throwable, Object... args) {
+            errors.add(message);
+            delegate.info(message, throwable, args);
+        }
+
+        @Override
+        public void debug(String message, Throwable throwable, Object... args) {
+            delegate.debug(message, throwable, args);
+        }
+
+        @Override
+        public void warn(String message, Throwable throwable, Object... args) {
+            errors.add(message);
+            delegate.warn(message, throwable, args);
+        }
+
+        @Override
+        public void error(String message, Throwable throwable, Object... args) {
+            errors.add(message);
+            delegate.error(message, throwable, args);
+        }
+
+        @Override
+        public void info(Throwable throwable) {
+            errors.add(String.valueOf(throwable));
+            delegate.info(throwable);
+        }
+
+        @Override
+        public void debug(Throwable throwable) {
+            delegate.debug(throwable);
+        }
+
+        @Override
+        public void warn(Throwable throwable) {
+            errors.add(String.valueOf(throwable));
+            delegate.warn(throwable);
+        }
+
+        @Override
+        public void error(Throwable throwable) {
+            errors.add(String.valueOf(throwable));
+            delegate.error(throwable);
+        }
+
     }
 
 }

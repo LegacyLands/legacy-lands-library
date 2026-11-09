@@ -55,13 +55,13 @@ public class VarHandleReflectionInjector implements StaticInjectorInterface {
      * for each annotated field and assigns it to the field.
      *
      * <p>The method performs the injection by using {@link MethodHandles#privateLookupIn(Class, MethodHandles.Lookup)}
-     * to securely access fields without requiring {@code setAccessible(true)}. For static method injection, 
+     * to securely access fields without requiring {@code setAccessible(true)}. For static method injection,
      * {@link MethodHandles.Lookup#findStatic(Class, String, MethodType)} is used to obtain method handles safely.
      *
      * <p>The specified static method must contain two parameters: {@link String} and {@link Class}
      *
      * <p>If a static method is specified in the annotation, a {@link MethodHandle} will be
-     * obtained to invoke the method securely. The class containing the static method must be loadable by the 
+     * obtained to invoke the method securely. The class containing the static method must be loadable by the
      * current thread's context {@link ClassLoader}.
      *
      * @param clazz the class into which {@link VarHandle} instances will be injected into its static fields

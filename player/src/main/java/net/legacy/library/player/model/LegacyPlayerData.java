@@ -53,19 +53,6 @@ public class LegacyPlayerData {
     }
 
     /**
-     * Restores the thread-safe map after this instance was read back from L2 or the database.
-     *
-     * <p>Gson and Morphia fill the map with a type of their own, which is not safe for concurrent use. Morphia calls
-     * this after loading; {@code LegacyPlayerSerializable} after Gson. Idempotent.
-     */
-    @PostLoad
-    public void restoreConcurrentCollections() {
-        if (!(data instanceof ConcurrentHashMap)) {
-            data = new ConcurrentHashMap<>(data == null ? Map.of() : data);
-        }
-    }
-
-    /**
      * Creates a new {@link LegacyPlayerData} instance for the given player.
      *
      * @param player the Bukkit {@link Player} instance
@@ -94,6 +81,19 @@ public class LegacyPlayerData {
      */
     public static LegacyPlayerData of(UUID uuid) {
         return new LegacyPlayerData(uuid);
+    }
+
+    /**
+     * Restores the thread-safe map after this instance was read back from L2 or the database.
+     *
+     * <p>Gson and Morphia fill the map with a type of their own, which is not safe for concurrent use. Morphia calls
+     * this after loading; {@code LegacyPlayerSerializable} after Gson. Idempotent.
+     */
+    @PostLoad
+    public void restoreConcurrentCollections() {
+        if (!(data instanceof ConcurrentHashMap)) {
+            data = new ConcurrentHashMap<>(data == null ? Map.of() : data);
+        }
     }
 
     /**

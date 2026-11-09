@@ -65,7 +65,7 @@ public class VirtualThreadScheduledFuture {
      *
      * @param mayInterruptIfRunning {@code true} to interrupt the task thread if running
      * @return {@code false} if the task could not be cancelled, typically because it has already
-     *         completed normally; {@code true} otherwise
+     * completed normally; {@code true} otherwise
      */
     public boolean cancel(boolean mayInterruptIfRunning) {
         return scheduledFuture.cancel(mayInterruptIfRunning);
@@ -79,7 +79,7 @@ public class VirtualThreadScheduledFuture {
      * the underlying scheduler or other scheduled tasks.
      *
      * @return {@code false} if the task could not be cancelled, typically because it has already
-     *         completed normally; {@code true} otherwise
+     * completed normally; {@code true} otherwise
      */
     public boolean cancel() {
         return cancel(true);
