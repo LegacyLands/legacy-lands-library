@@ -389,7 +389,7 @@ public class LegacyPlayerDataService {
      * contexts where startup latency is acceptable for the benefit of later read performance.
      *
      * @return a {@link List} containing all {@link LegacyPlayerData} objects found in the database.
-     *         Returns an empty list if no player data is found.
+     * Returns an empty list if no player data is found.
      */
     public List<LegacyPlayerData> getAllLegacyPlayerData() {
         // Get all LegacyPlayerData objects

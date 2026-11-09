@@ -43,21 +43,19 @@ import java.util.concurrent.CompletionException;
 @RequiredArgsConstructor
 public class PlayerDataPersistenceTask implements TaskInterface<CompletableFuture<?>> {
 
+    /**
+     * How many players one database write saves.
+     */
+    private static final int DATABASE_BATCH_SIZE = 1000;
     private final LockSettings lockSettings;
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final int limit;
     private final Duration ttl;
-
     /**
      * Whether this is the last run before shutdown: it persists everything this server wrote to L2, and a database
      * step skipped is worth a warning, as nothing runs after it.
      */
     private boolean finalRun;
-
-    /**
-     * How many players one database write saves.
-     */
-    private static final int DATABASE_BATCH_SIZE = 1000;
 
     /**
      * Factory method to create a new {@link PlayerDataPersistenceTask}.

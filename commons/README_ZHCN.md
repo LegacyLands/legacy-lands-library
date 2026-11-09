@@ -894,6 +894,80 @@ public class BlockCheckExample {
 }
 ```
 
+### [BukkitServiceUtil](src/main/java/net/legacy/library/commons/util/BukkitServiceUtil.java)
+
+`BukkitServiceUtil` 按提供者插件名称调用其他插件注册到 Bukkit `ServicesManager` 的服务，两个插件因此可以互相通信，而无需依赖对方的 jar。
+提供方以 JDK 类型注册（信号用 `BiConsumer<UUID, String>`，查询用 `Function<UUID, Integer>` 等），调用方按该类型和提供方的插件名称查找。
+
+找不到是正常结果：没有提供者、提供者抛出异常、提供者依赖的类不存在 (`LinkageError`)，都会返回调用方给出的默认值，绝不会抛出异常。
+由于提供者按类型和插件名称区分，同一个插件对每种 JDK 类型最多注册一个提供者。
+
+```java
+public class Example {
+    // 提供方插件 "Contracts"，在 onPluginEnable 中注册
+    public void register(Plugin plugin, WantedService wanted) {
+        Function<UUID, Integer> wantedLevel = wanted::levelOf;
+        Bukkit.getServicesManager().register(Function.class, wantedLevel, plugin, ServicePriority.Normal);
+    }
+
+    // 其他任意插件：Contracts 未安装或调用失败时返回 0
+    public int wantedLevel(UUID player) {
+        return BukkitServiceUtil.<Function<UUID, Integer>, Integer>query(
+                Function.class, "Contracts", function -> function.apply(player), 0);
+    }
+
+    // 向同一系列中除自己以外的每个插件发送信号；每个接收者单独调用，互不影响
+    public void signal(UUID player, String key) {
+        BukkitServiceUtil.<BiConsumer<UUID, String>>broadcast(BiConsumer.class,
+                name -> name.startsWith("Pillage") && !name.equals("PillageMarket"),
+                consumer -> consumer.accept(player, key));
+    }
+}
+```
+
+### [RateLimitedLogger](src/main/java/net/legacy/library/commons/util/RateLimitedLogger.java)
+
+`RateLimitedLogger` 在每个时间窗口内每个主题最多输出一行日志。期间被压下的行会被计数，下一次输出的行会说明压下了多少行，因此每个数据包或每个 tick 都会触发的警告不会在服务器已经出问题时刷屏。它是无锁的，可以安全地在虚拟线程上使用，主题数量有上限(`maxTopics`，默认 256)。
+
+```java
+public class Example {
+    private static final RateLimitedLogger LOGGER = RateLimitedLogger.of(Duration.ofSeconds(30));
+
+    public void onPacketError(String player, Exception exception) {
+        // 每 30 秒最多一行；下一行末尾会带上 "(41 similar lines held back)"
+        LOGGER.warn("packet-error", "Could not read a packet from %s", exception, player);
+    }
+}
+```
+
+### [DurationUtil](src/main/java/net/legacy/library/commons/util/DurationUtil.java)
+
+`DurationUtil` 读取人写的时长，并以同样的格式输出。`parse` 接受带单位 `ms`、`s`、`m`、`h`、`d`、`w`（以及 `min`、`hours` 等单词）的数值，可用空格、逗号分隔或直接相连，也接受单独的 `0` 和 ISO-8601 格式（如 `PT1H30M`）；其他输入会抛出 `IllegalArgumentException`，其消息可以直接展示给输入者。`format` 输出最大的两个单位，截断而不是四舍五入，并省略为零的单位。
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        Duration cooldown = DurationUtil.parse("1h 30m");               // PT1H30M
+        Duration fallback = DurationUtil.tryParse("soon").orElse(Duration.ofMinutes(5));
+
+        DurationUtil.format(Duration.ofSeconds(750));                    // "12m 30s"
+        DurationUtil.format(Duration.ofHours(51).plusMinutes(59));       // "2d 3h"
+        DurationUtil.format(Duration.ofDays(2).plusMinutes(5));          // "2d"
+        DurationUtil.format(Duration.ofSeconds(3725), 3);                // "1h 2m 5s"
+    }
+}
+```
+
+### [PluralUtil](src/main/java/net/legacy/library/commons/util/PluralUtil.java)
+
+`PluralUtil` 让英文名词与数量保持一致：恰好为 1 时用单数，其他任何数字（包括 0）都用复数。单复数两个名词都由调用方传入，因为 `entry/entries` 这类词无法用简单规则推导。
+
+```java
+PluralUtil.count(1, "entry", "entries");  // "1 entry"
+PluralUtil.count(0, "entry", "entries");  // "0 entries"
+PluralUtil.noun(3, "item", "items");      // "items"
+```
+
 ### [AnvilGUI](https://github.com/WesJD/AnvilGUI)
 
 `AnvilGUI` (`net.legacy.library.libs.anvilgui`) 只是作为一个依赖项被打包进来，并且进行了重定位，这只是为了方便一些重复开发。

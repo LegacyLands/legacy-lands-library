@@ -87,6 +87,15 @@ public class CommonsTestRunner extends AbstractModuleTestRunner {
         // Execute random generator tests
         executeTestClass(RandomGeneratorTest.class, "Random Generator Logic");
 
+        // Execute duration and count agreement tests
+        executeTestClass(DurationUtilTest.class, "Duration and Plural Logic");
+
+        // Execute rate-limited logger tests
+        executeTestClass(RateLimitedLoggerTest.class, "Rate-Limited Logger Logic");
+
+        // Execute Bukkit service lookup tests
+        executeTestClass(BukkitServiceUtilTest.class, "Bukkit Service Lookup Logic");
+
         timer.stopTimer("test-execution");
         timer.startTimer("validation");
 

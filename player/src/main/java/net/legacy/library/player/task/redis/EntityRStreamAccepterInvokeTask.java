@@ -41,39 +41,34 @@ import java.util.concurrent.TimeUnit;
 @Getter
 public class EntityRStreamAccepterInvokeTask implements TaskInterface<VirtualThreadScheduledFuture> {
 
+    /**
+     * How many messages one read takes from the stream.
+     */
+    private static final int READ_BATCH_SIZE = 1000;
     private final LegacyEntityDataService service;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
     private final Duration period;
-
     private final Set<Class<?>> annotatedClasses = Sets.newConcurrentHashSet();
     private final Set<EntityRStreamAccepterInterface> accepters = Sets.newConcurrentHashSet();
     /**
      * No longer filled: the read cursor delivers every message once. Kept so {@code getAcceptedId()} still exists.
      */
     private final Set<StreamMessageId> acceptedId = Sets.newConcurrentHashSet();
-
-    /**
-     * How many messages one read takes from the stream.
-     */
-    private static final int READ_BATCH_SIZE = 1000;
-
     /**
      * Messages an accepter that does not record them has handled, delivered again every round while they stay.
      */
     private final Set<StreamMessageId> redeliveredId = Sets.newConcurrentHashSet();
-
+    /**
+     * Logs failed rounds once per outage.
+     */
+    private final OutageLog roundLog = new OutageLog("Reading the entity stream");
     /**
      * The last message read; the next round reads from after it. It starts at the newest message when the task is
      * created: the state from before comes from L2 or the database when an entity is first needed, and replaying what
      * the stream still holds would apply old relationship commands again.
      */
     private volatile StreamMessageId readCursor;
-
-    /**
-     * Logs failed rounds once per outage.
-     */
-    private final OutageLog roundLog = new OutageLog("Reading the entity stream");
 
     /**
      * Constructs a new {@link EntityRStreamAccepterInvokeTask}.

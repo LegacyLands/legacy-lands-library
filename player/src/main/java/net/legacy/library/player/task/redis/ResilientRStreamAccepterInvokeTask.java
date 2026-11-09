@@ -49,6 +49,10 @@ import java.util.concurrent.TimeUnit;
 @Getter
 public class ResilientRStreamAccepterInvokeTask implements TaskInterface<VirtualThreadScheduledFuture> {
 
+    /**
+     * How many messages one read takes from the stream.
+     */
+    private static final int READ_BATCH_SIZE = 1000;
     private final LegacyPlayerDataService legacyPlayerDataService;
     private final List<String> basePackages;
     private final List<ClassLoader> classLoaders;
@@ -56,35 +60,26 @@ public class ResilientRStreamAccepterInvokeTask implements TaskInterface<Virtual
     private final boolean enableResilience;
     private final RetryPolicy retryPolicy;
     private final RetryCounter retryCounter;
-
     private final Set<Class<?>> annotatedClasses;
     private final Set<RStreamAccepterInterface> accepters;
     /**
      * No longer filled: the read cursor delivers every message once. Kept so {@code getAcceptedId()} still exists.
      */
     private final Set<StreamMessageId> acceptedId;
-
-    /**
-     * How many messages one read takes from the stream.
-     */
-    private static final int READ_BATCH_SIZE = 1000;
-
     /**
      * Messages an accepter that does not record them has handled, delivered again every round while they stay.
      */
     private final Set<StreamMessageId> redeliveredId = Sets.newConcurrentHashSet();
-
+    /**
+     * Logs failed rounds once per outage.
+     */
+    private final OutageLog roundLog = new OutageLog("Reading the player stream");
     /**
      * The last message read; the next round reads from after it. It starts at the newest message when the task is
      * created: the state from before is in L2 or the database, and replaying what the stream still holds would apply
      * old updates over it again.
      */
     private volatile StreamMessageId readCursor;
-
-    /**
-     * Logs failed rounds once per outage.
-     */
-    private final OutageLog roundLog = new OutageLog("Reading the player stream");
 
     /**
      * Constructs a new resilient RStream accepter invoke task.

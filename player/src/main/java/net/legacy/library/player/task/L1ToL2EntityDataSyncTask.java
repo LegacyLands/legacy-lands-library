@@ -44,14 +44,13 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture<?>> {
 
-    private final Set<UUID> entityUuids;
-    private final LegacyEntityDataService service;
-    private final Duration ttl;
-
     /**
      * How many entities are written to L2 at the same time.
      */
     private static final int SYNC_PARALLELISM = 256;
+    private final Set<UUID> entityUuids;
+    private final LegacyEntityDataService service;
+    private final Duration ttl;
 
     /**
      * Factory method to create a new {@link L1ToL2EntityDataSyncTask} without specifying UUIDs.
@@ -130,6 +129,15 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
         return new L1ToL2EntityDataSyncTask(entityUuids, service, ttl);
     }
 
+    private static boolean isRedisFailure(Throwable throwable) {
+        for (Throwable cause = throwable; cause != null; cause = cause.getCause()) {
+            if (cause instanceof RedisException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Executes the synchronization task, transferring entity data from L1 cache to L2 cache.
      *
@@ -199,15 +207,6 @@ public class L1ToL2EntityDataSyncTask implements TaskInterface<CompletableFuture
                 Log.warn("Could not write %s entities to L2 this run; they are written by the next", firstFailure.get(), failed.get());
             }
         });
-    }
-
-    private static boolean isRedisFailure(Throwable throwable) {
-        for (Throwable cause = throwable; cause != null; cause = cause.getCause()) {
-            if (cause instanceof RedisException) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

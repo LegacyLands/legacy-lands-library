@@ -86,6 +86,7 @@ public class PlayerTestRunner extends AbstractModuleTestRunner {
 
         executeTestClass(LegacyPlayerDataServiceTest.class, "LegacyPlayerDataService Integration");
         executeTestClass(LegacyEntityDataServiceTest.class, "LegacyEntityDataService Integration");
+        executeTestClass(LegacyDataServicesTest.class, "LegacyDataServices Integration");
         executeTestClass(OptimisticLockingIntegrationTest.class, "OptimisticLockingIntegrationTest");
         executeTestClass(EntityRStreamSynchronizationTest.class, "EntityRStreamSynchronizationTest");
         executeTestClass(ErrorRecoveryIntegrationTest.class, "ErrorRecoveryIntegrationTest");

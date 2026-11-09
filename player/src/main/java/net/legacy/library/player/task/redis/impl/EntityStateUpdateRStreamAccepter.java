@@ -155,7 +155,7 @@ public class EntityStateUpdateRStreamAccepter implements EntityRStreamAccepterIn
 
                 // Merged into the cached instance itself; the scheduled persistence writes it on
                 localEntity.mergeChanges(new LegacyEntityData.Changes(attributes, stamps, relationships, relationshipStamps,
-                        jsonObject.get("version").getAsLong(), jsonObject.get("lastModifiedTime").getAsLong(), 0),
+                                jsonObject.get("version").getAsLong(), jsonObject.get("lastModifiedTime").getAsLong(), 0),
                         legacyEntityDataService.tombstoneCutoff());
             });
         } catch (Exception exception) {

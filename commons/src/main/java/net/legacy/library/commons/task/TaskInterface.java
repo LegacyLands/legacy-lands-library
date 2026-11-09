@@ -184,9 +184,9 @@ public interface TaskInterface<R> {
      *
      * @param task the task to be executed in a virtual thread
      * @apiNote This method internally creates a new {@link ExecutorService} for the task and
-     *          immediately shuts it down (which blocks until the task is done). This makes
-     *          the call effectively synchronous. For asynchronous execution, use
-     *          {@link #executeWithVirtualThread(Runnable)}
+     * immediately shuts it down (which blocks until the task is done). This makes
+     * the call effectively synchronous. For asynchronous execution, use
+     * {@link #executeWithVirtualThread(Runnable)}
      */
     default void executeAndWaitWithEphemeralVirtualThread(Runnable task) {
         try (ExecutorService executorService = VirtualThreadExecutors.createEphemeralExecutor()) {

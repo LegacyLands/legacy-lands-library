@@ -51,36 +51,37 @@ import java.util.function.Function;
 public class LegacyEntityData {
 
     /**
-     * The unique identifier for the entity.
-     */
-    @Id
-    @NonNull
-    private final UUID uuid;
-
-    /**
-     * A single-entity, in-memory cache that resides on the server and is not persisted to db.
-     */
-    @Transient
-    private transient final CacheServiceInterface<Cache<String, String>, String> rawCache =
-            CacheServiceFactory.createCaffeineCache();
-
-    /**
      * Identifies the server this class was loaded on, in the stamps of the changes made here.
      */
     public static final String LOCAL_ORIGIN = UUID.randomUUID().toString();
-
     /**
      * Orders stamps: the later version, then the later time, then the higher origin.
      */
     private static final Comparator<Stamp> STAMP_ORDER = Comparator.comparingLong(Stamp::version)
             .thenComparingLong(Stamp::time)
             .thenComparing(Stamp::origin);
-
+    /**
+     * The unique identifier for the entity.
+     */
+    @Id
+    @NonNull
+    private final UUID uuid;
+    /**
+     * A single-entity, in-memory cache that resides on the server and is not persisted to db.
+     */
+    @Transient
+    private transient final CacheServiceInterface<Cache<String, String>, String> rawCache =
+            CacheServiceFactory.createCaffeineCache();
+    /**
+     * Keeps each change and its stamp together, and a merge from seeing half of one.
+     */
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private transient final ReentrantLock stateLock = new ReentrantLock();
     /**
      * A map containing the custom attributes associated with the entity.
      */
     private Map<String, String> attributes = new ConcurrentHashMap<>();
-
     /**
      * The stamp of the last change of each attribute, set or removed, encoded by {@link Stamp#encode()}.
      *
@@ -88,7 +89,6 @@ public class LegacyEntityData {
      * one stored before stamps existed, is older than any stamped change.
      */
     private Map<String, String> attributeStamps = new ConcurrentHashMap<>();
-
     /**
      * A map of relationships this entity has with other entities.
      *
@@ -97,27 +97,17 @@ public class LegacyEntityData {
      * <p>Value: Set of entity UUIDs this entity has that relationship with
      */
     private Map<String, Set<UUID>> relationships = new ConcurrentHashMap<>();
-
     /**
      * The stamp of the last change of each relationship, added or removed, keyed by {@link #relationshipKey}, and of
      * the last {@link #clearRelationships clearing} of each type, keyed by {@link #relationshipClearKey}.
      */
     private Map<String, String> relationshipStamps = new ConcurrentHashMap<>();
-
     /**
      * The version up to which this instance's changes were published; the next publication carries what is newer.
      */
     @Transient
     @Getter(AccessLevel.NONE)
     private transient long lastPublishedVersion = 0;
-
-    /**
-     * Keeps each change and its stamp together, and a merge from seeing half of one.
-     */
-    @Transient
-    @Getter(AccessLevel.NONE)
-    private transient final ReentrantLock stateLock = new ReentrantLock();
-
     /**
      * The type of this entity, used for classification and querying.
      */
@@ -165,54 +155,6 @@ public class LegacyEntityData {
     }
 
     /**
-     * The stamp of a change: the entity version it made, its time in milliseconds, and the server it was made on.
-     *
-     * @param version the entity version the change made
-     * @param time    when the change was made, in milliseconds since epoch
-     * @param origin  the {@link #LOCAL_ORIGIN} of the server it was made on
-     */
-    public record Stamp(long version, long time, String origin) {
-
-        /**
-         * The stamp of anything stored before stamps existed: older than every stamped change.
-         */
-        public static final Stamp NONE = new Stamp(0, 0, "");
-
-        /**
-         * Decodes a stamp written by {@link #encode()}.
-         *
-         * @param encoded the encoded stamp, or {@code null}
-         * @return the stamp, or {@link #NONE} for {@code null} or anything unreadable
-         */
-        public static Stamp decode(String encoded) {
-            if (encoded == null) {
-                return NONE;
-            }
-
-            String[] parts = encoded.split(":", 3);
-            if (parts.length != 3) {
-                return NONE;
-            }
-
-            try {
-                return new Stamp(Long.parseLong(parts[0]), Long.parseLong(parts[1]), parts[2]);
-            } catch (NumberFormatException exception) {
-                return NONE;
-            }
-        }
-
-        /**
-         * Encodes this stamp as {@code version:time:origin}.
-         *
-         * @return the encoded stamp
-         */
-        public String encode() {
-            return version + ":" + time + ":" + origin;
-        }
-
-    }
-
-    /**
      * Gets the key a relationship's stamp is kept under.
      *
      * @param relationshipType the type of relationship
@@ -234,22 +176,6 @@ public class LegacyEntityData {
     }
 
     /**
-     * The changes of an entity not yet published: the attributes and relationships stamped past a version, their
-     * stamps, removals and clearings included, and the entity's version and modification time.
-     *
-     * @param attributes         the current values of the changed attributes; a removed one is absent
-     * @param attributeStamps    the stamps of the changed attributes
-     * @param relationships      the {@link #relationshipKey keys} of the changed relationships that are present
-     * @param relationshipStamps the stamps of the changed relationships and clearings
-     * @param version            the entity's version
-     * @param lastModifiedTime   the entity's modification time
-     * @param since              the version past which the changes were taken; 0 for changes received
-     */
-    public record Changes(Map<String, String> attributes, Map<String, String> attributeStamps, Set<String> relationships,
-                          Map<String, String> relationshipStamps, long version, long lastModifiedTime, long since) {
-    }
-
-    /**
      * Decides between two stamped values of the same key: the later stamp wins, and of two equal stamps, which only
      * arise from data stored before stamps, the greater value, a removal counting as the least.
      */
@@ -260,6 +186,24 @@ public class LegacyEntityData {
         }
 
         return Comparator.nullsFirst(Comparator.<String>naturalOrder()).compare(candidateValue, currentValue) > 0;
+    }
+
+    /**
+     * Creates a new {@link LegacyEntityData} instance for a player with type "player".
+     *
+     * @param player the Bukkit {@link Player} instance
+     * @return a new {@link LegacyEntityData} instance associated with the player's UUID
+     */
+    public static LegacyEntityData ofPlayer(Player player) {
+        return of(player.getUniqueId(), "player");
+    }
+
+    private static boolean isUnpublished(Stamp stamp, long since) {
+        return since == 0 ? stamp.version() > 0 : stamp.version() > since && LOCAL_ORIGIN.equals(stamp.origin());
+    }
+
+    private static boolean isExpiredTombstone(Stamp stamp, long tombstoneCutoff) {
+        return !stamp.equals(Stamp.NONE) && stamp.time() < tombstoneCutoff;
     }
 
     /**
@@ -304,16 +248,6 @@ public class LegacyEntityData {
         } finally {
             stateLock.unlock();
         }
-    }
-
-    /**
-     * Creates a new {@link LegacyEntityData} instance for a player with type "player".
-     *
-     * @param player the Bukkit {@link Player} instance
-     * @return a new {@link LegacyEntityData} instance associated with the player's UUID
-     */
-    public static LegacyEntityData ofPlayer(Player player) {
-        return of(player.getUniqueId(), "player");
     }
 
     /**
@@ -664,9 +598,9 @@ public class LegacyEntityData {
      * Merges relationships one at a time, the later stamp winning, a type's clearing included: a relationship stamped
      * before the latest clearing of its type, on either side, is absent.
      *
-     * @param keys          the relationship keys and clear keys to consider
-     * @param otherPresent  the relationship keys present on the other side
-     * @param otherStamps   the other side's stamps, clearings included
+     * @param keys            the relationship keys and clear keys to consider
+     * @param otherPresent    the relationship keys present on the other side
+     * @param otherStamps     the other side's stamps, clearings included
      * @param unstampedKept   whether a relationship unstamped on both sides is kept if either side has it, as the
      *                        union merge did before stamps
      * @param tombstoneCutoff the time in milliseconds since epoch before which removal and clearing stamps are
@@ -795,14 +729,6 @@ public class LegacyEntityData {
         }
     }
 
-    private static boolean isUnpublished(Stamp stamp, long since) {
-        return since == 0 ? stamp.version() > 0 : stamp.version() > since && LOCAL_ORIGIN.equals(stamp.origin());
-    }
-
-    private static boolean isExpiredTombstone(Stamp stamp, long tombstoneCutoff) {
-        return !stamp.equals(Stamp.NONE) && stamp.time() < tombstoneCutoff;
-    }
-
     /**
      * Puts back changes whose publication failed, so the next publication carries them again.
      *
@@ -898,6 +824,72 @@ public class LegacyEntityData {
             return this;
         }
         return remove ? removeRelationship(relationshipType, targetEntityUuid) : addRelationship(relationshipType, targetEntityUuid);
+    }
+
+    /**
+     * The stamp of a change: the entity version it made, its time in milliseconds, and the server it was made on.
+     *
+     * @param version the entity version the change made
+     * @param time    when the change was made, in milliseconds since epoch
+     * @param origin  the {@link #LOCAL_ORIGIN} of the server it was made on
+     */
+    public record Stamp(long version, long time, String origin) {
+
+        /**
+         * The stamp of anything stored before stamps existed: older than every stamped change.
+         */
+        public static final Stamp NONE = new Stamp(0, 0, "");
+
+        /**
+         * Decodes a stamp written by {@link #encode()}.
+         *
+         * @param encoded the encoded stamp, or {@code null}
+         * @return the stamp, or {@link #NONE} for {@code null} or anything unreadable
+         */
+        public static Stamp decode(String encoded) {
+            if (encoded == null) {
+                return NONE;
+            }
+
+            String[] parts = encoded.split(":", 3);
+            if (parts.length != 3) {
+                return NONE;
+            }
+
+            try {
+                return new Stamp(Long.parseLong(parts[0]), Long.parseLong(parts[1]), parts[2]);
+            } catch (NumberFormatException exception) {
+                return NONE;
+            }
+        }
+
+        /**
+         * Encodes this stamp as {@code version:time:origin}.
+         *
+         * @return the encoded stamp
+         */
+        public String encode() {
+            return version + ":" + time + ":" + origin;
+        }
+
+    }
+
+    /**
+     * The changes of an entity not yet published: the attributes and relationships stamped past a version, their
+     * stamps, removals and clearings included, and the entity's version and modification time.
+     *
+     * @param attributes         the current values of the changed attributes; a removed one is absent
+     * @param attributeStamps    the stamps of the changed attributes
+     * @param relationships      the {@link #relationshipKey keys} of the changed relationships that are present
+     * @param relationshipStamps the stamps of the changed relationships and clearings
+     * @param version            the entity's version
+     * @param lastModifiedTime   the entity's modification time
+     * @param since              the version past which the changes were taken; 0 for changes received
+     */
+    public record Changes(Map<String, String> attributes, Map<String, String> attributeStamps,
+                          Set<String> relationships,
+                          Map<String, String> relationshipStamps, long version, long lastModifiedTime, long since) {
+
     }
 
 }

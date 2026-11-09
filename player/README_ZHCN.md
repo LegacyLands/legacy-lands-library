@@ -212,6 +212,43 @@ public class ServiceInitExample {
 }
 ```
 
+### 一起启动和关闭服务
+
+`LegacyDataServices` 启动一个插件的玩家数据服务和实体数据服务，并按正确的顺序关闭它们。
+它会先 ping MongoDB，因此数据库无法连接时启动直接失败，而不是等到第一次保存才失败；如果后面的步骤失败，已经启动的服务会被重新关闭。
+服务分别命名为 `<name>-player-data-service` 和 `<name>-entity-data-service`；这些名称是其 Redis 键的一部分，一旦已有数据就不要再更改。
+
+除名称和两个连接外，`LegacyDataServiceSettings` 的其他设置都使用 `of` 方法的默认值。如果 MongoDB 连接只为这些服务而打开，请设置 `closeMongoDBConnection(true)`。
+
+```java
+public class StorageExample {
+    private LegacyDataServices services;
+
+    public void onEnable() {
+        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
+                "shop", "mongodb://localhost:27017/", UuidRepresentation.STANDARD);
+
+        services = LegacyDataServices.start(LegacyDataServiceSettings.builder()
+                .name("shop")
+                .mongoDBConnectionConfig(mongoConfig)
+                .redisConfig(LegacyDataServices.singleServerRedisConfig("redis://127.0.0.1:6379", 0, null))
+                .closeMongoDBConnection(true)
+                .autoSaveInterval(Duration.ofMinutes(5))
+                .build());
+
+        LegacyEntityDataService entityService = services.getEntityDataService();
+    }
+
+    public void onDisable() {
+        // 先关闭玩家服务，再关闭实体服务（两者都会持久化全部 L1），最后关闭 MongoDB 连接
+        services.shutdown();
+    }
+}
+```
+
+`shutdown()` 只会执行一次。每一步都会捕获并记录自身的异常，因此一个服务失败不会影响另一个服务的持久化或连接的关闭。
+中断标志会在所有步骤执行完后才恢复，因此不会打断后一个服务的最终持久化。请在禁用插件的线程中调用，不要在虚拟线程中调用，因为它会等待最终的持久化完成。
+
 ### 数据库索引管理 (可选但推荐)
 
 为了优化查询性能，特别是对于 `findEntitiesByType`、`findEntitiesByAttribute` 和 `findEntitiesByRelationship` 的查询，在

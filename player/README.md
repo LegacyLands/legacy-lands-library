@@ -230,6 +230,41 @@ public class ServiceInitExample {
 }
 ```
 
+### Starting and Stopping the Services Together
+
+`LegacyDataServices` starts the player and entity data services of one plugin and shuts them down in the right order.
+It pings MongoDB first, so an unreachable database fails the start instead of the first save, and if a later step fails, what was already started is shut down again. The services are named `<name>-player-data-service` and `<name>-entity-data-service`; these names are part of their Redis keys, so keep the name once data exists.
+
+`LegacyDataServiceSettings` has the defaults of the `of` methods for everything but the name and the two connections. Set `closeMongoDBConnection(true)` when the connection was opened only for these services.
+
+```java
+public class StorageExample {
+    private LegacyDataServices services;
+
+    public void onEnable() {
+        MongoDBConnectionConfig mongoConfig = MongoDBConnectionConfigFactory.create(
+                "shop", "mongodb://localhost:27017/", UuidRepresentation.STANDARD);
+
+        services = LegacyDataServices.start(LegacyDataServiceSettings.builder()
+                .name("shop")
+                .mongoDBConnectionConfig(mongoConfig)
+                .redisConfig(LegacyDataServices.singleServerRedisConfig("redis://127.0.0.1:6379", 0, null))
+                .closeMongoDBConnection(true)
+                .autoSaveInterval(Duration.ofMinutes(5))
+                .build());
+
+        LegacyEntityDataService entityService = services.getEntityDataService();
+    }
+
+    public void onDisable() {
+        // Player service, then entity service (each persists all of L1), then the MongoDB connection
+        services.shutdown();
+    }
+}
+```
+
+`shutdown()` runs once. Each step catches and logs its own failure, so one service failing never keeps the other from persisting or the connection from closing. An interrupt is restored only after every step has run, so it cannot cut the next service's final persistence short. Call it from the thread that disables the plugin, not from a virtual thread, because it waits for the final persistence runs.
+
 ### Database Index Management (Optional but Recommended)
 
 To optimize query performance, especially for `findEntitiesByType`, `findEntitiesByAttribute`, and
